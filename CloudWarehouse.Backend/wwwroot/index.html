@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>云仓管理系统</title>
+    <style>
+        body { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+        }
+        .nav {
+            background: #333;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .nav button {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .nav button:hover {
+            background: #666;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .input-area {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .input-row {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        button {
+            padding: 8px 20px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+        .search-box input {
+            width: 200px;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .table th {
+            background: #f8f9fa;
+        }
+        .import-summary {
+            margin: 15px 0;
+            padding: 12px 16px;
+            background: #e7f3ff;
+            border-radius: 5px;
+            display: none;
+        }
+        .import-hint {
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .table-wrap {
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <button onclick="showPage('site')">站点管理</button>
+        <button onclick="showPage('destination')">目的地管理</button>
+        <button onclick="showPage('pricerule')">价格规则</button>
+        <button onclick="showPage('import')">价格表导入</button>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div id="site" class="page active">
+        <h2>站点管理</h2>
+        <div class="input-area">
+            <h3>添加/编辑站点</h3>
+            <input type="hidden" id="siteId">
+            <div class="input-row">
+                <label>站点编号：</label>
+                <input type="text" id="siteCode" placeholder="输入站点编号">
+            </div>
+            <div class="input-row">
+                <label>站点名称：</label>
+                <input type="text" id="siteName" placeholder="输入站点名称">
+            </div>
+            <div class="input-row">
+                <label>站点类型：</label>
+                <select id="siteType">
+                    <option value="1">配送站</option>
+                    <option value="2">中转站</option>
+                    <option value="3">仓库</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <label>快递公司：</label>
+                <input type="text" id="expressCompany" placeholder="输入快递公司">
+            </div>
+            <div class="input-row">
+                <label>联系人：</label>
+                <input type="text" id="contactPerson" placeholder="输入联系人">
+            </div>
+            <div class="input-row">
+                <label>联系电话：</label>
+                <input type="text" id="contactPhone" placeholder="输入联系电话">
+            </div>
+            <div class="input-row">
+                <label>地址：</label>
+                <input type="text" id="address" placeholder="输入地址">
+            </div>
+            <div class="input-row">
+                <label>状态：</label>
+                <select id="siteStatus">
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <button onclick="saveSite()">保存</button>
+                <button onclick="clearSiteForm()">清空</button>
+            </div>
+        </div>
+        <div class="search-box">
+            <input type="text" id="siteSearch" placeholder="搜索站点编号或名称" onkeyup="searchSite()">
+            <button onclick="loadSites()">刷新</button>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>编号</th>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>快递公司</th>
+                    <th>联系人</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="siteTableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="destination" class="page">
+        <h2>目的地管理</h2>
+        <div class="input-area">
+            <h3>添加/编辑目的地</h3>
+            <input type="hidden" id="destId">
+            <div class="input-row">
+                <label>目的地编码：</label>
+                <input type="text" id="destCode" placeholder="输入目的地编码">
+            </div>
+            <div class="input-row">
+                <label>省份：</label>
+                <input type="text" id="province" placeholder="输入省份">
+            </div>
+            <div class="input-row">
+                <label>城市：</label>
+                <input type="text" id="city" placeholder="输入城市">
+            </div>
+            <div class="input-row">
+                <label>区域：</label>
+                <input type="text" id="area" placeholder="输入区域">
+            </div>
+            <div class="input-row">
+                <button onclick="saveDestination()">保存</button>
+                <button onclick="clearDestForm()">清空</button>
+            </div>
+        </div>
+        <div class="search-box">
+            <input type="text" id="destSearch" placeholder="搜索目的地编码或省份" onkeyup="searchDestination()">
+            <button onclick="loadDestinations()">刷新</button>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>编码</th>
+                    <th>省份</th>
+                    <th>城市</th>
+                    <th>区域</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="destTableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="pricerule" class="page">
+        <h2>价格规则管理</h2>
+        <div class="input-area">
+            <h3>添加/编辑价格规则</h3>
+            <input type="hidden" id="ruleId">
+            <div class="input-row">
+                <label>站点：</label>
+                <select id="ruleSiteId"></select>
+            </div>
+            <div class="input-row">
+                <label>目的地：</label>
+                <select id="ruleDestId"></select>
+            </div>
+            <div class="input-row">
+                <label>计费类型：</label>
+                <select id="ruleBillingType">
+                    <option value="1">区间计费(≤5kg)</option>
+                    <option value="2">续重计费(>5kg)</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <label>最小重量：</label>
+                <input type="number" step="0.1" id="ruleMinWeight" placeholder="最小重量(kg)">
+            </div>
+            <div class="input-row">
+                <label>最大重量：</label>
+                <input type="number" step="0.1" id="ruleMaxWeight" placeholder="最大重量(kg)">
+            </div>
+            <div class="input-row">
+                <label>单价：</label>
+                <input type="number" step="0.01" id="ruleUnitPrice" placeholder="单价(元)">
+            </div>
+            <div class="input-row">
+                <label>面单费：</label>
+                <input type="number" step="0.01" id="ruleBaseFee" placeholder="面单费(元)" value="3.5">
+            </div>
+            <div class="input-row">
+                <label>生效日期：</label>
+                <input type="date" id="ruleEffectiveDate">
+            </div>
+            <div class="input-row">
+                <label>状态：</label>
+                <select id="ruleStatus">
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <button onclick="savePriceRule()">保存</button>
+                <button onclick="clearRuleForm()">清空</button>
+            </div>
+        </div>
+        <div class="search-box">
+            <input type="text" id="ruleSearch" placeholder="搜索规则" onkeyup="searchRule()">
+            <button onclick="loadPriceRules()">刷新</button>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>站点</th>
+                    <th>目的地</th>
+                    <th>计费类型</th>
+                    <th>重量范围</th>
+                    <th>单价</th>
+                    <th>面单费</th>
+                    <th>生效日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="ruleTableBody"></tbody>
+        </table>
+        <div class="input-area">
+            <h3>价格计算</h3>
+            <div class="input-row">
+                <label>站点：</label>
+                <select id="calcSiteId"></select>
+            </div>
+            <div class="input-row">
+                <label>目的地：</label>
+                <select id="calcDestId"></select>
+            </div>
+            <div class="input-row">
+                <label>重量(kg)：</label>
+                <input type="number" step="0.1" id="calcWeight" placeholder="输入重量">
+            </div>
+            <div class="input-row">
+                <button onclick="calculatePrice()">计算运费</button>
+            </div>
+            <div id="calcResult" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; display: none;">
+                <h4>计算结果</h4>
+                <p><strong>计费方式：</strong><span id="calcBillingType"></span></p>
+                <p><strong>面单费：</strong><span id="calcBaseFee"></span> 元</p>
+                <p><strong>运费：</strong><span id="calcWeightFee"></span> 元</p>
+                <p><strong>总计：</strong><span id="calcTotal" style="font-size: 18px; color: #dc3545;"></span> 元</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="import" class="page">
+        <h2>价格表导入</h2>
+        <div class="input-area">
+            <h3>上传供应商价格表</h3>
+            <p class="import-hint">
+                支持三级表头格式：第 1-2 行为分类标题，<strong>第 3 行为列名</strong>，第 4 行起为数据（A-M 共 13 列）。
+                工作表名建议为「价格表」。当前仅解析并展示，不写入数据库。
+            </p>
+            <div class="input-row">
+                <label>Excel 文件：</label>
+                <input type="file" id="priceFile" accept=".xlsx,.xlsm">
+            </div>
+            <div class="input-row">
+                <button onclick="importPriceTable()">导入并计算预期价格</button>
+                <button onclick="exportImportResult()" id="btnExportResult" disabled>导出结果 Excel</button>
+                <button onclick="clearImportResult()">清空</button>
+            </div>
+        </div>
+        <div class="import-summary" id="importSummary"></div>
+        <div class="table-wrap">
+            <table class="table" id="importResultTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>行号</th>
+                        <th>生效时间</th>
+                        <th>站点</th>
+                        <th>目的地代码</th>
+                        <th>目的地</th>
+                        <th>0-0.3kg</th>
+                        <th>0.3-0.5kg</th>
+                        <th>0.5-1kg</th>
+                        <th>1-2kg</th>
+                        <th>2-3kg</th>
+                        <th>3-4kg</th>
+                        <th>4-5kg</th>
+                        <th>面单费</th>
+                        <th>续重</th>
+                        <th>预期(1kg)</th>
+                        <th>预期(5kg)</th>
+                        <th>预期(10kg)</th>
+                    </tr>
+                </thead>
+                <tbody id="importTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5001/api";
+        let editSiteId = null;
+        let editDestId = null;
+        let editRuleId = null;
+        let sites = [];
+        let destinations = [];
+        let importResultRows = [];
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            if (pageId === 'site') loadSites();
+            else if (pageId === 'destination') loadDestinations();
+            else if (pageId === 'pricerule') {
+                loadSitesForSelect();
+                loadDestinationsForSelect();
+                loadPriceRules();
+            }
+        }
+
+        function showMessage(msg, success) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + (success ? 'success' : 'error');
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        async function loadSites() {
+            try {
+                const res = await fetch(`${API_URL}/Site`);
+                const result = await res.json();
+                if (result.success) {
+                    sites = result.data;
+                    renderSiteTable(result.data);
+                }
+            } catch (e) {
+                showMessage('加载失败: ' + e.message, false);
+            }
+        }
+
+        function renderSiteTable(data) {
+            const tbody = document.getElementById('siteTableBody');
+            tbody.innerHTML = data.map(s => `
+                <tr>
+                    <td>${s.siteCode}</td>
+                    <td>${s.siteName}</td>
+                    <td>${s.siteType === 1 ? '配送站' : s.siteType === 2 ? '中转站' : '仓库'}</td>
+                    <td>${s.expressCompany}</td>
+                    <td>${s.contactPerson} (${s.contactPhone})</td>
+                    <td><span class="status ${s.status === 1 ? 'active' : 'inactive'}">${s.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td>
+                        <button onclick="editSite(${s.id})">编辑</button>
+                        <button class="danger" onclick="deleteSite(${s.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editSite(id) {
+            const site = sites.find(s => s.id === id);
+            if (site) {
+                editSiteId = id;
+                document.getElementById('siteId').value = site.id;
+                document.getElementById('siteCode').value = site.siteCode;
+                document.getElementById('siteName').value = site.siteName;
+                document.getElementById('siteType').value = site.siteType;
+                document.getElementById('expressCompany').value = site.expressCompany;
+                document.getElementById('contactPerson').value = site.contactPerson;
+                document.getElementById('contactPhone').value = site.contactPhone;
+                document.getElementById('address').value = site.address;
+                document.getElementById('siteStatus').value = site.status;
+            }
+        }
+
+        async function saveSite() {
+            const site = {
+                Id: document.getElementById('siteId').value || 0,
+                SiteCode: document.getElementById('siteCode').value.trim(),
+                SiteName: document.getElementById('siteName').value.trim(),
+                SiteType: parseInt(document.getElementById('siteType').value),
+                ExpressCompany: document.getElementById('expressCompany').value.trim(),
+                ContactPerson: document.getElementById('contactPerson').value.trim(),
+                ContactPhone: document.getElementById('contactPhone').value.trim(),
+                Address: document.getElementById('address').value.trim(),
+                Status: parseInt(document.getElementById('siteStatus').value)
+            };
+
+            if (!site.SiteCode || !site.SiteName) {
+                showMessage('请填写站点编号和名称', false);
+                return;
+            }
+
+            try {
+                const method = editSiteId === null ? 'POST' : 'PUT';
+                const url = editSiteId === null ? `${API_URL}/Site` : `${API_URL}/Site/${editSiteId}`;
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(site)
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('操作成功', true);
+                    clearSiteForm();
+                    loadSites();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('操作失败: ' + e.message, false);
+            }
+        }
+
+        function clearSiteForm() {
+            editSiteId = null;
+            document.getElementById('siteId').value = '';
+            document.getElementById('siteCode').value = '';
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteType').value = '1';
+            document.getElementById('expressCompany').value = '';
+            document.getElementById('contactPerson').value = '';
+            document.getElementById('contactPhone').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('siteStatus').value = '1';
+        }
+
+        async function deleteSite(id) {
+            if (!confirm('确定删除？')) return;
+            try {
+                const res = await fetch(`${API_URL}/Site/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('删除成功', true);
+                    loadSites();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('删除失败: ' + e.message, false);
+            }
+        }
+
+        function searchSite() {
+            const keyword = document.getElementById('siteSearch').value.toLowerCase();
+            const filtered = sites.filter(s => 
+                s.siteCode.toLowerCase().includes(keyword) || 
+                s.siteName.toLowerCase().includes(keyword)
+            );
+            renderSiteTable(filtered);
+        }
+
+        async function loadDestinations() {
+            try {
+                const res = await fetch(`${API_URL}/Destination`);
+                const result = await res.json();
+                if (result.success) {
+                    destinations = result.data;
+                    renderDestTable(result.data);
+                }
+            } catch (e) {
+                showMessage('加载失败: ' + e.message, false);
+            }
+        }
+
+        function renderDestTable(data) {
+            const tbody = document.getElementById('destTableBody');
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td>${d.destCode}</td>
+                    <td>${d.province}</td>
+                    <td>${d.city}</td>
+                    <td>${d.area}</td>
+                    <td>${new Date(d.createTime).toLocaleString()}</td>
+                    <td>
+                        <button onclick="editDestination(${d.id})">编辑</button>
+                        <button class="danger" onclick="deleteDestination(${d.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editDestination(id) {
+            const dest = destinations.find(d => d.id === id);
+            if (dest) {
+                editDestId = id;
+                document.getElementById('destId').value = dest.id;
+                document.getElementById('destCode').value = dest.destCode;
+                document.getElementById('province').value = dest.province;
+                document.getElementById('city').value = dest.city;
+                document.getElementById('area').value = dest.area;
+            }
+        }
+
+        async function saveDestination() {
+            const dest = {
+                Id: document.getElementById('destId').value || 0,
+                DestCode: document.getElementById('destCode').value.trim(),
+                Province: document.getElementById('province').value.trim(),
+                City: document.getElementById('city').value.trim(),
+                Area: document.getElementById('area').value.trim()
+            };
+
+            if (!dest.DestCode || !dest.Province) {
+                showMessage('请填写目的地编码和省份', false);
+                return;
+            }
+
+            try {
+                const method = editDestId === null ? 'POST' : 'PUT';
+                const url = editDestId === null ? `${API_URL}/Destination` : `${API_URL}/Destination/${editDestId}`;
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dest)
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('操作成功', true);
+                    clearDestForm();
+                    loadDestinations();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('操作失败: ' + e.message, false);
+            }
+        }
+
+        function clearDestForm() {
+            editDestId = null;
+            document.getElementById('destId').value = '';
+            document.getElementById('destCode').value = '';
+            document.getElementById('province').value = '';
+            document.getElementById('city').value = '';
+            document.getElementById('area').value = '';
+        }
+
+        async function deleteDestination(id) {
+            if (!confirm('确定删除？')) return;
+            try {
+                const res = await fetch(`${API_URL}/Destination/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('删除成功', true);
+                    loadDestinations();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('删除失败: ' + e.message, false);
+            }
+        }
+
+        function searchDestination() {
+            const keyword = document.getElementById('destSearch').value.toLowerCase();
+            const filtered = destinations.filter(d => 
+                d.destCode.toLowerCase().includes(keyword) || 
+                d.province.toLowerCase().includes(keyword)
+            );
+            renderDestTable(filtered);
+        }
+
+        async function loadSitesForSelect() {
+            const res = await fetch(`${API_URL}/Site`);
+            const result = await res.json();
+            if (result.success) {
+                sites = result.data;
+                const select = document.getElementById('ruleSiteId');
+                select.innerHTML = sites.map(s => `<option value="${s.id}">${s.siteCode} - ${s.siteName}</option>`).join('');
+                document.getElementById('calcSiteId').innerHTML = select.innerHTML;
+            }
+        }
+
+        async function loadDestinationsForSelect() {
+            const res = await fetch(`${API_URL}/Destination`);
+            const result = await res.json();
+            if (result.success) {
+                destinations = result.data;
+                const select = document.getElementById('ruleDestId');
+                select.innerHTML = destinations.map(d => `<option value="${d.id}">${d.destCode} - ${d.province}</option>`).join('');
+                document.getElementById('calcDestId').innerHTML = select.innerHTML;
+            }
+        }
+
+        async function loadPriceRules() {
+            try {
+                const res = await fetch(`${API_URL}/PriceRule`);
+                const result = await res.json();
+                if (result.success) {
+                    renderRuleTable(result.data);
+                }
+            } catch (e) {
+                showMessage('加载失败: ' + e.message, false);
+            }
+        }
+
+        function renderRuleTable(data) {
+            const tbody = document.getElementById('ruleTableBody');
+            tbody.innerHTML = data.map(r => `
+                <tr>
+                    <td>${getSiteName(r.siteId)}</td>
+                    <td>${getDestName(r.destId)}</td>
+                    <td>${r.billingType === 1 ? '区间计费' : '续重计费'}</td>
+                    <td>${r.minWeight} - ${r.maxWeight} kg</td>
+                    <td>${r.unitPrice.toFixed(2)} 元</td>
+                    <td>${r.baseFee.toFixed(2)} 元</td>
+                    <td>${new Date(r.effectiveDate).toLocaleDateString()}</td>
+                    <td><span class="status ${r.status === 1 ? 'active' : 'inactive'}">${r.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td>
+                        <button onclick="editPriceRule(${r.id})">编辑</button>
+                        <button class="danger" onclick="deletePriceRule(${r.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getSiteName(id) {
+            const site = sites.find(s => s.id === id);
+            return site ? `${site.siteCode} - ${site.siteName}` : id;
+        }
+
+        function getDestName(id) {
+            const dest = destinations.find(d => d.id === id);
+            return dest ? `${dest.destCode} - ${dest.province}` : id;
+        }
+
+        async function editPriceRule(id) {
+            const res = await fetch(`${API_URL}/PriceRule/${id}`);
+            const result = await res.json();
+            if (result.success) {
+                const rule = result.data;
+                editRuleId = id;
+                document.getElementById('ruleId').value = rule.id;
+                document.getElementById('ruleSiteId').value = rule.siteId;
+                document.getElementById('ruleDestId').value = rule.destId;
+                document.getElementById('ruleBillingType').value = rule.billingType;
+                document.getElementById('ruleMinWeight').value = rule.minWeight;
+                document.getElementById('ruleMaxWeight').value = rule.maxWeight;
+                document.getElementById('ruleUnitPrice').value = rule.unitPrice;
+                document.getElementById('ruleBaseFee').value = rule.baseFee;
+                document.getElementById('ruleEffectiveDate').value = new Date(rule.effectiveDate).toISOString().split('T')[0];
+                document.getElementById('ruleStatus').value = rule.status;
+            }
+        }
+
+        async function savePriceRule() {
+            const rule = {
+                Id: document.getElementById('ruleId').value || 0,
+                SiteId: parseInt(document.getElementById('ruleSiteId').value),
+                DestId: parseInt(document.getElementById('ruleDestId').value),
+                BillingType: parseInt(document.getElementById('ruleBillingType').value),
+                MinWeight: parseFloat(document.getElementById('ruleMinWeight').value),
+                MaxWeight: parseFloat(document.getElementById('ruleMaxWeight').value),
+                UnitPrice: parseFloat(document.getElementById('ruleUnitPrice').value),
+                BaseFee: parseFloat(document.getElementById('ruleBaseFee').value),
+                EffectiveDate: document.getElementById('ruleEffectiveDate').value,
+                Status: parseInt(document.getElementById('ruleStatus').value)
+            };
+
+            if (!rule.MinWeight && rule.MinWeight !== 0 || !rule.MaxWeight || !rule.UnitPrice) {
+                showMessage('请填写完整的价格信息', false);
+                return;
+            }
+
+            try {
+                const method = editRuleId === null ? 'POST' : 'PUT';
+                const url = editRuleId === null ? `${API_URL}/PriceRule` : `${API_URL}/PriceRule/${editRuleId}`;
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rule)
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('操作成功', true);
+                    clearRuleForm();
+                    loadPriceRules();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('操作失败: ' + e.message, false);
+            }
+        }
+
+        function clearRuleForm() {
+            editRuleId = null;
+            document.getElementById('ruleId').value = '';
+            document.getElementById('ruleSiteId').value = sites.length > 0 ? sites[0].id : '';
+            document.getElementById('ruleDestId').value = destinations.length > 0 ? destinations[0].id : '';
+            document.getElementById('ruleBillingType').value = '1';
+            document.getElementById('ruleMinWeight').value = '';
+            document.getElementById('ruleMaxWeight').value = '';
+            document.getElementById('ruleUnitPrice').value = '';
+            document.getElementById('ruleBaseFee').value = '3.5';
+            document.getElementById('ruleEffectiveDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ruleStatus').value = '1';
+        }
+
+        async function deletePriceRule(id) {
+            if (!confirm('确定删除？')) return;
+            try {
+                const res = await fetch(`${API_URL}/PriceRule/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('删除成功', true);
+                    loadPriceRules();
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('删除失败: ' + e.message, false);
+            }
+        }
+
+        function searchRule() {
+            loadPriceRules();
+        }
+
+        async function calculatePrice() {
+            const req = {
+                SiteId: parseInt(document.getElementById('calcSiteId').value),
+                DestId: parseInt(document.getElementById('calcDestId').value),
+                Weight: parseFloat(document.getElementById('calcWeight').value),
+                OrderDate: new Date().toISOString().split('T')[0]
+            };
+
+            if (!req.Weight || req.Weight <= 0) {
+                showMessage('请输入有效重量', false);
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/PriceRule/calculate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req)
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    const data = result.data;
+                    document.getElementById('calcBillingType').textContent = data.billingType;
+                    document.getElementById('calcBaseFee').textContent = data.baseFee.toFixed(2);
+                    document.getElementById('calcWeightFee').textContent = data.weightFee.toFixed(2);
+                    document.getElementById('calcTotal').textContent = data.totalPrice.toFixed(2);
+                    document.getElementById('calcResult').style.display = 'block';
+                } else {
+                    showMessage(result.message, false);
+                }
+            } catch (e) {
+                showMessage('计算失败: ' + e.message, false);
+            }
+        }
+
+        async function importPriceTable() {
+            const fileInput = document.getElementById('priceFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${API_URL}/Import/price-table`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (!result.success) {
+                    showMessage(result.message || '导入失败', false);
+                    return;
+                }
+
+                const data = result.data;
+                importResultRows = data.rows || [];
+                renderImportTable(importResultRows);
+
+                const summary = document.getElementById('importSummary');
+                summary.style.display = 'block';
+                summary.innerHTML = `
+                    <strong>导入成功</strong> — 工作表「${data.sheetName}」，
+                    表头第 ${data.headerRow} 行，数据从第 ${data.dataStartRow} 行起，
+                    共解析 <strong>${data.totalRows}</strong> 条。
+                    ${(data.warnings && data.warnings.length) ? '<br>提示：' + data.warnings.join('；') : ''}
+                `;
+                document.getElementById('btnExportResult').disabled = importResultRows.length === 0;
+                showMessage(`成功导入 ${data.totalRows} 条`, true);
+            } catch (e) {
+                showMessage('导入失败: ' + e.message, false);
+            }
+        }
+
+        function fmt(v) {
+            return v == null ? '-' : Number(v).toFixed(2);
+        }
+
+        function renderImportTable(rows) {
+            const table = document.getElementById('importResultTable');
+            const tbody = document.getElementById('importTableBody');
+            if (!rows.length) {
+                table.style.display = 'none';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            table.style.display = 'table';
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${r.rowNumber}</td>
+                    <td>${r.effectiveDate ? new Date(r.effectiveDate).toLocaleDateString() : '-'}</td>
+                    <td>${r.siteCode}</td>
+                    <td>${r.destCode}</td>
+                    <td>${r.destination}</td>
+                    <td>${fmt(r.price_0_0_3)}</td>
+                    <td>${fmt(r.price_0_3_0_5)}</td>
+                    <td>${fmt(r.price_0_5_1)}</td>
+                    <td>${fmt(r.price_1_2)}</td>
+                    <td>${fmt(r.price_2_3)}</td>
+                    <td>${fmt(r.price_3_4)}</td>
+                    <td>${fmt(r.price_4_5)}</td>
+                    <td>${fmt(r.baseFee)}</td>
+                    <td>${fmt(r.additionalUnitPrice)}</td>
+                    <td><strong>${fmt(r.expectedPrice1Kg)}</strong></td>
+                    <td><strong>${fmt(r.expectedPrice5Kg)}</strong></td>
+                    <td><strong>${fmt(r.expectedPrice10Kg)}</strong></td>
+                </tr>
+            `).join('');
+        }
+
+        async function exportImportResult() {
+            if (!importResultRows.length) {
+                showMessage('没有可导出的数据', false);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/Import/price-table/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(importResultRows)
+                });
+                if (!res.ok) {
+                    showMessage('导出失败', false);
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `价格表导入结果_${new Date().toISOString().slice(0,10)}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('导出成功', true);
+            } catch (e) {
+                showMessage('导出失败: ' + e.message, false);
+            }
+        }
+
+        function clearImportResult() {
+            importResultRows = [];
+            document.getElementById('priceFile').value = '';
+            document.getElementById('importSummary').style.display = 'none';
+            document.getElementById('importResultTable').style.display = 'none';
+            document.getElementById('importTableBody').innerHTML = '';
+            document.getElementById('btnExportResult').disabled = true;
+        }
+
+        window.onload = () => {
+            showPage('site');
+        };
+    </script>
+</body>
+</html>

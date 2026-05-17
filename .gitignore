@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.log
+
+## IDE
+.vs/
+.idea/
+*.swp
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Secrets (do not commit)
+appsettings.Development.json
+*.pfx
