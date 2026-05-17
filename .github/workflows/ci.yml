@@ -19,7 +19,10 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Restore
-        run: dotnet restore CloudWarehouse.Backend/CloudWarehouse.Backend.csproj
+        run: dotnet restore CloudWarehouse.sln
 
       - name: Build
-        run: dotnet build CloudWarehouse.Backend/CloudWarehouse.Backend.csproj --no-restore -c Release
+        run: dotnet build CloudWarehouse.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test CloudWarehouse.sln --no-build -c Release --verbosity normal

@@ -1,0 +1,80 @@
+using CloudWarehouse.Backend.Helpers;
+using CloudWarehouse.Tests.Helpers;
+
+namespace CloudWarehouse.Tests;
+
+public class ExcelHelperTests
+{
+    [Fact]
+    public void ReadPriceTable_ValidWorkbook_ParsesRowsAndExpectedPrices()
+    {
+        using var stream = PriceTableExcelFactory.CreateValidWorkbook(
+            ws => PriceTableExcelFactory.FillSampleRow(ws, 4, "11", "安徽省"),
+            ws => PriceTableExcelFactory.FillSampleRow(ws, 5, "12", "福建省"));
+
+        var result = ExcelHelper.ReadPriceTable(stream);
+
+        Assert.Equal("价格表", result.SheetName);
+        Assert.Equal(3, result.HeaderRow);
+        Assert.Equal(4, result.DataStartRow);
+        Assert.Equal(2, result.TotalRows);
+        Assert.Empty(result.Warnings);
+
+        var anhui = result.Rows[0];
+        Assert.Equal(4, anhui.RowNumber);
+        Assert.Equal("C001", anhui.SiteCode);
+        Assert.Equal("11", anhui.DestCode);
+        Assert.Equal("安徽省", anhui.Destination);
+        Assert.Equal(3.5m, anhui.BaseFee);
+        Assert.Equal(0.7m, anhui.AdditionalUnitPrice);
+        Assert.Equal(5.6m, anhui.ExpectedPrice1Kg);
+        Assert.Equal(9.5m, anhui.ExpectedPrice5Kg);
+        Assert.Equal(7.0m, anhui.ExpectedPrice10Kg);
+    }
+
+    [Fact]
+    public void ReadPriceTable_InvalidHeader_Throws()
+    {
+        using var stream = PriceTableExcelFactory.CreateInvalidHeaderWorkbook();
+        var ex = Assert.Throws<InvalidOperationException>(() => ExcelHelper.ReadPriceTable(stream));
+        Assert.Contains("生效时间", ex.Message);
+    }
+
+    [Fact]
+    public void ReadPriceTable_NoDataRows_AddsWarning()
+    {
+        using var stream = PriceTableExcelFactory.CreateValidWorkbook();
+        // 仅表头，无数据行 configurators 默认有一行 - 需要只有表头
+
+        using var emptyStream = CreateHeaderOnlyWorkbook();
+        var result = ExcelHelper.ReadPriceTable(emptyStream);
+
+        Assert.Equal(0, result.TotalRows);
+        Assert.Contains(result.Warnings, w => w.Contains("未解析到有效数据行"));
+    }
+
+    [Fact]
+    public void ExportPriceTableResult_ReturnsNonEmptyXlsx()
+    {
+        using var stream = PriceTableExcelFactory.CreateValidWorkbook();
+        var import = ExcelHelper.ReadPriceTable(stream);
+
+        var bytes = ExcelHelper.ExportPriceTableResult(import.Rows);
+
+        Assert.NotEmpty(bytes);
+        Assert.Equal(0x50, bytes[0]); // PK zip header
+        Assert.Equal(0x4B, bytes[1]);
+    }
+
+    private static MemoryStream CreateHeaderOnlyWorkbook()
+    {
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var ws = workbook.AddWorksheet("价格表");
+        ws.Cell(3, 1).Value = "生效时间";
+        ws.Cell(3, 2).Value = "站点编号";
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
+}
