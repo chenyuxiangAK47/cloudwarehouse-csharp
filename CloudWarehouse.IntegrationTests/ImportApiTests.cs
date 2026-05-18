@@ -21,7 +21,7 @@ public class ImportApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
         using var stream = PriceTableExcelFactory.CreateValidWorkbook();
         using var content = BuildFileContent(stream, "价格表.xlsx");
 
-        var response = await _client.PostAsync("/api/Import/price-table", content);
+        var response = await _client.PostAsync("/api/Import/price-table/preview", content);
         var body = await JsonTestHelper.ReadApiAsync<ApiResponse<PriceTableImportResult>>(response);
 
         Assert.NotNull(body);
@@ -29,6 +29,15 @@ public class ImportApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
         Assert.NotNull(body.Data);
         Assert.Equal(1, body.Data.TotalRows);
         Assert.Equal(5.6m, body.Data.Rows[0].ExpectedPrice1Kg);
+    }
+
+    [Fact]
+    public async Task DownloadStandardTemplate_ReturnsXlsx()
+    {
+        var response = await _client.GetAsync("/api/Import/price-table/template");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 100);
     }
 
     [Fact]
@@ -68,7 +77,7 @@ public class ImportApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
         var body = await JsonTestHelper.ReadApiAsync<ApiResponse<PriceTableImportResult>>(response);
 
         Assert.False(body!.Success);
-        Assert.Contains("生效时间", body.Message);
+        Assert.Contains("无法识别", body!.Message);
     }
 
     [Fact]
@@ -76,7 +85,7 @@ public class ImportApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
     {
         using var stream = PriceTableExcelFactory.CreateValidWorkbook();
         using var importContent = BuildFileContent(stream, "价格表.xlsx");
-        var importResponse = await _client.PostAsync("/api/Import/price-table", importContent);
+        var importResponse = await _client.PostAsync("/api/Import/price-table/preview", importContent);
         var importBody = await JsonTestHelper.ReadApiAsync<ApiResponse<PriceTableImportResult>>(importResponse);
 
         var exportResponse = await _client.PostAsJsonAsync(

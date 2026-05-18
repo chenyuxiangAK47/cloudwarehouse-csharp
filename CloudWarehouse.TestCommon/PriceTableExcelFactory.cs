@@ -66,6 +66,34 @@ public static class PriceTableExcelFactory
         return stream;
     }
 
+    public static MemoryStream CreateStandardFormatWorkbook(
+        params Action<IXLWorksheet>[] dataRowConfigurators)
+    {
+        using var workbook = new XLWorkbook();
+        var ws = workbook.AddWorksheet("价格表");
+
+        var headers = new[]
+        {
+            "生效时间", "站点编号", "目的地代码", "目的地",
+            "0kg<X<=0.3kg", "0.3kg<X<=0.5kg", "0.5kg<X<=1kg",
+            "1kg<X<=2kg", "2kg<X<=3kg", "3kg<X<=4kg", "4kg<X<=5kg",
+            "面单费", "续重(元/kg)"
+        };
+        for (int i = 0; i < headers.Length; i++)
+            ws.Cell(1, i + 1).Value = headers[i];
+
+        foreach (var configure in dataRowConfigurators)
+            configure(ws);
+
+        if (dataRowConfigurators.Length == 0)
+            FillSampleRow(ws, 2, "11", "安徽省");
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
+
     public static MemoryStream CreateHeaderOnlyWorkbook()
     {
         using var workbook = new XLWorkbook();

@@ -6,6 +6,28 @@ namespace CloudWarehouse.Tests;
 public class ExcelHelperTests
 {
     [Fact]
+    public void ReadPriceTable_StandardFormat_ParsesFromRow2()
+    {
+        using var stream = PriceTableExcelFactory.CreateStandardFormatWorkbook();
+        var result = ExcelHelper.ReadPriceTable(stream);
+
+        Assert.Equal("标准格式", result.Format);
+        Assert.Equal(1, result.HeaderRow);
+        Assert.Equal(2, result.DataStartRow);
+        Assert.Equal(1, result.TotalRows);
+    }
+
+    [Fact]
+    public void CreateStandardPriceTableTemplate_ReturnsValidXlsx()
+    {
+        var bytes = ExcelHelper.CreateStandardPriceTableTemplate();
+        Assert.True(bytes.Length > 100);
+        using var stream = new MemoryStream(bytes);
+        var result = ExcelHelper.ReadPriceTable(stream);
+        Assert.Equal("标准格式", result.Format);
+    }
+
+    [Fact]
     public void ReadPriceTable_ValidWorkbook_ParsesRowsAndExpectedPrices()
     {
         using var stream = PriceTableExcelFactory.CreateValidWorkbook(
@@ -37,7 +59,7 @@ public class ExcelHelperTests
     {
         using var stream = PriceTableExcelFactory.CreateInvalidHeaderWorkbook();
         var ex = Assert.Throws<InvalidOperationException>(() => ExcelHelper.ReadPriceTable(stream));
-        Assert.Contains("生效时间", ex.Message);
+        Assert.Contains("无法识别", ex.Message);
     }
 
     [Fact]

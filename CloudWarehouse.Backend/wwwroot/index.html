@@ -271,8 +271,9 @@
     </div>
 
     <div id="pricerule" class="page">
-        <h2>价格规则管理</h2>
-        <div class="input-area">
+        <h2>价格规则（由 Excel 导入维护）</h2>
+        <p class="import-hint">规则通过「价格表导入」写入，此处仅查看与试算。</p>
+        <div class="input-area" style="display:none">
             <h3>添加/编辑价格规则</h3>
             <input type="hidden" id="ruleId">
             <div class="input-row">
@@ -337,13 +338,12 @@
                     <th>面单费</th>
                     <th>生效日期</th>
                     <th>状态</th>
-                    <th>操作</th>
                 </tr>
             </thead>
             <tbody id="ruleTableBody"></tbody>
         </table>
         <div class="input-area">
-            <h3>价格计算</h3>
+            <h3>运费试算（按已导入规则）</h3>
             <div class="input-row">
                 <label>站点：</label>
                 <select id="calcSiteId"></select>
@@ -372,17 +372,22 @@
     <div id="import" class="page">
         <h2>价格表导入</h2>
         <div class="input-area">
-            <h3>上传供应商价格表</h3>
+            <h3>上传价格表</h3>
             <p class="import-hint">
-                支持三级表头格式：第 1-2 行为分类标题，<strong>第 3 行为列名</strong>，第 4 行起为数据（A-M 共 13 列）。
-                工作表名建议为「价格表」。当前仅解析并展示，不写入数据库。
+                推荐先 <strong>下载标准模板</strong> 填写（第 1 行表头、第 2 行起数据）。
+                也兼容供应商三级表头（第 3 行表头）。导入前请确保站点编号、目的地代码已在系统中存在。
+                同一站点+目的地路线：有规则则整批替换，无则新增。任一行校验失败则全部不入库。
             </p>
+            <div class="input-row">
+                <button onclick="downloadPriceTemplate()">下载标准模板</button>
+            </div>
             <div class="input-row">
                 <label>Excel 文件：</label>
                 <input type="file" id="priceFile" accept=".xlsx,.xlsm">
             </div>
             <div class="input-row">
-                <button onclick="importPriceTable()">导入并计算预期价格</button>
+                <button onclick="previewPriceTable()">预览解析</button>
+                <button onclick="importPriceTable()">确认导入到数据库</button>
                 <button onclick="exportImportResult()" id="btnExportResult" disabled>导出结果 Excel</button>
                 <button onclick="clearImportResult()">清空</button>
             </div>
@@ -393,6 +398,7 @@
                 <thead>
                     <tr>
                         <th>行号</th>
+                        <th>状态</th>
                         <th>生效时间</th>
                         <th>站点</th>
                         <th>目的地代码</th>
@@ -420,7 +426,6 @@
         const API_URL = "http://localhost:5001/api";
         let editSiteId = null;
         let editDestId = null;
-        let editRuleId = null;
         let sites = [];
         let destinations = [];
         let importResultRows = [];
@@ -690,9 +695,8 @@
             const result = await res.json();
             if (result.success) {
                 sites = result.data;
-                const select = document.getElementById('ruleSiteId');
-                select.innerHTML = sites.map(s => `<option value="${s.id}">${s.siteCode} - ${s.siteName}</option>`).join('');
-                document.getElementById('calcSiteId').innerHTML = select.innerHTML;
+                document.getElementById('calcSiteId').innerHTML = sites.map(s =>
+                    `<option value="${s.id}">${s.siteCode} - ${s.siteName}</option>`).join('');
             }
         }
 
@@ -701,9 +705,8 @@
             const result = await res.json();
             if (result.success) {
                 destinations = result.data;
-                const select = document.getElementById('ruleDestId');
-                select.innerHTML = destinations.map(d => `<option value="${d.id}">${d.destCode} - ${d.province}</option>`).join('');
-                document.getElementById('calcDestId').innerHTML = select.innerHTML;
+                document.getElementById('calcDestId').innerHTML = destinations.map(d =>
+                    `<option value="${d.id}">${d.destCode} - ${d.province}</option>`).join('');
             }
         }
 
@@ -731,10 +734,6 @@
                     <td>${r.baseFee.toFixed(2)} 元</td>
                     <td>${new Date(r.effectiveDate).toLocaleDateString()}</td>
                     <td><span class="status ${r.status === 1 ? 'active' : 'inactive'}">${r.status === 1 ? '启用' : '禁用'}</span></td>
-                    <td>
-                        <button onclick="editPriceRule(${r.id})">编辑</button>
-                        <button class="danger" onclick="deletePriceRule(${r.id})">删除</button>
-                    </td>
                 </tr>
             `).join('');
         }
@@ -747,101 +746,6 @@
         function getDestName(id) {
             const dest = destinations.find(d => d.id === id);
             return dest ? `${dest.destCode} - ${dest.province}` : id;
-        }
-
-        async function editPriceRule(id) {
-            const res = await fetch(`${API_URL}/PriceRule/${id}`);
-            const result = await res.json();
-            if (result.success) {
-                const rule = result.data;
-                editRuleId = id;
-                document.getElementById('ruleId').value = rule.id;
-                document.getElementById('ruleSiteId').value = rule.siteId;
-                document.getElementById('ruleDestId').value = rule.destId;
-                document.getElementById('ruleBillingType').value = rule.billingType;
-                document.getElementById('ruleMinWeight').value = rule.minWeight;
-                document.getElementById('ruleMaxWeight').value = rule.maxWeight;
-                document.getElementById('ruleUnitPrice').value = rule.unitPrice;
-                document.getElementById('ruleBaseFee').value = rule.baseFee;
-                document.getElementById('ruleEffectiveDate').value = new Date(rule.effectiveDate).toISOString().split('T')[0];
-                document.getElementById('ruleStatus').value = rule.status;
-            }
-        }
-
-        async function savePriceRule() {
-            const rule = {
-                Id: document.getElementById('ruleId').value || 0,
-                SiteId: parseInt(document.getElementById('ruleSiteId').value),
-                DestId: parseInt(document.getElementById('ruleDestId').value),
-                BillingType: parseInt(document.getElementById('ruleBillingType').value),
-                MinWeight: parseFloat(document.getElementById('ruleMinWeight').value),
-                MaxWeight: parseFloat(document.getElementById('ruleMaxWeight').value),
-                UnitPrice: parseFloat(document.getElementById('ruleUnitPrice').value),
-                BaseFee: parseFloat(document.getElementById('ruleBaseFee').value),
-                EffectiveDate: document.getElementById('ruleEffectiveDate').value,
-                Status: parseInt(document.getElementById('ruleStatus').value)
-            };
-
-            if (!rule.MinWeight && rule.MinWeight !== 0 || !rule.MaxWeight || !rule.UnitPrice) {
-                showMessage('请填写完整的价格信息', false);
-                return;
-            }
-
-            try {
-                const method = editRuleId === null ? 'POST' : 'PUT';
-                const url = editRuleId === null ? `${API_URL}/PriceRule` : `${API_URL}/PriceRule/${editRuleId}`;
-                
-                const res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(rule)
-                });
-                
-                const result = await res.json();
-                if (result.success) {
-                    showMessage('操作成功', true);
-                    clearRuleForm();
-                    loadPriceRules();
-                } else {
-                    showMessage(result.message, false);
-                }
-            } catch (e) {
-                showMessage('操作失败: ' + e.message, false);
-            }
-        }
-
-        function clearRuleForm() {
-            editRuleId = null;
-            document.getElementById('ruleId').value = '';
-            document.getElementById('ruleSiteId').value = sites.length > 0 ? sites[0].id : '';
-            document.getElementById('ruleDestId').value = destinations.length > 0 ? destinations[0].id : '';
-            document.getElementById('ruleBillingType').value = '1';
-            document.getElementById('ruleMinWeight').value = '';
-            document.getElementById('ruleMaxWeight').value = '';
-            document.getElementById('ruleUnitPrice').value = '';
-            document.getElementById('ruleBaseFee').value = '3.5';
-            document.getElementById('ruleEffectiveDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('ruleStatus').value = '1';
-        }
-
-        async function deletePriceRule(id) {
-            if (!confirm('确定删除？')) return;
-            try {
-                const res = await fetch(`${API_URL}/PriceRule/${id}`, { method: 'DELETE' });
-                const result = await res.json();
-                if (result.success) {
-                    showMessage('删除成功', true);
-                    loadPriceRules();
-                } else {
-                    showMessage(result.message, false);
-                }
-            } catch (e) {
-                showMessage('删除失败: ' + e.message, false);
-            }
-        }
-
-        function searchRule() {
-            loadPriceRules();
         }
 
         async function calculatePrice() {
@@ -880,44 +784,55 @@
             }
         }
 
-        async function importPriceTable() {
+        function downloadPriceTemplate() {
+            window.location.href = `${API_URL}/Import/price-table/template`;
+        }
+
+        async function uploadPriceFile(endpoint, successMsg) {
             const fileInput = document.getElementById('priceFile');
             if (!fileInput.files || fileInput.files.length === 0) {
                 showMessage('请选择 Excel 文件', false);
                 return;
             }
-
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-
             try {
-                const res = await fetch(`${API_URL}/Import/price-table`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const res = await fetch(`${API_URL}/Import/${endpoint}`, { method: 'POST', body: formData });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '导入失败', false);
+                    showMessage(result.message || '操作失败', false);
                     return;
                 }
-
-                const data = result.data;
-                importResultRows = data.rows || [];
-                renderImportTable(importResultRows);
-
-                const summary = document.getElementById('importSummary');
-                summary.style.display = 'block';
-                summary.innerHTML = `
-                    <strong>导入成功</strong> — 工作表「${data.sheetName}」，
-                    表头第 ${data.headerRow} 行，数据从第 ${data.dataStartRow} 行起，
-                    共解析 <strong>${data.totalRows}</strong> 条。
-                    ${(data.warnings && data.warnings.length) ? '<br>提示：' + data.warnings.join('；') : ''}
-                `;
-                document.getElementById('btnExportResult').disabled = importResultRows.length === 0;
-                showMessage(`成功导入 ${data.totalRows} 条`, true);
+                showImportResult(result.data, successMsg);
             } catch (e) {
-                showMessage('导入失败: ' + e.message, false);
+                showMessage('操作失败: ' + e.message, false);
             }
+        }
+
+        function previewPriceTable() {
+            uploadPriceFile('price-table/preview', '预览完成');
+        }
+
+        function importPriceTable() {
+            if (!confirm('确认将价格表写入数据库？任一行校验失败将整批回滚。')) return;
+            uploadPriceFile('price-table', '已写入数据库');
+        }
+
+        function showImportResult(data, title) {
+            importResultRows = data.rows || [];
+            renderImportTable(importResultRows);
+            const summary = document.getElementById('importSummary');
+            summary.style.display = 'block';
+            const errCount = importResultRows.filter(r => r.errorMessage).length;
+            summary.innerHTML = `
+                <strong>${title}</strong> — 格式：${data.format || '-'}，工作表「${data.sheetName}」，
+                表头第 ${data.headerRow} 行，共 <strong>${data.totalRows}</strong> 条。
+                ${data.savedToDatabase ? `已写入规则 <strong>${data.rulesUpserted}</strong> 条。` : ''}
+                ${errCount ? `<br><span style="color:#721c24">校验失败 ${errCount} 行（未入库）</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>提示：' + data.warnings.join('；') : ''}
+            `;
+            document.getElementById('btnExportResult').disabled = importResultRows.length === 0;
+            showMessage(title, !errCount);
         }
 
         function fmt(v) {
@@ -935,8 +850,9 @@
 
             table.style.display = 'table';
             tbody.innerHTML = rows.map(r => `
-                <tr>
+                <tr style="${r.errorMessage ? 'background:#fff5f5' : ''}">
                     <td>${r.rowNumber}</td>
+                    <td>${r.errorMessage ? r.errorMessage : '✓'}</td>
                     <td>${r.effectiveDate ? new Date(r.effectiveDate).toLocaleDateString() : '-'}</td>
                     <td>${r.siteCode}</td>
                     <td>${r.destCode}</td>

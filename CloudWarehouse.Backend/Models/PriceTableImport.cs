@@ -26,14 +26,21 @@ public class PriceTableRow
     public decimal? ExpectedPrice5Kg { get; set; }
     /// <summary>按规则试算：10kg 预期总价（面单费 + 续重）</summary>
     public decimal? ExpectedPrice10Kg { get; set; }
+
+    public long? SiteId { get; set; }
+    public long? DestId { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 public class PriceTableImportResult
 {
     public string SheetName { get; set; } = string.Empty;
+    public string Format { get; set; } = string.Empty;
     public int HeaderRow { get; set; }
     public int DataStartRow { get; set; }
     public int TotalRows { get; set; }
+    public int RulesUpserted { get; set; }
+    public bool SavedToDatabase { get; set; }
     public List<PriceTableRow> Rows { get; set; } = [];
     public List<string> Warnings { get; set; } = [];
 }
