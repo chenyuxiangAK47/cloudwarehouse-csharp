@@ -7,7 +7,7 @@ on:
     branches: [main, master]
 
 jobs:
-  build:
+  build-test-coverage:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +21,35 @@ jobs:
       - name: Restore
         run: dotnet restore CloudWarehouse.sln
 
-      - name: Build
-        run: dotnet build CloudWarehouse.sln --no-restore -c Release
+      - name: Test with coverage
+        run: >
+          dotnet test CloudWarehouse.sln -c Release
+          --settings coverlet.runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage
+          --verbosity normal
 
-      - name: Test
-        run: dotnet test CloudWarehouse.sln --no-build -c Release --verbosity normal
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.4.1
+
+      - name: Generate coverage report
+        run: >
+          reportgenerator
+          "-reports:coverage/**/coverage.cobertura.xml"
+          "-targetdir:coveragereport"
+          "-reporttypes:Html;TextSummary"
+
+      - name: Print coverage summary
+        run: cat coveragereport/Summary.txt
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coveragereport/
+
+      - name: Upload raw coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-cobertura
+          path: coverage/

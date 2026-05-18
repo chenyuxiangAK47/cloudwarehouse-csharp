@@ -1,6 +1,7 @@
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://localhost:5001");
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.WebHost.UseUrls("http://localhost:5001");
 
 builder.Services.AddControllers();
 builder.Services.AddCors(p => p.AddPolicy("AllowAll", b =>
@@ -11,7 +12,10 @@ builder.Services.AddCors(p => p.AddPolicy("AllowAll", b =>
 var app = builder.Build();
 
 app.UseCors("AllowAll");
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+public partial class Program;

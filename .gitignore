@@ -8,6 +8,11 @@ obj/
 *.pdb
 *.log
 
+## Test coverage
+coverage/
+coveragereport/
+TestResults/
+
 ## IDE
 .vs/
 .idea/

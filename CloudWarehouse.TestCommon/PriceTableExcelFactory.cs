@@ -1,9 +1,9 @@
 using ClosedXML.Excel;
 
-namespace CloudWarehouse.Tests.Helpers;
+namespace CloudWarehouse.TestCommon;
 
-/// <summary>在内存中构造三级表头价格表，用于 Excel 解析单测。</summary>
-internal static class PriceTableExcelFactory
+/// <summary>在内存中构造三级表头价格表，供单元测试与集成测试复用。</summary>
+public static class PriceTableExcelFactory
 {
     public static MemoryStream CreateValidWorkbook(params Action<IXLWorksheet>[] dataRowConfigurators)
     {
@@ -25,17 +25,11 @@ internal static class PriceTableExcelFactory
         ws.Cell(3, 12).Value = "面单费";
         ws.Cell(3, 13).Value = "续重(元/kg)";
 
-        int row = 4;
         foreach (var configure in dataRowConfigurators)
-        {
             configure(ws);
-            row++;
-        }
 
         if (dataRowConfigurators.Length == 0)
-        {
             FillSampleRow(ws, 4, "11", "安徽省");
-        }
 
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
@@ -65,6 +59,19 @@ internal static class PriceTableExcelFactory
         using var workbook = new XLWorkbook();
         var ws = workbook.AddWorksheet("价格表");
         ws.Cell(3, 1).Value = "错误表头";
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
+
+    public static MemoryStream CreateHeaderOnlyWorkbook()
+    {
+        using var workbook = new XLWorkbook();
+        var ws = workbook.AddWorksheet("价格表");
+        ws.Cell(3, 1).Value = "生效时间";
+        ws.Cell(3, 2).Value = "站点编号";
 
         var stream = new MemoryStream();
         workbook.SaveAs(stream);

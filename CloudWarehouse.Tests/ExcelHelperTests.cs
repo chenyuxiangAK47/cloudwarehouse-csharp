@@ -1,5 +1,5 @@
 using CloudWarehouse.Backend.Helpers;
-using CloudWarehouse.Tests.Helpers;
+using CloudWarehouse.TestCommon;
 
 namespace CloudWarehouse.Tests;
 
@@ -46,7 +46,7 @@ public class ExcelHelperTests
         using var stream = PriceTableExcelFactory.CreateValidWorkbook();
         // 仅表头，无数据行 configurators 默认有一行 - 需要只有表头
 
-        using var emptyStream = CreateHeaderOnlyWorkbook();
+        using var emptyStream = PriceTableExcelFactory.CreateHeaderOnlyWorkbook();
         var result = ExcelHelper.ReadPriceTable(emptyStream);
 
         Assert.Equal(0, result.TotalRows);
@@ -66,15 +66,18 @@ public class ExcelHelperTests
         Assert.Equal(0x4B, bytes[1]);
     }
 
-    private static MemoryStream CreateHeaderOnlyWorkbook()
+    [Fact]
+    public void ReadPriceTable_SkipsBlankDataRows()
     {
-        using var workbook = new ClosedXML.Excel.XLWorkbook();
-        var ws = workbook.AddWorksheet("价格表");
-        ws.Cell(3, 1).Value = "生效时间";
-        ws.Cell(3, 2).Value = "站点编号";
-        var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        stream.Position = 0;
-        return stream;
+        using var stream = PriceTableExcelFactory.CreateValidWorkbook(
+            ws => PriceTableExcelFactory.FillSampleRow(ws, 4, "11", "安徽省"),
+            ws => { /* 空行：无目的地代码与名称 */ },
+            ws => PriceTableExcelFactory.FillSampleRow(ws, 6, "12", "福建省"));
+
+        var result = ExcelHelper.ReadPriceTable(stream);
+
+        Assert.Equal(2, result.TotalRows);
+        Assert.Equal("11", result.Rows[0].DestCode);
+        Assert.Equal("12", result.Rows[1].DestCode);
     }
 }
