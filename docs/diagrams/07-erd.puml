@@ -1,0 +1,53 @@
+@startuml CloudWarehouse_ERD
+title Database Design — ERD (SQL Server)
+
+entity "Sites" as sites {
+  * **Id** : BIGINT <<PK>>
+  --
+  SiteCode : NVARCHAR(50) <<UK>>
+  SiteName : NVARCHAR(100)
+  SiteType : INT
+  ExpressCompany : NVARCHAR(100)
+  ContactPerson : NVARCHAR(50)
+  ContactPhone : NVARCHAR(30)
+  Address : NVARCHAR(200)
+  Status : INT
+  CreateTime : DATETIME2
+  Remark : NVARCHAR(500)
+}
+
+entity "Destinations" as dest {
+  * **Id** : BIGINT <<PK>>
+  --
+  DestCode : NVARCHAR(50) <<UK>>
+  Province : NVARCHAR(50)
+  City : NVARCHAR(50)
+  Area : NVARCHAR(50)
+  CreateTime : DATETIME2
+}
+
+entity "PriceRules" as rules {
+  * **Id** : BIGINT <<PK>>
+  --
+  SiteId : BIGINT <<FK>>
+  DestId : BIGINT <<FK>>
+  BillingType : INT
+  MinWeight : DECIMAL(10,2)
+  MaxWeight : DECIMAL(10,2)
+  UnitPrice : DECIMAL(10,2)
+  BaseFee : DECIMAL(10,2)
+  EffectiveDate : DATE
+  ExpiryDate : DATE
+  Status : INT
+  CreateTime : DATETIME2
+  Remark : NVARCHAR(200)
+}
+
+sites ||--o{ rules : "1 : N"
+dest ||--o{ rules : "1 : N"
+
+@enduml
+
+' 1. Three tables: Sites and Destinations are master data; PriceRules stores tier and overweight rows.
+' 2. A route is identified by SiteId plus DestId; import replaces all rules for that pair.
+' 3. BillingType distinguishes weight-tier rows (<=5kg) from overweight continuation (>5kg).

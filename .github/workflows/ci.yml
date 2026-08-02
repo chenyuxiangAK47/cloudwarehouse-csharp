@@ -42,6 +42,13 @@ jobs:
       - name: Print coverage summary
         run: cat coveragereport/Summary.txt
 
+      - name: NuGet vulnerability scan (dependency SAST)
+        continue-on-error: true
+        run: |
+          echo "Scanning for known vulnerable packages..."
+          dotnet list CloudWarehouse.sln package --vulnerable --include-transitive > vulnerable-packages.txt 2>&1 || true
+          cat vulnerable-packages.txt
+
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4
         with:
@@ -53,3 +60,9 @@ jobs:
         with:
           name: coverage-cobertura
           path: coverage/
+
+      - name: Upload NuGet vulnerability scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-vulnerable-scan
+          path: vulnerable-packages.txt

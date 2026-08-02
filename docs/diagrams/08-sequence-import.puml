@@ -1,0 +1,54 @@
+@startuml CloudWarehouse_Sequence_Confirm_Import
+title Core Use Case — Confirm Price Table Import (Class-Level)
+
+actor "Warehouse Admin" as User
+participant "index.html" as UI
+participant "ImportController" as IC
+participant "PriceRuleImportService" as Svc
+participant "ExcelHelper" as Excel
+participant "PriceRuleMapper" as Mapper
+database "SQL Server" as DB
+
+User -> UI : select file,\nConfirm import
+UI -> IC : POST /api/Import/price-table\n(multipart/form-data)
+activate IC
+IC -> Svc : ProcessImportAsync(stream,\nsaveToDatabase=true)
+activate Svc
+
+Svc -> Excel : ReadPriceTable(stream)
+activate Excel
+Excel --> Svc : PriceTableImportResult
+deactivate Excel
+
+Svc -> DB : SELECT Sites, Destinations
+activate DB
+DB --> Svc : lookup by SiteCode / DestCode
+deactivate DB
+
+alt any row has validation error
+  Svc --> IC : InvalidOperationException\n(full batch rejected)
+  IC --> UI : { success: false, message }
+  UI --> User : show error summary
+else all rows valid
+  Svc -> DB : BEGIN TRANSACTION
+  activate DB
+  loop each route row
+    Svc -> DB : DELETE PriceRules\nWHERE SiteId AND DestId
+    Svc -> Mapper : ToPriceRules(row, siteId, destId)
+    Mapper --> Svc : List<PriceRule>
+    Svc -> DB : INSERT PriceRules
+  end
+  Svc -> DB : COMMIT
+  deactivate DB
+  Svc --> IC : result (savedToDatabase,\nrulesUpserted)
+  deactivate Svc
+  IC --> UI : { success: true, data }
+  deactivate IC
+  UI --> User : show import summary
+end
+
+@enduml
+
+' 1. The UI posts the Excel file to ImportController, which delegates to PriceRuleImportService.
+' 2. We parse with ExcelHelper, validate master data, then upsert rules inside one SQL transaction.
+' 3. Any validation error aborts the whole batch, matching our all-or-nothing business rule.

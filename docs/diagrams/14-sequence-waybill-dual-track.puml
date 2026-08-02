@@ -1,0 +1,111 @@
+@startuml CloudWarehouse_Sequence_Waybill_Dual_Track
+title Core Use Case — Waybill Preview Dual-Track Pricing (Class-Level)
+
+actor "Warehouse Admin" as User
+participant "index.html\n(Browser)" as UI
+participant "BillController" as BC
+participant "BillImportService" as BIS
+participant "WaybillExcelHelper" as Excel
+participant "WeightRounding" as WR
+participant "IDualTrackFeeCalculator\n/ DualTrackFeeCalculator" as Dual
+participant "PriceRuleCalculateService\n(Payable / Cost)" as CostSvc
+participant "CustomerQuoteCalculateService\n(Receivable / Quote)" as QuoteSvc
+participant "FeeCalculationEngine" as Fee
+participant "IBillingStrategyResolver" as Factory
+participant "IBillingStrategy\n(Tier / Overweight)" as Strategy
+participant "BillLineTotals" as Totals
+database "SQL Server" as DB
+
+User -> UI : select waybill Excel\nclick Preview
+UI -> BC : POST /api/Bill/waybill/preview\n(multipart/form-data)
+activate BC
+BC -> BIS : ProcessImportAsync(stream,\nsaveToDatabase=false)
+activate BIS
+
+BIS -> Excel : ReadWaybills(stream)
+activate Excel
+note right of Excel
+  Detect dual-row header
+  (账单明细 + 成本明细)
+  or standard template
+end note
+Excel --> BIS : WaybillImportResult\n(+ expected L/X fees if present)
+deactivate Excel
+
+BIS -> DB : SELECT Sites, Destinations,\nPriceRules counts,\nCustomers, CustomerAccounts
+activate DB
+DB --> BIS : master data caches
+deactivate DB
+
+loop each WaybillImportRow
+  BIS -> BIS : ValidateRow\n(waybillNo, province, weight)
+  alt validation fails
+    BIS -> BIS : set ErrorMessage\n(e.g. empty province)
+  else valid row
+    BIS -> WR : RoundForForwardBilling /\nRoundWeight
+    WR --> BIS : RoundedWeight
+    BIS -> BIS : resolve CustomerId\n(CustomerCode or AccountName)
+    BIS -> BIS : ResolveSite\n(ExpressType as SiteCode)
+    BIS -> BIS : ResolveDestination\n(prefer dest with price rules)
+
+    BIS -> Dual : CalculateAsync(row)
+    activate Dual
+
+    == Payable track (成本 / X column) ==
+    Dual -> CostSvc : CalculateAsync(\nSiteId, DestId, RoundedWeight, BillDate)
+    activate CostSvc
+    CostSvc -> DB : SELECT PriceRules\nWHERE SiteId/DestId\nAND EffectiveDate <= BillDate\nAND (ExpiryDate IS NULL OR >= BillDate)
+    activate DB
+    DB --> CostSvc : active cost rules
+    deactivate DB
+    CostSvc -> Fee : Calculate(rules, weight, BillDate)
+    activate Fee
+    Fee -> Factory : Resolve(BillingContext)
+    Factory --> Fee : TierBillingStrategy\nor OverweightBillingStrategy
+    Fee -> Strategy : Calculate(context)
+    Strategy --> Fee : PriceCalculateResult
+    Fee --> CostSvc : payable result
+    deactivate Fee
+    CostSvc --> Dual : WeightFee + BaseFee
+    deactivate CostSvc
+
+    == Receivable track (客户报价 / L column) ==
+    Dual -> QuoteSvc : CalculateAsync(\nCustomerId, Province,\nExpressType, weight, BillDate)
+    activate QuoteSvc
+    QuoteSvc -> DB : SELECT CustomerQuoteRules\nWHERE CustomerId\nAND EffectiveDate <= BillDate\nAND expiry filter
+    activate DB
+    DB --> QuoteSvc : active quote rules
+    deactivate DB
+    QuoteSvc -> Fee : Calculate(...)\nvia mapped PriceRules
+    activate Fee
+    Fee -> Factory : Resolve(BillingContext)
+    Fee -> Strategy : Calculate(context)
+    Fee --> QuoteSvc : receivable result
+    deactivate Fee
+    QuoteSvc --> Dual : WeightFee + BaseFee
+    deactivate QuoteSvc
+
+    Dual -> Totals : CalcReceivableGrandTotal /\nCalcRemaining /\nApplyComparison(row)
+    note right of Totals
+      Compare machine fees vs
+      Excel L/X expected fees
+      (tolerance 0.01)
+      → TransitFeeMatched
+    end note
+    Dual --> BIS : row filled\n(profit + match flags)
+    deactivate Dual
+  end
+end
+
+BIS --> BC : WaybillImportResult\n(matched / mismatch counts)
+deactivate BIS
+BC --> UI : { success: true, data }
+deactivate BC
+UI --> User : table: 应收/应付\n机器值 / 表内值\n+ 验证一致/不一致
+
+@enduml
+
+' Presentation (EN, ~3 sentences):
+' 1. Preview posts the waybill Excel to BillController → BillImportService; WaybillExcelHelper parses dual-header or standard sheets.
+' 2. For each row we round weight, resolve site/customer/destination, then run two fee tracks: PriceRules (payable) and CustomerQuoteRules (receivable), both dated by BillDate and calculated via Strategy Pattern.
+' 3. BillLineTotals compares machine results to spreadsheet L/X columns so the UI can show match/mismatch evidence (e.g. 339 consistent).

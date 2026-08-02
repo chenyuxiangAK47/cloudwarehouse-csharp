@@ -1,0 +1,16 @@
+云仓模块化重构 — 开发前必读
+================================
+
+请先阅读完整文档（AI 与人类开发者均适用）：
+
+  docs/refactoring/开发前必读-模块化重构.md
+
+约束速查（INI）：
+
+  docs/refactoring/refactor.constraints.ini
+
+原则：一份代码，两种交付叙事
+  - 师傅：单 exe + bat + SQL Server（不变）
+  - NUS：模块边界 + Pricing.Core + 可选 Pricing.Api 演示
+
+下一步（尚未执行）：Step 1 仅创建空 Modules 目录与空 Pricing.Core 项目，不移动任何 .cs 文件。

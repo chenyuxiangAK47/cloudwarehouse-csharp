@@ -1,0 +1,83 @@
+@startuml CloudWarehouse_DDD_Bounded_Contexts
+title DDD — Bounded Contexts and Aggregates
+
+skinparam package {
+  BackgroundColor #F8F9FA
+  BorderColor #2980b9
+  FontStyle bold
+}
+skinparam class {
+  BackgroundColor #ECF0F1
+  BorderColor #34495e
+  FontSize 10
+}
+
+package "Master Data Context" as MD {
+  class Site <<Aggregate Root>> {
+    SiteCode (unique)
+    SiteName
+    SiteType
+    Status
+    --
+    Invariant: SiteCode unique
+  }
+  class Destination <<Aggregate Root>> {
+    DestCode (unique)
+    Province
+    City
+    Area
+    --
+    Invariant: DestCode unique
+  }
+}
+
+package "Pricing Context" as PR {
+  class PriceRule <<Entity>> {
+    SiteId (FK)
+    DestId (FK)
+    BillingType (1=tier, 2=overweight)
+    MinWeight / MaxWeight
+    UnitPrice
+    BaseFee
+    EffectiveDate
+    --
+    Invariant: replace all rules\nper SiteId + DestId on import
+  }
+  class PriceRuleCalculateService <<Application Service>> {
+    Calculate(weight)
+  }
+}
+
+package "Import Context" as IM {
+  class PriceTableRow <<Entity>> {
+    SiteCode
+    DestCode
+    tier prices + overweight rate
+  }
+  class PriceTableImportResult <<Value>> {
+    rows, warnings, errors
+  }
+  class PriceRuleImportService <<Application Service>> {
+    validate + transaction
+  }
+  class ExcelHelper <<Infrastructure>> {
+    parse / template / export
+  }
+}
+
+IM -[#C0392B,thickness=2]-> PR : upsert PriceRules\nafter successful import
+IM .[#27AE60,dashed].> MD : requires\nSiteCode & DestCode exist
+PR .[#27AE60,dashed].> MD : references\nSiteId, DestId
+
+Site "1" o-- "many" PriceRule : referenced by
+Destination "1" o-- "many" PriceRule : referenced by
+
+note bottom of PR
+  Persistence: Dapper SQL\n(no separate repository interface in MVP)
+end note
+
+@enduml
+
+' 1. Three bounded contexts: master data, pricing, and import coordination.
+' 2. Site and Destination are aggregate roots; PriceRule rows form a route pricing policy set.
+' 3. Import context validates against master data, then replaces pricing rules in one transaction.

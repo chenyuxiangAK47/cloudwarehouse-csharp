@@ -1,4 +1,5 @@
 using CloudWarehouse.Backend.Helpers;
+using CloudWarehouse.Backend.Models;
 using CloudWarehouse.TestCommon;
 
 namespace CloudWarehouse.Tests;
@@ -86,6 +87,18 @@ public class ExcelHelperTests
         Assert.NotEmpty(bytes);
         Assert.Equal(0x50, bytes[0]); // PK zip header
         Assert.Equal(0x4B, bytes[1]);
+    }
+
+    [Fact]
+    public void ReadPriceTable_DestinationMatrix_UsesSystemDefaultSiteC001()
+    {
+        using var stream = PriceTableExcelFactory.CreateDestinationMatrixWorkbook();
+        var result = ExcelHelper.ReadPriceTable(stream);
+
+        Assert.Equal("目的地矩阵价目表", result.Format);
+        Assert.Single(result.Rows);
+        Assert.Equal(PriceTableImportOptions.DefaultSiteCode, result.Rows[0].SiteCode);
+        Assert.Equal("矩阵测试省", result.Rows[0].Destination);
     }
 
     [Fact]

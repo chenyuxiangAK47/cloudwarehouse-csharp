@@ -1,0 +1,90 @@
+@startuml CloudWarehouse_Logical_Architecture
+title Logical Architecture — Subsystems and Components
+
+skinparam component {
+  BackgroundColor #ECF0F1
+  BorderColor #34495e
+  FontSize 10
+}
+skinparam package {
+  BackgroundColor #F8F9FA
+  BorderColor #2980b9
+  FontStyle bold
+}
+
+package "Presentation Layer" {
+  [Web UI (index.html)\n4 tabs: Site / Destination / Rules / Import] as UI
+  [HTTP Client (fetch)] as Http
+}
+
+package "Application Layer (API)" {
+  package "Master Data subsystem" {
+    [SiteController\nSite CRUD] as SiteCtrl
+    [DestinationController\nDestination CRUD] as DestCtrl
+  }
+  package "Price Table Import subsystem" {
+    [ImportController\ntemplate / preview / import / export] as ImportCtrl
+  }
+  package "Pricing subsystem" {
+    [PriceRuleController\nread-only rules + calculate] as PriceCtrl
+  }
+  [Program.cs\nrouting, CORS, DI, static files] as Program
+}
+
+package "Business Logic Layer" {
+  [PriceRuleImportService\nvalidate + transactional upsert] as ImportSvc
+  [PriceRuleCalculateService\ntier + overweight pricing] as CalcSvc
+  [ExcelHelper\ndual-format read / template / export] as ExcelH
+  [PriceRuleMapper\nrow to PriceRule entities] as Mapper
+  [PriceCalculator\nexpected price preview] as CalcPrev
+  [ClosedXML] as CXML #D4EDDA
+}
+
+package "Data Access Layer" {
+  [Dapper + SqlConnection] as Dapper
+}
+
+package "Data Layer" {
+  database "SQL Server\nCloudWarehouse" as DB {
+    frame "Tables" {
+      [Sites]
+      [Destinations]
+      [PriceRules]
+    }
+  }
+}
+
+package "Test subsystem (non-production)" #F5F5F5 {
+  [CloudWarehouse.Tests\n25 unit tests] as UnitT
+  [CloudWarehouse.IntegrationTests\n10 integration + 2 stress] as IntT
+  [CloudWarehouse.TestCommon\nExcel test factory] as TestC
+}
+
+UI --> Http
+Http --> SiteCtrl : HTTP/JSON
+Http --> DestCtrl
+Http --> ImportCtrl
+Http --> PriceCtrl
+
+ImportCtrl --> ImportSvc
+PriceCtrl --> CalcSvc
+SiteCtrl --> Dapper
+DestCtrl --> Dapper
+ImportSvc --> ExcelH
+ImportSvc --> Mapper
+ImportSvc --> CalcPrev
+ImportSvc --> Dapper
+CalcSvc --> Dapper
+ExcelH --> CXML
+Dapper --> DB
+
+UnitT ..> CalcPrev
+UnitT ..> Mapper
+IntT ..> ImportCtrl : in-memory host
+TestC ..> CXML
+
+@enduml
+
+' 1. Standard four-layer layout: UI, API, business services, and Dapper data access.
+' 2. Controllers are thin; import and calculate logic live in dedicated services.
+' 3. ClosedXML is isolated inside ExcelHelper only, so the Excel library can be swapped later.

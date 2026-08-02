@@ -1,0 +1,39 @@
+@startuml CloudWarehouse_ADR_Decisions
+title Architecture Decisions (ADR) - Top
+top to bottom direction
+skinparam defaultFontSize 10
+skinparam rectangleBorderColor #34495e
+skinparam packageStyle rectangle
+
+package "Architecture Decisions (ADR)" #E8F4FC {
+
+  together {
+    rectangle "ADR-1\nDapper (not EF Core)" as ADR1 #E8F4FC
+    rectangle "ADR-2\nMonolithic Web API" as ADR2 #E8F4FC
+    rectangle "ADR-3\nRules via Excel only" as ADR3 #E8F4FC
+  }
+  together {
+    rectangle "ADR-4\nAll-or-nothing import" as ADR4 #E8F4FC
+    rectangle "ADR-5\nClosedXML + dual headers" as ADR5 #E8F4FC
+    rectangle "ADR-6\nGitHub Actions CI" as ADR6 #E8F4FC
+  }
+
+  ADR1 -[hidden]right- ADR2
+  ADR2 -[hidden]right- ADR3
+  ADR4 -[hidden]right- ADR5
+  ADR5 -[hidden]right- ADR6
+  ADR1 -[hidden]down- ADR4
+}
+
+note bottom of ADR1 : SQL control\nmanual schema.sql
+note bottom of ADR2 : fast MVP\nsimple ops
+note bottom of ADR3 : supplier spreadsheets\nno rule CRUD API
+note bottom of ADR4 : SQL transaction\none error = rollback all
+note bottom of ADR5 : .xlsx standard + legacy\nno .xls
+note bottom of ADR6 : CI evidence video\nno Jenkins
+
+@enduml
+
+' 1. Six ADRs cover data access, deployment shape, rule source, import consistency, Excel, and CI.
+' 2. Each decision trades flexibility for speed and clarity within course scope.
+' 3. The most business-critical ADR is all-or-nothing import with full batch rollback.

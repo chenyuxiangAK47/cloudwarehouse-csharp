@@ -1,0 +1,48 @@
+@startuml CloudWarehouse_Deployment_Diagram
+title Deployment Diagram — Environment Topology
+
+skinparam node {
+  BackgroundColor #F0F8FF
+  BorderColor #2980b9
+}
+
+node "Developer Workstation\n(local dev / demo)" as Local {
+  artifact "Browser\nindex.html" as A1
+  artifact "dotnet.exe\nCloudWarehouse.Backend.dll" as A2
+  database "SQL Server\nDB: CloudWarehouse" as A3
+}
+
+node "GitHub Actions\n(CI pipeline)" as CI {
+  artifact "dotnet SDK 9" as B1
+  artifact "coverage-report\n(uploaded artifact)" as B2
+  component "Workflow: ci.yml" as WF
+}
+
+node "Future production\n(planned)" as Future #E0E0E0 {
+  artifact "App Service / IIS" as F1 #D0D0D0
+  artifact "Azure SQL / managed SQL" as F2 #D0D0D0
+}
+
+A1 -[#2980b9,thickness=2]-> A2 : HTTP :5001\nREST + static files
+A2 -[#27ae60,thickness=2]-> A3 : Connection string\nDefaultConnection
+
+WF -[#34495e,dashed]-> B1 : uses
+WF -[#34495e,dashed]-> B2 : publishes
+
+note right of A2
+  **Depends on:** SQL Server running
+  **Start:** dotnet run --project CloudWarehouse.Backend
+end note
+
+note bottom of CI
+  Trigger: push / PR to main
+  Steps: restore -> test -> coverage report
+end note
+
+Future ..[hidden].. Local : future migration
+
+@enduml
+
+' 1. Primary deployment is local: browser, API process, and database on one workstation.
+' 2. CI is a separate environment on GitHub Actions; output is test results and coverage HTML.
+' 3. We document a planned cloud deployment but did not implement it for the course MVP.

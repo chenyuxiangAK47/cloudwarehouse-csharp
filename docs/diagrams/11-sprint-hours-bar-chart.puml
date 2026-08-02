@@ -1,0 +1,17 @@
+@startsalt CloudWarehouse_Sprint_Hours
+{
+{T+
++ Sprint | Estimated (h) | Actual (h) | Delta | Note
+| Sprint 1 - Foundation | 48 | 52 | +4 | On plan
+| Sprint 2 - Excel Import | 44 | 61 | +17 | **+39%** overrun (3-tier headers)
+| Sprint 3 - Calculate + Tests | 56 | 51 | -5 | Re-baseline; within 10%
+| Sprint 4 - CI + Docs | 50 | 47 | -3 | Within 10%
+}
+}
+@endsalt
+
+note bottom
+  **Slide chart:** export ``11-sprint-hours-bar-chart.mmd`` at mermaid.live
+  or open ``docs/project-management/sprint-hours-chart.html`` and screenshot.
+  Data: ``sprint-hours-chart-data.csv``
+end note

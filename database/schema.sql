@@ -1,5 +1,8 @@
--- CloudWarehouse SQL Server 建库脚本
+-- CloudWarehouse SQL Server 建库脚本（库表结构 + 示例数据）
 -- 在 SSMS 或 sqlcmd 中执行
+--
+-- 说明：本文件不含「应用登录用户名/密码」。
+--       账号密码在 appsettings.json 连接串中；首次请再执行 setup-sql-authentication.sql 设置 sa。
 
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'CloudWarehouse')
     CREATE DATABASE CloudWarehouse;
@@ -43,6 +46,22 @@ BEGIN
 END
 GO
 
+-- 客户（客户编号 / 客户名称）
+IF OBJECT_ID(N'dbo.Customers', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Customers (
+        Id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+        CustomerCode    NVARCHAR(50)  NOT NULL,
+        CustomerName    NVARCHAR(200) NOT NULL,
+        Status          INT           NOT NULL DEFAULT 1,
+        CreateTime      DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+        Remark          NVARCHAR(500) NULL,
+        CONSTRAINT UQ_Customers_CustomerCode UNIQUE (CustomerCode)
+    );
+    CREATE INDEX IX_Customers_CustomerName ON dbo.Customers(CustomerName);
+END
+GO
+
 -- 价格规则（由 Excel 导入生成；区间≤5kg + 续重>5kg）
 IF OBJECT_ID(N'dbo.PriceRules', N'U') IS NULL
 BEGIN
@@ -63,6 +82,8 @@ BEGIN
         CONSTRAINT FK_PriceRules_Site FOREIGN KEY (SiteId) REFERENCES dbo.Sites(Id),
         CONSTRAINT FK_PriceRules_Dest FOREIGN KEY (DestId) REFERENCES dbo.Destinations(Id)
     );
+    -- Non-unique only: many rules per lane (tiers + overweight share EffectiveDate).
+    -- Do NOT add UNIQUE (SiteId, DestId, EffectiveDate) — import will fail.
     CREATE INDEX IX_PriceRules_Site_Dest ON dbo.PriceRules(SiteId, DestId);
 END
 GO
@@ -79,4 +100,14 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Destinations WHERE DestCode = N'11')
 IF NOT EXISTS (SELECT 1 FROM dbo.Destinations WHERE DestCode = N'12')
     INSERT INTO dbo.Destinations (DestCode, Province, City, Area)
     VALUES (N'12', N'福建省', N'', N'');
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Customers WHERE CustomerCode = N'A0001')
+    INSERT INTO dbo.Customers (CustomerCode, CustomerName, Status) VALUES
+    (N'A0001', N'小米粒服饰百货店铺', 1),
+    (N'A0002', N'织布鸟家纺工厂店', 1),
+    (N'A0003', N'长安区坦姐服装店', 1),
+    (N'A0004', N'鑫诗雅魅力服饰箱包严选', 1),
+    (N'A0005', N'小米粒服饰百货店铺', 1),
+    (N'A0006', N'娜娜服饰中午12点开播', 1),
+    (N'A0007', N'沫沫大姨女装网批', 1);
 GO

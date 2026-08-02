@@ -2,440 +2,745 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>云仓管理系统</title>
     <style>
-        body { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            font-family: Arial, sans-serif; 
-            padding: 20px;
+        :root {
+            --bg: #f0f4f8;
+            --surface: #ffffff;
+            --text: #1a2b3c;
+            --muted: #5c6b7a;
+            --primary: #0d6efd;
+            --primary-hover: #0b5ed7;
+            --danger: #dc3545;
+            --border: #e2e8f0;
+            --nav-bg: #0f2942;
+            --accent: #00a896;
+            --shadow: 0 4px 20px rgba(15, 41, 66, 0.08);
+            --radius: 10px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .app-header {
+            background: linear-gradient(135deg, var(--nav-bg) 0%, #1a4a6e 100%);
+            color: #fff;
+            padding: 1.25rem 2rem;
+            box-shadow: var(--shadow);
+        }
+        .app-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        .app-header p {
+            margin: 0.35rem 0 0;
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+        .app-body {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem 2.5rem;
         }
         .nav {
-            background: #333;
-            color: white;
-            padding: 10px;
-            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            background: var(--surface);
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
         }
         .nav button {
-            background: #555;
-            color: white;
+            background: transparent;
+            color: var(--muted);
             border: none;
-            padding: 8px 16px;
-            margin-right: 10px;
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.15s, color 0.15s;
         }
         .nav button:hover {
-            background: #666;
+            background: var(--bg);
+            color: var(--text);
         }
-        .page {
-            display: none;
+        .nav button.active {
+            background: var(--primary);
+            color: #fff;
         }
-        .page.active {
-            display: block;
+        .page { display: none; }
+        .page.active { display: block; }
+        .page > h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.35rem;
+            color: var(--nav-bg);
         }
-        .input-area {
-            margin-bottom: 20px;
-            padding: 20px;
-            border: 1px solid #eee;
-            border-radius: 5px;
+        .page-subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin: 0 0 1.25rem;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow);
+        }
+        .card h3 {
+            margin: 0 0 1rem;
+            font-size: 1rem;
+            color: var(--nav-bg);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            display: inline-block;
         }
         .input-row {
-            margin-bottom: 10px;
+            margin-bottom: 0.85rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 1rem;
         }
         label {
-            display: inline-block;
-            width: 120px;
-            font-weight: bold;
+            min-width: 140px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--muted);
         }
-        input, select, textarea {
-            padding: 8px;
-            width: 300px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
+        input, select {
+            padding: 0.55rem 0.75rem;
+            width: min(320px, 100%);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
         }
-        button {
-            padding: 8px 20px;
+        input:focus, select:focus {
+            outline: 2px solid rgba(13, 110, 253, 0.35);
+            border-color: var(--primary);
+        }
+        .btn {
+            padding: 0.55rem 1.15rem;
             cursor: pointer;
-            background: #007bff;
-            color: white;
             border: none;
-            border-radius: 3px;
-            margin-right: 10px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            margin-top: 0.25rem;
+            transition: transform 0.1s, background 0.15s;
         }
-        button:hover {
-            background: #0056b3;
+        .btn:active { transform: scale(0.98); }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
         }
-        button.danger {
-            background: #dc3545;
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
-        button.danger:hover {
-            background: #c82333;
+        .btn-secondary:hover { background: #e8eef4; }
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
         }
-        ul {
-            list-style: none;
-            padding: 0;
+        .btn-accent:hover { filter: brightness(1.05); }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
         }
-        li {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
+        .btn-danger:hover { filter: brightness(1.08); }
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        .toolbar {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
             align-items: center;
+            margin-bottom: 1rem;
         }
-        .status {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .status.active {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status.inactive {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            display: none;
-        }
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .search-box {
-            margin-bottom: 15px;
-        }
-        .search-box input {
-            width: 200px;
-        }
+        .toolbar input { width: 220px; }
+        .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
         .table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            font-size: 0.875rem;
+            background: var(--surface);
         }
         .table th, .table td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            padding: 0.65rem 0.85rem;
             text-align: left;
+            border-bottom: 1px solid var(--border);
         }
         .table th {
-            background: #f8f9fa;
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--nav-bg);
+            white-space: nowrap;
         }
-        .import-summary {
-            margin: 15px 0;
-            padding: 12px 16px;
-            background: #e7f3ff;
-            border-radius: 5px;
+        .table tbody tr:hover { background: #f8fafc; }
+        .status {
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status.active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .message {
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border-radius: var(--radius);
             display: none;
+            font-size: 0.9rem;
+        }
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
         .import-hint {
-            color: #666;
-            font-size: 13px;
-            margin-top: 8px;
-            line-height: 1.6;
+            color: var(--muted);
+            font-size: 0.875rem;
+            line-height: 1.65;
+            margin: 0 0 1rem;
         }
-        .table-wrap {
-            overflow-x: auto;
+        .import-summary {
+            margin: 0 0 1rem;
+            padding: 1rem 1.25rem;
+            background: #e0f2fe;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius);
+            display: none;
+            font-size: 0.9rem;
         }
+        .calc-result {
+            margin-top: 1rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1px solid #bbf7d0;
+            border-radius: var(--radius);
+            display: none;
+        }
+        .calc-result h4 { margin: 0 0 0.75rem; color: var(--nav-bg); }
+        .calc-result .total {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .row-error { background: #fff5f5 !important; }
+        .actions { white-space: nowrap; }
     </style>
 </head>
 <body>
-    <div class="nav">
-        <button onclick="showPage('site')">站点管理</button>
-        <button onclick="showPage('destination')">目的地管理</button>
-        <button onclick="showPage('pricerule')">价格规则</button>
-        <button onclick="showPage('import')">价格表导入</button>
-    </div>
+    <header class="app-header">
+        <h1>云仓管理系统</h1>
+        <p>物流计价 — 站点、目的地、客户、价格表导入与运费试算</p>
+    </header>
 
-    <div class="message" id="message"></div>
+    <div class="app-body">
+        <nav class="nav" aria-label="主导航">
+            <button type="button" data-page="site" class="active" onclick="showPage('site')">站点管理</button>
+            <button type="button" data-page="destination" onclick="showPage('destination')">目的地管理</button>
+            <button type="button" data-page="customer" onclick="showPage('customer')">客户管理</button>
+            <button type="button" data-page="pricerule" onclick="showPage('pricerule')">价格规则</button>
+            <button type="button" data-page="import" onclick="showPage('import')">成本价导入</button>
+            <button type="button" data-page="customerquote" onclick="showPage('customerquote')">客户报价导入</button>
+            <button type="button" data-page="waybill" onclick="showPage('waybill')">运单导入</button>
+        </nav>
 
-    <div id="site" class="page active">
-        <h2>站点管理</h2>
-        <div class="input-area">
-            <h3>添加/编辑站点</h3>
-            <input type="hidden" id="siteId">
-            <div class="input-row">
-                <label>站点编号：</label>
-                <input type="text" id="siteCode" placeholder="输入站点编号">
-            </div>
-            <div class="input-row">
-                <label>站点名称：</label>
-                <input type="text" id="siteName" placeholder="输入站点名称">
-            </div>
-            <div class="input-row">
-                <label>站点类型：</label>
-                <select id="siteType">
-                    <option value="1">配送站</option>
-                    <option value="2">中转站</option>
-                    <option value="3">仓库</option>
-                </select>
-            </div>
-            <div class="input-row">
-                <label>快递公司：</label>
-                <input type="text" id="expressCompany" placeholder="输入快递公司">
-            </div>
-            <div class="input-row">
-                <label>联系人：</label>
-                <input type="text" id="contactPerson" placeholder="输入联系人">
-            </div>
-            <div class="input-row">
-                <label>联系电话：</label>
-                <input type="text" id="contactPhone" placeholder="输入联系电话">
-            </div>
-            <div class="input-row">
-                <label>地址：</label>
-                <input type="text" id="address" placeholder="输入地址">
-            </div>
-            <div class="input-row">
-                <label>状态：</label>
-                <select id="siteStatus">
-                    <option value="1">启用</option>
-                    <option value="0">禁用</option>
-                </select>
-            </div>
-            <div class="input-row">
-                <button onclick="saveSite()">保存</button>
-                <button onclick="clearSiteForm()">清空</button>
-            </div>
-        </div>
-        <div class="search-box">
-            <input type="text" id="siteSearch" placeholder="搜索站点编号或名称" onkeyup="searchSite()">
-            <button onclick="loadSites()">刷新</button>
-        </div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>编号</th>
-                    <th>名称</th>
-                    <th>类型</th>
-                    <th>快递公司</th>
-                    <th>联系人</th>
-                    <th>状态</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="siteTableBody"></tbody>
-        </table>
-    </div>
+        <div class="message" id="message" role="alert"></div>
 
-    <div id="destination" class="page">
-        <h2>目的地管理</h2>
-        <div class="input-area">
-            <h3>添加/编辑目的地</h3>
-            <input type="hidden" id="destId">
-            <div class="input-row">
-                <label>目的地编码：</label>
-                <input type="text" id="destCode" placeholder="输入目的地编码">
+        <div id="site" class="page active">
+            <h2>站点管理</h2>
+            <p class="page-subtitle">维护配送站/仓库主数据，支持手工维护或 Excel 批量导入。</p>
+            <div class="card">
+                <h3>添加 / 编辑站点</h3>
+                <input type="hidden" id="siteId">
+                <div class="input-row">
+                    <label for="siteCode">站点编号</label>
+                    <input type="text" id="siteCode" placeholder="如 C001">
+                </div>
+                <div class="input-row">
+                    <label for="siteName">站点名称</label>
+                    <input type="text" id="siteName" placeholder="显示名称">
+                </div>
+                <div class="input-row">
+                    <label for="siteType">站点类型</label>
+                    <select id="siteType">
+                        <option value="1">配送站</option>
+                        <option value="2">中转站</option>
+                        <option value="3">仓库</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label for="expressCompany">快递公司</label>
+                    <input type="text" id="expressCompany" placeholder="快递公司">
+                </div>
+                <div class="input-row">
+                    <label for="contactPerson">联系人</label>
+                    <input type="text" id="contactPerson" placeholder="姓名">
+                </div>
+                <div class="input-row">
+                    <label for="contactPhone">联系电话</label>
+                    <input type="text" id="contactPhone" placeholder="手机号">
+                </div>
+                <div class="input-row">
+                    <label for="address">地址</label>
+                    <input type="text" id="address" placeholder="详细地址">
+                </div>
+                <div class="input-row">
+                    <label for="siteStatus">状态</label>
+                    <select id="siteStatus">
+                        <option value="1">启用</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="saveSite()">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearSiteForm()">清空</button>
+                </div>
             </div>
-            <div class="input-row">
-                <label>省份：</label>
-                <input type="text" id="province" placeholder="输入省份">
+            <div class="card">
+                <h3>Excel 导入</h3>
+                <p class="import-hint">
+                    第 1 行表头：<strong>站点编号</strong>、<strong>站点名称</strong>（必填）；
+                    可选列：站点类型、快递公司、联系人、联系电话、地址、状态、备注。
+                    已存在编号将更新，新编号将插入。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadSiteTemplate()">下载导入模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="siteFile">Excel 文件</label>
+                    <input type="file" id="siteFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewSiteImport()">预览</button>
+                    <button type="button" class="btn btn-primary" onclick="commitSiteImport()">导入到数据库</button>
+                </div>
+                <div class="import-summary" id="siteImportSummary"></div>
             </div>
-            <div class="input-row">
-                <label>城市：</label>
-                <input type="text" id="city" placeholder="输入城市">
+            <div class="toolbar">
+                <input type="text" id="siteSearch" placeholder="搜索编号或名称…" onkeyup="searchSite()">
+                <button type="button" class="btn btn-secondary" onclick="loadSites()">刷新</button>
             </div>
-            <div class="input-row">
-                <label>区域：</label>
-                <input type="text" id="area" placeholder="输入区域">
-            </div>
-            <div class="input-row">
-                <button onclick="saveDestination()">保存</button>
-                <button onclick="clearDestForm()">清空</button>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>编号</th>
+                            <th>名称</th>
+                            <th>类型</th>
+                            <th>快递</th>
+                            <th>联系人</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="siteTableBody"></tbody>
+                </table>
             </div>
         </div>
-        <div class="search-box">
-            <input type="text" id="destSearch" placeholder="搜索目的地编码或省份" onkeyup="searchDestination()">
-            <button onclick="loadDestinations()">刷新</button>
-        </div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>编码</th>
-                    <th>省份</th>
-                    <th>城市</th>
-                    <th>区域</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="destTableBody"></tbody>
-        </table>
-    </div>
 
-    <div id="pricerule" class="page">
-        <h2>价格规则（由 Excel 导入维护）</h2>
-        <p class="import-hint">规则通过「价格表导入」写入，此处仅查看与试算。</p>
-        <div class="input-area" style="display:none">
-            <h3>添加/编辑价格规则</h3>
-            <input type="hidden" id="ruleId">
-            <div class="input-row">
-                <label>站点：</label>
-                <select id="ruleSiteId"></select>
+        <div id="destination" class="page">
+            <h2>目的地管理</h2>
+            <p class="page-subtitle">维护目的地/省份编码，支持手工维护或 Excel 批量导入。</p>
+            <div class="card">
+                <h3>添加 / 编辑目的地</h3>
+                <input type="hidden" id="destId">
+                <div class="input-row">
+                    <label for="destCode">目的地编码</label>
+                    <input type="text" id="destCode" placeholder="如 11">
+                </div>
+                <div class="input-row">
+                    <label for="province">省份</label>
+                    <input type="text" id="province" placeholder="省份">
+                </div>
+                <div class="input-row">
+                    <label for="city">城市</label>
+                    <input type="text" id="city" placeholder="城市">
+                </div>
+                <div class="input-row">
+                    <label for="area">区域</label>
+                    <input type="text" id="area" placeholder="区/县">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="saveDestination()">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearDestForm()">清空</button>
+                </div>
             </div>
-            <div class="input-row">
-                <label>目的地：</label>
-                <select id="ruleDestId"></select>
+            <div class="card">
+                <h3>Excel 导入</h3>
+                <p class="import-hint">
+                    第 1 行表头：<strong>目的地编码</strong>、<strong>省份</strong>（必填）；
+                    可选列：城市、区域。已存在编码将更新，新编码将插入。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadDestinationTemplate()">下载导入模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="destFile">Excel 文件</label>
+                    <input type="file" id="destFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewDestinationImport()">预览</button>
+                    <button type="button" class="btn btn-primary" onclick="commitDestinationImport()">导入到数据库</button>
+                </div>
+                <div class="import-summary" id="destImportSummary"></div>
             </div>
-            <div class="input-row">
-                <label>计费类型：</label>
-                <select id="ruleBillingType">
-                    <option value="1">区间计费(≤5kg)</option>
-                    <option value="2">续重计费(>5kg)</option>
-                </select>
+            <div class="toolbar">
+                <input type="text" id="destSearch" placeholder="搜索编码或省份…" onkeyup="searchDestination()">
+                <button type="button" class="btn btn-secondary" onclick="loadDestinations()">刷新</button>
             </div>
-            <div class="input-row">
-                <label>最小重量：</label>
-                <input type="number" step="0.1" id="ruleMinWeight" placeholder="最小重量(kg)">
-            </div>
-            <div class="input-row">
-                <label>最大重量：</label>
-                <input type="number" step="0.1" id="ruleMaxWeight" placeholder="最大重量(kg)">
-            </div>
-            <div class="input-row">
-                <label>单价：</label>
-                <input type="number" step="0.01" id="ruleUnitPrice" placeholder="单价(元)">
-            </div>
-            <div class="input-row">
-                <label>面单费：</label>
-                <input type="number" step="0.01" id="ruleBaseFee" placeholder="面单费(元)" value="3.5">
-            </div>
-            <div class="input-row">
-                <label>生效日期：</label>
-                <input type="date" id="ruleEffectiveDate">
-            </div>
-            <div class="input-row">
-                <label>状态：</label>
-                <select id="ruleStatus">
-                    <option value="1">启用</option>
-                    <option value="0">禁用</option>
-                </select>
-            </div>
-            <div class="input-row">
-                <button onclick="savePriceRule()">保存</button>
-                <button onclick="clearRuleForm()">清空</button>
-            </div>
-        </div>
-        <div class="search-box">
-            <input type="text" id="ruleSearch" placeholder="搜索规则" onkeyup="searchRule()">
-            <button onclick="loadPriceRules()">刷新</button>
-        </div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>站点</th>
-                    <th>目的地</th>
-                    <th>计费类型</th>
-                    <th>重量范围</th>
-                    <th>单价</th>
-                    <th>面单费</th>
-                    <th>生效日期</th>
-                    <th>状态</th>
-                </tr>
-            </thead>
-            <tbody id="ruleTableBody"></tbody>
-        </table>
-        <div class="input-area">
-            <h3>运费试算（按已导入规则）</h3>
-            <div class="input-row">
-                <label>站点：</label>
-                <select id="calcSiteId"></select>
-            </div>
-            <div class="input-row">
-                <label>目的地：</label>
-                <select id="calcDestId"></select>
-            </div>
-            <div class="input-row">
-                <label>重量(kg)：</label>
-                <input type="number" step="0.1" id="calcWeight" placeholder="输入重量">
-            </div>
-            <div class="input-row">
-                <button onclick="calculatePrice()">计算运费</button>
-            </div>
-            <div id="calcResult" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; display: none;">
-                <h4>计算结果</h4>
-                <p><strong>计费方式：</strong><span id="calcBillingType"></span></p>
-                <p><strong>面单费：</strong><span id="calcBaseFee"></span> 元</p>
-                <p><strong>运费：</strong><span id="calcWeightFee"></span> 元</p>
-                <p><strong>总计：</strong><span id="calcTotal" style="font-size: 18px; color: #dc3545;"></span> 元</p>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>编码</th>
+                            <th>省份</th>
+                            <th>城市</th>
+                            <th>区域</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="destTableBody"></tbody>
+                </table>
             </div>
         </div>
-    </div>
 
-    <div id="import" class="page">
-        <h2>价格表导入</h2>
-        <div class="input-area">
-            <h3>上传价格表</h3>
-            <p class="import-hint">
-                推荐先 <strong>下载标准模板</strong> 填写（第 1 行表头、第 2 行起数据）。
-                也兼容供应商三级表头（第 3 行表头）。导入前请确保站点编号、目的地代码已在系统中存在。
-                同一站点+目的地路线：有规则则整批替换，无则新增。任一行校验失败则全部不入库。
-            </p>
-            <div class="input-row">
-                <button onclick="downloadPriceTemplate()">下载标准模板</button>
+        <div id="customer" class="page">
+            <h2>客户管理</h2>
+            <p class="page-subtitle">B2B 客户主数据 — 支持手工维护或 Excel 导入（客户编号 + 客户名称）。</p>
+            <div class="card">
+                <h3>添加 / 编辑客户</h3>
+                <input type="hidden" id="customerId">
+                <div class="input-row">
+                    <label for="customerCode">客户编号</label>
+                    <input type="text" id="customerCode" placeholder="如 A0001">
+                </div>
+                <div class="input-row">
+                    <label for="customerName">客户名称</label>
+                    <input type="text" id="customerName" placeholder="店铺/账户名称">
+                </div>
+                <div class="input-row">
+                    <label for="customerStatus">状态</label>
+                    <select id="customerStatus">
+                        <option value="1">启用</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label for="customerRemark">备注</label>
+                    <input type="text" id="customerRemark" placeholder="选填">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="saveCustomer()">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearCustomerForm()">清空</button>
+                </div>
             </div>
-            <div class="input-row">
-                <label>Excel 文件：</label>
-                <input type="file" id="priceFile" accept=".xlsx,.xlsm">
+            <div class="card">
+                <h3>Excel 导入</h3>
+                <p class="import-hint">
+                    第 1 行表头：<strong>客户编号</strong>、<strong>客户名称</strong>
+                    （也支持 CustomerCode / CustomerName）。已存在编号将更新名称，新编号将插入。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadCustomerTemplate()">下载导入模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="customerFile">Excel 文件</label>
+                    <input type="file" id="customerFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewCustomerImport()">预览</button>
+                    <button type="button" class="btn btn-primary" onclick="commitCustomerImport()">导入到数据库</button>
+                </div>
+                <div class="import-summary" id="customerImportSummary"></div>
             </div>
-            <div class="input-row">
-                <button onclick="previewPriceTable()">预览解析</button>
-                <button onclick="importPriceTable()">确认导入到数据库</button>
-                <button onclick="exportImportResult()" id="btnExportResult" disabled>导出结果 Excel</button>
-                <button onclick="clearImportResult()">清空</button>
+            <div class="toolbar">
+                <input type="text" id="customerSearch" placeholder="搜索编号或名称…" onkeyup="searchCustomer()">
+                <button type="button" class="btn btn-secondary" onclick="loadCustomers()">刷新</button>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>编号</th>
+                            <th>名称</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody"></tbody>
+                </table>
             </div>
         </div>
-        <div class="import-summary" id="importSummary"></div>
-        <div class="table-wrap">
-            <table class="table" id="importResultTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>行号</th>
-                        <th>状态</th>
-                        <th>生效时间</th>
-                        <th>站点</th>
-                        <th>目的地代码</th>
-                        <th>目的地</th>
-                        <th>0-0.3kg</th>
-                        <th>0.3-0.5kg</th>
-                        <th>0.5-1kg</th>
-                        <th>1-2kg</th>
-                        <th>2-3kg</th>
-                        <th>3-4kg</th>
-                        <th>4-5kg</th>
-                        <th>面单费</th>
-                        <th>续重</th>
-                        <th>预期(1kg)</th>
-                        <th>预期(5kg)</th>
-                        <th>预期(10kg)</th>
-                    </tr>
-                </thead>
-                <tbody id="importTableBody"></tbody>
-            </table>
+
+        <div id="pricerule" class="page">
+            <h2>价格规则</h2>
+            <p class="page-subtitle">规则仅通过价格表导入维护 — 下方可查看线路并试算运费。</p>
+            <div class="toolbar">
+                <input type="text" id="ruleSearch" placeholder="筛选规则…" onkeyup="searchRule()">
+                <button type="button" class="btn btn-secondary" onclick="loadPriceRules()">刷新</button>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>站点</th>
+                            <th>目的地</th>
+                            <th>计费类型</th>
+                            <th>重量范围</th>
+                            <th>单价</th>
+                            <th>面单费</th>
+                            <th>生效日期</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ruleTableBody"></tbody>
+                </table>
+            </div>
+            <div class="card" style="margin-top: 1.25rem;">
+                <h3>运费试算（按已导入规则）</h3>
+                <div class="input-row">
+                    <label for="calcSiteId">站点</label>
+                    <select id="calcSiteId"></select>
+                </div>
+                <div class="input-row">
+                    <label for="calcDestId">目的地</label>
+                    <select id="calcDestId"></select>
+                </div>
+                <div class="input-row">
+                    <label for="calcWeight">重量 (kg)</label>
+                    <input type="number" step="0.1" id="calcWeight" placeholder="如 3.5">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="calculatePrice()">计算运费</button>
+                </div>
+                <div id="calcResult" class="calc-result">
+                    <h4>试算结果</h4>
+                    <p><strong>计费方式：</strong><span id="calcBillingType"></span></p>
+                    <p><strong>面单费：</strong><span id="calcBaseFee"></span> 元</p>
+                    <p><strong>运费：</strong><span id="calcWeightFee"></span> 元</p>
+                    <p><strong>总计：</strong><span class="total"><span id="calcTotal"></span> 元</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="import" class="page">
+            <h2>成本价导入</h2>
+            <p class="page-subtitle">上传站点成本价（应付侧）— 先预览解析，再一次性事务入库。</p>
+            <div class="card">
+                <h3>上传 Excel</h3>
+                <p class="import-hint">
+                    推荐先 <strong>下载标准模板</strong>（第 1 行表头，第 2 行起为数据）。
+                    也兼容师傅 <strong>成本表</strong>（快递类型、地区、Kg-Min/Max、中转费，如 <code>93-成本表-单独.xlsx</code>）、
+                    供应商 <strong>三级表头</strong>，以及「目的地」列 <strong>矩阵价目表</strong>。
+                    运单测试若只用「中通-晋州」，也可上传已转换的 <code>93-中通晋州-成本-标准格式.xlsx</code>。
+                    导入时自动补齐：站点不存在则新建、目的地不存在则新建；同一站点→目的地线路有规则则整批替换，否则新增。任一行校验失败则全部回滚。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadPriceTemplate()">下载标准模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="priceFile">Excel 文件</label>
+                    <input type="file" id="priceFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewPriceTable()">预览解析</button>
+                    <button type="button" class="btn btn-primary" onclick="importPriceTable()">确认导入到数据库</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportImportResult()" id="btnExportResult" disabled>导出结果 Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearImportResult()">清空</button>
+                </div>
+            </div>
+            <div class="import-summary" id="importSummary"></div>
+            <div class="table-wrap">
+                <table class="table" id="importResultTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>行号</th>
+                            <th>状态</th>
+                            <th>生效时间</th>
+                            <th>站点</th>
+                            <th>目的地代码</th>
+                            <th>目的地</th>
+                            <th>0-0.3kg</th>
+                            <th>0.3-0.5kg</th>
+                            <th>0.5-1kg</th>
+                            <th>1-2kg</th>
+                            <th>2-3kg</th>
+                            <th>3-4kg</th>
+                            <th>4-5kg</th>
+                            <th>面单费</th>
+                            <th>续重(元/kg)</th>
+                            <th>预期(1kg)</th>
+                            <th>预期(5kg)</th>
+                            <th>预期(10kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="importTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="waybill" class="page">
+            <h2>运单导入</h2>
+            <p class="page-subtitle">上传运单 Excel — 自动取整重量、计算应收/应付/利润；支持师傅双行表头账单明细做<strong>中转费对比验证</strong>，可预览后入库或导出结果。</p>
+            <div class="card">
+                <h3>上传 Excel</h3>
+                <p class="import-hint">
+                    推荐先 <strong>下载标准模板</strong>（账单日期、运单号、账户名称、目的省、结算重量等）。
+                    也兼容师傅 <strong>账单明细双行表头</strong>（账单明细 + 成本明细）：系统会读取表内人工核算的中转费，与机器计算结果对比验证。
+                    请上传<strong>单个 sheet</strong> 文件（勿整本多 sheet 账单统计）。
+                    取整规则：≤0.3→0.3，≤0.5→0.5，≤5→向上取整公斤（如 2.19→3）。
+                    <strong>应收</strong>按客户编号或账户名称匹配客户报价；<strong>应付</strong>按成本价 + 目的省。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadWaybillTemplate()">下载标准模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="waybillFile">Excel 文件</label>
+                    <input type="file" id="waybillFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewWaybills()">预览解析</button>
+                    <button type="button" class="btn btn-primary" onclick="importWaybills()">确认导入到数据库</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportWaybillResult()" id="btnExportWaybill" disabled>导出结果 Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearWaybillResult()">清空</button>
+                </div>
+            </div>
+            <div class="import-summary" id="waybillSummary"></div>
+            <div class="table-wrap">
+                <table class="table" id="waybillResultTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>行号</th>
+                            <th>状态</th>
+                            <th>验证</th>
+                            <th>运单号</th>
+                            <th>目的省</th>
+                            <th>结算重量</th>
+                            <th>取整重量</th>
+                            <th>应收中转费</th>
+                            <th>应付中转费</th>
+                            <th>合计应收</th>
+                            <th>剩余应收</th>
+                            <th>利润</th>
+                        </tr>
+                    </thead>
+                    <tbody id="waybillTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="customerquote" class="page">
+            <h2>客户报价导入</h2>
+            <p class="page-subtitle">维护客户应收价（按省份）；运单结算时与成本价（价格表）对比得出利润。</p>
+            <div class="card">
+                <h3>上传 Excel</h3>
+                <p class="import-hint">
+                    推荐 <strong>下载标准模板</strong>（客户编号、省份、各重量段单价、面单费、续重）。
+                    也兼容师傅 <strong>公斤段 / 地区+重量范围</strong> 报价表（如 <code>93-客户报价-单独.xlsx</code>）。
+                    <strong>勿上传运单账单明细</strong>（含运单号、账单明细、成本明细）— 那种文件请用【运单导入】。
+                    同一客户 + 省份 + 快递类型线路导入时将整批替换。
+                </p>
+                <div class="input-row">
+                    <button type="button" class="btn btn-accent" onclick="downloadCustomerQuoteTemplate()">下载标准模板</button>
+                </div>
+                <div class="input-row">
+                    <label for="customerQuoteFile">Excel 文件</label>
+                    <input type="file" id="customerQuoteFile" accept=".xlsx,.xlsm">
+                </div>
+                <div class="input-row">
+                    <button type="button" class="btn btn-primary" onclick="previewCustomerQuote()">预览解析</button>
+                    <button type="button" class="btn btn-primary" onclick="importCustomerQuote()">确认导入到数据库</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportCustomerQuoteResult()" id="btnExportCustomerQuote" disabled>导出结果 Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearCustomerQuoteResult()">清空</button>
+                </div>
+            </div>
+            <div class="import-summary" id="customerQuoteSummary"></div>
+            <div class="table-wrap">
+                <table class="table" id="customerQuoteResultTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>行号</th>
+                            <th>状态</th>
+                            <th>客户编号</th>
+                            <th>省份</th>
+                            <th>2-3kg</th>
+                            <th>面单费</th>
+                            <th>预期(3kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerQuoteTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        const API_URL = "http://localhost:5001/api";
+        const API_URL = `${window.location.origin}/api`;
+        const LOCALE = 'zh-CN';
         let editSiteId = null;
         let editDestId = null;
+        let editCustomerId = null;
         let sites = [];
         let destinations = [];
+        let customers = [];
+        let priceRules = [];
         let importResultRows = [];
+        let waybillResultRows = [];
+        let customerQuoteResultData = null;
+
+        const SITE_TYPES = { 1: '配送站', 2: '中转站', 3: '仓库' };
+        const BILLING_API_LABELS = {
+            'Tiered rate (≤5 kg)': '区间计费(≤5kg)',
+            'Overweight rate (>5 kg)': '续重计费(>5kg)',
+            '区间计费(≤5kg)': '区间计费(≤5kg)',
+            '续重计费(>5kg)': '续重计费(>5kg)'
+        };
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
-            
+            document.querySelectorAll('.nav button').forEach(b => {
+                b.classList.toggle('active', b.dataset.page === pageId);
+            });
+
             if (pageId === 'site') loadSites();
             else if (pageId === 'destination') loadDestinations();
+            else if (pageId === 'customer') loadCustomers();
             else if (pageId === 'pricerule') {
                 loadSitesForSelect();
                 loadDestinationsForSelect();
@@ -448,7 +753,23 @@
             el.textContent = msg;
             el.className = 'message ' + (success ? 'success' : 'error');
             el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 3000);
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
+        }
+
+        function formatDateTime(iso) {
+            return new Date(iso).toLocaleString(LOCALE);
+        }
+
+        function formatDate(iso) {
+            return new Date(iso).toLocaleDateString(LOCALE);
+        }
+
+        function billingLabel(type) {
+            return type === 1 ? '区间计费(≤5kg)' : '续重计费(>5kg)';
+        }
+
+        function translateBilling(text) {
+            return BILLING_API_LABELS[text] || text;
         }
 
         async function loadSites() {
@@ -460,7 +781,7 @@
                     renderSiteTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载失败: ' + e.message, false);
+                showMessage('加载站点失败: ' + e.message, false);
             }
         }
 
@@ -468,18 +789,23 @@
             const tbody = document.getElementById('siteTableBody');
             tbody.innerHTML = data.map(s => `
                 <tr>
-                    <td>${s.siteCode}</td>
-                    <td>${s.siteName}</td>
-                    <td>${s.siteType === 1 ? '配送站' : s.siteType === 2 ? '中转站' : '仓库'}</td>
-                    <td>${s.expressCompany}</td>
-                    <td>${s.contactPerson} (${s.contactPhone})</td>
+                    <td>${escapeHtml(s.siteCode)}</td>
+                    <td>${escapeHtml(s.siteName)}</td>
+                    <td>${SITE_TYPES[s.siteType] || s.siteType}</td>
+                    <td>${escapeHtml(s.expressCompany || '')}</td>
+                    <td>${escapeHtml(s.contactPerson || '')} ${s.contactPhone ? '(' + escapeHtml(s.contactPhone) + ')' : ''}</td>
                     <td><span class="status ${s.status === 1 ? 'active' : 'inactive'}">${s.status === 1 ? '启用' : '禁用'}</span></td>
-                    <td>
-                        <button onclick="editSite(${s.id})">编辑</button>
-                        <button class="danger" onclick="deleteSite(${s.id})">删除</button>
+                    <td class="actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editSite(${s.id})">编辑</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">删除</button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         }
 
         function editSite(id) {
@@ -490,11 +816,12 @@
                 document.getElementById('siteCode').value = site.siteCode;
                 document.getElementById('siteName').value = site.siteName;
                 document.getElementById('siteType').value = site.siteType;
-                document.getElementById('expressCompany').value = site.expressCompany;
-                document.getElementById('contactPerson').value = site.contactPerson;
-                document.getElementById('contactPhone').value = site.contactPhone;
-                document.getElementById('address').value = site.address;
+                document.getElementById('expressCompany').value = site.expressCompany || '';
+                document.getElementById('contactPerson').value = site.contactPerson || '';
+                document.getElementById('contactPhone').value = site.contactPhone || '';
+                document.getElementById('address').value = site.address || '';
                 document.getElementById('siteStatus').value = site.status;
+                showPage('site');
             }
         }
 
@@ -517,25 +844,23 @@
             }
 
             try {
-                const method = editSiteId === null ? 'POST' : 'PUT';
-                const url = editSiteId === null ? `${API_URL}/Site` : `${API_URL}/Site/${editSiteId}`;
-                
+                const isNew = !editSiteId;
+                const url = isNew ? `${API_URL}/Site` : `${API_URL}/Site/${editSiteId}`;
                 const res = await fetch(url, {
-                    method: method,
+                    method: isNew ? 'POST' : 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(site)
                 });
-                
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('操作成功', true);
+                    showMessage('站点保存成功', true);
                     clearSiteForm();
                     loadSites();
                 } else {
-                    showMessage(result.message, false);
+                    showMessage(result.message || '保存失败', false);
                 }
             } catch (e) {
-                showMessage('操作失败: ' + e.message, false);
+                showMessage('保存失败: ' + e.message, false);
             }
         }
 
@@ -553,7 +878,7 @@
         }
 
         async function deleteSite(id) {
-            if (!confirm('确定删除？')) return;
+            if (!confirm('确定删除该站点？')) return;
             try {
                 const res = await fetch(`${API_URL}/Site/${id}`, { method: 'DELETE' });
                 const result = await res.json();
@@ -561,7 +886,7 @@
                     showMessage('删除成功', true);
                     loadSites();
                 } else {
-                    showMessage(result.message, false);
+                    showMessage(result.message || '删除失败', false);
                 }
             } catch (e) {
                 showMessage('删除失败: ' + e.message, false);
@@ -570,11 +895,53 @@
 
         function searchSite() {
             const keyword = document.getElementById('siteSearch').value.toLowerCase();
-            const filtered = sites.filter(s => 
-                s.siteCode.toLowerCase().includes(keyword) || 
+            const filtered = sites.filter(s =>
+                s.siteCode.toLowerCase().includes(keyword) ||
                 s.siteName.toLowerCase().includes(keyword)
             );
             renderSiteTable(filtered);
+        }
+
+        function downloadSiteTemplate() {
+            window.location.href = `${API_URL}/Site/import/template`;
+        }
+
+        async function uploadSiteFile(endpoint, okMsg) {
+            const fileInput = document.getElementById('siteFile');
+            if (!fileInput.files?.length) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch(`${API_URL}/Site/${endpoint}`, { method: 'POST', body: formData });
+                const result = await res.json();
+                if (!result.success) {
+                    showMessage(result.message || '导入失败', false);
+                    return;
+                }
+                const data = result.data;
+                const summary = document.getElementById('siteImportSummary');
+                summary.style.display = 'block';
+                const errCount = (data.rows || []).filter(r => r.errorMessage).length;
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
+                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                showMessage(okMsg, errCount === 0);
+                if (data.savedToDatabase) loadSites();
+            } catch (e) {
+                showMessage('导入失败: ' + e.message, false);
+            }
+        }
+
+        function previewSiteImport() {
+            uploadSiteFile('import/preview', '预览完成');
+        }
+
+        function commitSiteImport() {
+            if (!confirm('确认将站点数据写入数据库？')) return;
+            uploadSiteFile('import', '已导入到数据库');
         }
 
         async function loadDestinations() {
@@ -586,7 +953,7 @@
                     renderDestTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载失败: ' + e.message, false);
+                showMessage('加载目的地失败: ' + e.message, false);
             }
         }
 
@@ -594,14 +961,14 @@
             const tbody = document.getElementById('destTableBody');
             tbody.innerHTML = data.map(d => `
                 <tr>
-                    <td>${d.destCode}</td>
-                    <td>${d.province}</td>
-                    <td>${d.city}</td>
-                    <td>${d.area}</td>
-                    <td>${new Date(d.createTime).toLocaleString()}</td>
-                    <td>
-                        <button onclick="editDestination(${d.id})">编辑</button>
-                        <button class="danger" onclick="deleteDestination(${d.id})">删除</button>
+                    <td>${escapeHtml(d.destCode)}</td>
+                    <td>${escapeHtml(d.province)}</td>
+                    <td>${escapeHtml(d.city || '')}</td>
+                    <td>${escapeHtml(d.area || '')}</td>
+                    <td>${formatDateTime(d.createTime)}</td>
+                    <td class="actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editDestination(${d.id})">编辑</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteDestination(${d.id})">删除</button>
                     </td>
                 </tr>
             `).join('');
@@ -614,8 +981,9 @@
                 document.getElementById('destId').value = dest.id;
                 document.getElementById('destCode').value = dest.destCode;
                 document.getElementById('province').value = dest.province;
-                document.getElementById('city').value = dest.city;
-                document.getElementById('area').value = dest.area;
+                document.getElementById('city').value = dest.city || '';
+                document.getElementById('area').value = dest.area || '';
+                showPage('destination');
             }
         }
 
@@ -634,25 +1002,23 @@
             }
 
             try {
-                const method = editDestId === null ? 'POST' : 'PUT';
-                const url = editDestId === null ? `${API_URL}/Destination` : `${API_URL}/Destination/${editDestId}`;
-                
+                const isNew = !editDestId;
+                const url = isNew ? `${API_URL}/Destination` : `${API_URL}/Destination/${editDestId}`;
                 const res = await fetch(url, {
-                    method: method,
+                    method: isNew ? 'POST' : 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dest)
                 });
-                
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('操作成功', true);
+                    showMessage('目的地保存成功', true);
                     clearDestForm();
                     loadDestinations();
                 } else {
-                    showMessage(result.message, false);
+                    showMessage(result.message || '保存失败', false);
                 }
             } catch (e) {
-                showMessage('操作失败: ' + e.message, false);
+                showMessage('保存失败: ' + e.message, false);
             }
         }
 
@@ -666,7 +1032,7 @@
         }
 
         async function deleteDestination(id) {
-            if (!confirm('确定删除？')) return;
+            if (!confirm('确定删除该目的地？')) return;
             try {
                 const res = await fetch(`${API_URL}/Destination/${id}`, { method: 'DELETE' });
                 const result = await res.json();
@@ -674,7 +1040,7 @@
                     showMessage('删除成功', true);
                     loadDestinations();
                 } else {
-                    showMessage(result.message, false);
+                    showMessage(result.message || '删除失败', false);
                 }
             } catch (e) {
                 showMessage('删除失败: ' + e.message, false);
@@ -683,11 +1049,202 @@
 
         function searchDestination() {
             const keyword = document.getElementById('destSearch').value.toLowerCase();
-            const filtered = destinations.filter(d => 
-                d.destCode.toLowerCase().includes(keyword) || 
+            const filtered = destinations.filter(d =>
+                d.destCode.toLowerCase().includes(keyword) ||
                 d.province.toLowerCase().includes(keyword)
             );
             renderDestTable(filtered);
+        }
+
+        function downloadDestinationTemplate() {
+            window.location.href = `${API_URL}/Destination/import/template`;
+        }
+
+        async function uploadDestinationFile(endpoint, okMsg) {
+            const fileInput = document.getElementById('destFile');
+            if (!fileInput.files?.length) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch(`${API_URL}/Destination/${endpoint}`, { method: 'POST', body: formData });
+                const result = await res.json();
+                if (!result.success) {
+                    showMessage(result.message || '导入失败', false);
+                    return;
+                }
+                const data = result.data;
+                const summary = document.getElementById('destImportSummary');
+                summary.style.display = 'block';
+                const errCount = (data.rows || []).filter(r => r.errorMessage).length;
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
+                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                showMessage(okMsg, errCount === 0);
+                if (data.savedToDatabase) loadDestinations();
+            } catch (e) {
+                showMessage('导入失败: ' + e.message, false);
+            }
+        }
+
+        function previewDestinationImport() {
+            uploadDestinationFile('import/preview', '预览完成');
+        }
+
+        function commitDestinationImport() {
+            if (!confirm('确认将目的地数据写入数据库？')) return;
+            uploadDestinationFile('import', '已导入到数据库');
+        }
+
+        async function loadCustomers() {
+            try {
+                const res = await fetch(`${API_URL}/Customer`);
+                const result = await res.json();
+                if (result.success) {
+                    customers = result.data;
+                    renderCustomerTable(customers);
+                }
+            } catch (e) {
+                showMessage('加载客户失败: ' + e.message, false);
+            }
+        }
+
+        function renderCustomerTable(data) {
+            const tbody = document.getElementById('customerTableBody');
+            tbody.innerHTML = data.map(c => `
+                <tr>
+                    <td>${escapeHtml(c.customerCode)}</td>
+                    <td>${escapeHtml(c.customerName)}</td>
+                    <td><span class="status ${c.status === 1 ? 'active' : 'inactive'}">${c.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td>${formatDateTime(c.createTime)}</td>
+                    <td class="actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editCustomer(${c.id})">编辑</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteCustomer(${c.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editCustomer(id) {
+            const c = customers.find(x => x.id === id);
+            if (!c) return;
+            editCustomerId = id;
+            document.getElementById('customerId').value = c.id;
+            document.getElementById('customerCode').value = c.customerCode;
+            document.getElementById('customerName').value = c.customerName;
+            document.getElementById('customerStatus').value = c.status;
+            document.getElementById('customerRemark').value = c.remark || '';
+            showPage('customer');
+        }
+
+        async function saveCustomer() {
+            const customer = {
+                Id: document.getElementById('customerId').value || 0,
+                CustomerCode: document.getElementById('customerCode').value.trim(),
+                CustomerName: document.getElementById('customerName').value.trim(),
+                Status: parseInt(document.getElementById('customerStatus').value),
+                Remark: document.getElementById('customerRemark').value.trim() || null
+            };
+            if (!customer.CustomerCode || !customer.CustomerName) {
+                showMessage('请填写客户编号和名称', false);
+                return;
+            }
+            try {
+                const isNew = !editCustomerId;
+                const url = isNew ? `${API_URL}/Customer` : `${API_URL}/Customer/${editCustomerId}`;
+                const res = await fetch(url, {
+                    method: isNew ? 'POST' : 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(customer)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('客户保存成功', true);
+                    clearCustomerForm();
+                    loadCustomers();
+                } else {
+                    showMessage(result.message || '保存失败', false);
+                }
+            } catch (e) {
+                showMessage('保存失败: ' + e.message, false);
+            }
+        }
+
+        function clearCustomerForm() {
+            editCustomerId = null;
+            document.getElementById('customerId').value = '';
+            document.getElementById('customerCode').value = '';
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerStatus').value = '1';
+            document.getElementById('customerRemark').value = '';
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('确定删除该客户？')) return;
+            try {
+                const res = await fetch(`${API_URL}/Customer/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    showMessage('删除成功', true);
+                    loadCustomers();
+                } else {
+                    showMessage(result.message || '删除失败', false);
+                }
+            } catch (e) {
+                showMessage('删除失败: ' + e.message, false);
+            }
+        }
+
+        function searchCustomer() {
+            const keyword = document.getElementById('customerSearch').value.toLowerCase();
+            const filtered = customers.filter(c =>
+                c.customerCode.toLowerCase().includes(keyword) ||
+                c.customerName.toLowerCase().includes(keyword)
+            );
+            renderCustomerTable(filtered);
+        }
+
+        function downloadCustomerTemplate() {
+            window.location.href = `${API_URL}/Customer/import/template`;
+        }
+
+        async function uploadCustomerFile(endpoint, okMsg) {
+            const fileInput = document.getElementById('customerFile');
+            if (!fileInput.files?.length) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch(`${API_URL}/Customer/${endpoint}`, { method: 'POST', body: formData });
+                const result = await res.json();
+                if (!result.success) {
+                    showMessage(result.message || '导入失败', false);
+                    return;
+                }
+                const data = result.data;
+                const summary = document.getElementById('customerImportSummary');
+                summary.style.display = 'block';
+                const errCount = (data.rows || []).filter(r => r.errorMessage).length;
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
+                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                showMessage(okMsg, errCount === 0);
+                if (data.savedToDatabase) loadCustomers();
+            } catch (e) {
+                showMessage('导入失败: ' + e.message, false);
+            }
+        }
+
+        function previewCustomerImport() {
+            uploadCustomerFile('import/preview', '预览完成');
+        }
+
+        function commitCustomerImport() {
+            uploadCustomerFile('import', '已导入到数据库');
         }
 
         async function loadSitesForSelect() {
@@ -696,7 +1253,7 @@
             if (result.success) {
                 sites = result.data;
                 document.getElementById('calcSiteId').innerHTML = sites.map(s =>
-                    `<option value="${s.id}">${s.siteCode} - ${s.siteName}</option>`).join('');
+                    `<option value="${s.id}">${escapeHtml(s.siteCode)} — ${escapeHtml(s.siteName)}</option>`).join('');
             }
         }
 
@@ -706,7 +1263,7 @@
             if (result.success) {
                 destinations = result.data;
                 document.getElementById('calcDestId').innerHTML = destinations.map(d =>
-                    `<option value="${d.id}">${d.destCode} - ${d.province}</option>`).join('');
+                    `<option value="${d.id}">${escapeHtml(d.destCode)} — ${escapeHtml(d.province)}</option>`).join('');
             }
         }
 
@@ -715,10 +1272,11 @@
                 const res = await fetch(`${API_URL}/PriceRule`);
                 const result = await res.json();
                 if (result.success) {
+                    priceRules = result.data;
                     renderRuleTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载失败: ' + e.message, false);
+                showMessage('加载价格规则失败: ' + e.message, false);
             }
         }
 
@@ -726,26 +1284,35 @@
             const tbody = document.getElementById('ruleTableBody');
             tbody.innerHTML = data.map(r => `
                 <tr>
-                    <td>${getSiteName(r.siteId)}</td>
-                    <td>${getDestName(r.destId)}</td>
-                    <td>${r.billingType === 1 ? '区间计费' : '续重计费'}</td>
-                    <td>${r.minWeight} - ${r.maxWeight} kg</td>
-                    <td>${r.unitPrice.toFixed(2)} 元</td>
-                    <td>${r.baseFee.toFixed(2)} 元</td>
-                    <td>${new Date(r.effectiveDate).toLocaleDateString()}</td>
+                    <td>${escapeHtml(getSiteName(r.siteId))}</td>
+                    <td>${escapeHtml(getDestName(r.destId))}</td>
+                    <td>${billingLabel(r.billingType)}</td>
+                    <td>${r.minWeight} – ${r.maxWeight} kg</td>
+                    <td>${r.unitPrice.toFixed(2)}</td>
+                    <td>${r.baseFee.toFixed(2)}</td>
+                    <td>${formatDate(r.effectiveDate)}</td>
                     <td><span class="status ${r.status === 1 ? 'active' : 'inactive'}">${r.status === 1 ? '启用' : '禁用'}</span></td>
                 </tr>
             `).join('');
         }
 
+        function searchRule() {
+            const keyword = document.getElementById('ruleSearch').value.toLowerCase();
+            const filtered = priceRules.filter(r =>
+                getSiteName(r.siteId).toLowerCase().includes(keyword) ||
+                getDestName(r.destId).toLowerCase().includes(keyword)
+            );
+            renderRuleTable(filtered);
+        }
+
         function getSiteName(id) {
             const site = sites.find(s => s.id === id);
-            return site ? `${site.siteCode} - ${site.siteName}` : id;
+            return site ? `${site.siteCode} — ${site.siteName}` : String(id);
         }
 
         function getDestName(id) {
             const dest = destinations.find(d => d.id === id);
-            return dest ? `${dest.destCode} - ${dest.province}` : id;
+            return dest ? `${dest.destCode} — ${dest.province}` : String(id);
         }
 
         async function calculatePrice() {
@@ -767,17 +1334,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(req)
                 });
-                
                 const result = await res.json();
                 if (result.success) {
                     const data = result.data;
-                    document.getElementById('calcBillingType').textContent = data.billingType;
+                    document.getElementById('calcBillingType').textContent = translateBilling(data.billingType);
                     document.getElementById('calcBaseFee').textContent = data.baseFee.toFixed(2);
                     document.getElementById('calcWeightFee').textContent = data.weightFee.toFixed(2);
                     document.getElementById('calcTotal').textContent = data.totalPrice.toFixed(2);
                     document.getElementById('calcResult').style.display = 'block';
                 } else {
-                    showMessage(result.message, false);
+                    showMessage(result.message || '计算失败', false);
                 }
             } catch (e) {
                 showMessage('计算失败: ' + e.message, false);
@@ -824,19 +1390,23 @@
             const summary = document.getElementById('importSummary');
             summary.style.display = 'block';
             const errCount = importResultRows.filter(r => r.errorMessage).length;
+            const formatLabel = data.format || '—';
             summary.innerHTML = `
-                <strong>${title}</strong> — 格式：${data.format || '-'}，工作表「${data.sheetName}」，
-                表头第 ${data.headerRow} 行，共 <strong>${data.totalRows}</strong> 条。
-                ${data.savedToDatabase ? `已写入规则 <strong>${data.rulesUpserted}</strong> 条。` : ''}
-                ${errCount ? `<br><span style="color:#721c24">校验失败 ${errCount} 行（未入库）</span>` : ''}
-                ${(data.warnings && data.warnings.length) ? '<br>提示：' + data.warnings.join('；') : ''}
+                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(formatLabel)}；
+                工作表「${escapeHtml(data.sheetName || '')}」，表头第 ${data.headerRow} 行。
+                共解析 <strong>${data.totalRows}</strong> 条。
+                ${data.savedToDatabase ? ` 已更新 <strong>${data.lanesUpserted ?? 0}</strong> 条线路、写入 <strong>${data.rulesUpserted}</strong> 条价格规则。` : ''}
+                ${data.savedToDatabase && (data.sitesCreated || data.destinationsCreated) ? ` 新建站点 <strong>${data.sitesCreated}</strong> 个、目的地 <strong>${data.destinationsCreated}</strong> 个。` : ''}
+                ${!data.savedToDatabase && data.masterDataToCreate && data.masterDataToCreate.length ? `<br>将自动新建：${escapeHtml(data.masterDataToCreate.join('、'))}` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">校验失败 ${errCount} 行（未入库）。</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
             `;
             document.getElementById('btnExportResult').disabled = importResultRows.length === 0;
-            showMessage(title, !errCount);
+            showMessage(title, errCount === 0);
         }
 
         function fmt(v) {
-            return v == null ? '-' : Number(v).toFixed(2);
+            return v == null ? '—' : Number(v).toFixed(2);
         }
 
         function renderImportTable(rows) {
@@ -847,16 +1417,15 @@
                 tbody.innerHTML = '';
                 return;
             }
-
             table.style.display = 'table';
             tbody.innerHTML = rows.map(r => `
-                <tr style="${r.errorMessage ? 'background:#fff5f5' : ''}">
+                <tr class="${r.errorMessage ? 'row-error' : ''}">
                     <td>${r.rowNumber}</td>
-                    <td>${r.errorMessage ? r.errorMessage : '✓'}</td>
-                    <td>${r.effectiveDate ? new Date(r.effectiveDate).toLocaleDateString() : '-'}</td>
-                    <td>${r.siteCode}</td>
-                    <td>${r.destCode}</td>
-                    <td>${r.destination}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) + '成功' : '成功')}</td>
+                    <td>${r.effectiveDate ? formatDate(r.effectiveDate) : '—'}</td>
+                    <td>${escapeHtml(r.siteCode)}</td>
+                    <td>${escapeHtml(r.destCode)}</td>
+                    <td>${escapeHtml(r.destination)}</td>
                     <td>${fmt(r.price_0_0_3)}</td>
                     <td>${fmt(r.price_0_3_0_5)}</td>
                     <td>${fmt(r.price_0_5_1)}</td>
@@ -892,7 +1461,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `价格表导入结果_${new Date().toISOString().slice(0,10)}.xlsx`;
+                a.download = `价格表导入结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
                 a.click();
                 URL.revokeObjectURL(url);
                 showMessage('导出成功', true);
@@ -910,9 +1479,253 @@
             document.getElementById('btnExportResult').disabled = true;
         }
 
-        window.onload = () => {
-            showPage('site');
-        };
+        function downloadWaybillTemplate() {
+            window.location.href = `${API_URL}/Bill/waybill/template`;
+        }
+
+        function uploadWaybillFile(endpoint, successMsg) {
+            const fileInput = document.getElementById('waybillFile');
+            if (!fileInput.files.length) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            fetch(`${API_URL}/Bill/${endpoint}`, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        showMessage(res.message || '处理失败', false);
+                        return;
+                    }
+                    showWaybillResult(res.data, successMsg);
+                })
+                .catch(e => showMessage('请求失败: ' + e.message, false));
+        }
+
+        function previewWaybills() {
+            uploadWaybillFile('waybill/preview', '预览完成');
+        }
+
+        function importWaybills() {
+            if (!confirm('确认将运单结算结果写入数据库？任一行校验失败将整批回滚。')) return;
+            uploadWaybillFile('waybill', '已写入数据库');
+        }
+
+        function showWaybillResult(data, title) {
+            waybillResultRows = data.rows || [];
+            renderWaybillTable(waybillResultRows);
+            const summary = document.getElementById('waybillSummary');
+            summary.style.display = 'block';
+            const errCount = waybillResultRows.filter(r => r.errorMessage).length;
+            const matched = data.matchedTransitRows ?? waybillResultRows.filter(r => r.transitFeeMatched === true).length;
+            const mismatch = data.mismatchTransitRows ?? waybillResultRows.filter(r => r.transitFeeMatched === false).length;
+            const hasCompare = matched + mismatch > 0;
+            summary.innerHTML = `
+                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(data.format || '—')}；
+                工作表「${escapeHtml(data.sheetName || '')}」，表头第 ${data.headerRow} 行。
+                共解析 <strong>${data.totalRows}</strong> 条。
+                ${hasCompare ? `<br>中转费对比：<strong style="color:#166534">${matched} 一致</strong>，<strong style="color:#991b1b">${mismatch} 不一致</strong>。` : ''}
+                ${data.savedToDatabase ? ` 已写入 <strong>${data.linesSaved ?? 0}</strong> 条（批次 ${escapeHtml(data.importBatchId || '')}）。` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">校验/计价失败 ${errCount} 行。</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
+            `;
+            document.getElementById('btnExportWaybill').disabled = waybillResultRows.length === 0;
+            showMessage(title, errCount === 0);
+        }
+
+        function renderWaybillTable(rows) {
+            const table = document.getElementById('waybillResultTable');
+            const tbody = document.getElementById('waybillTableBody');
+            if (!rows.length) {
+                table.style.display = 'none';
+                tbody.innerHTML = '';
+                return;
+            }
+            table.style.display = 'table';
+            tbody.innerHTML = rows.map(r => `
+                <tr class="${r.errorMessage ? 'row-error' : (r.transitFeeMatched === false ? 'row-warn' : '')}">
+                    <td>${r.rowNumber}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : '成功'}</td>
+                    <td>${r.transitFeeMatched === true ? '一致' : r.transitFeeMatched === false ? '不一致' : '—'}</td>
+                    <td>${escapeHtml(r.waybillNo)}</td>
+                    <td>${escapeHtml(r.province)}</td>
+                    <td>${fmt(r.actualWeight)}</td>
+                    <td><strong>${fmt(r.roundedWeight)}</strong></td>
+                    <td>${fmt(r.receivableTransitFee)}${r.expectedReceivableTransitFee != null ? ` / ${fmt(r.expectedReceivableTransitFee)}` : ''}</td>
+                    <td>${fmt(r.payableTransitFee)}${r.expectedPayableTransitFee != null ? ` / ${fmt(r.expectedPayableTransitFee)}` : ''}</td>
+                    <td>${fmt(r.receivableGrandTotal ?? r.receivableTotal)}</td>
+                    <td>${fmt(r.remainingReceivable)}</td>
+                    <td><strong>${fmt(r.profit)}</strong></td>
+                </tr>
+            `).join('');
+        }
+
+        async function exportWaybillResult() {
+            if (!waybillResultRows.length) {
+                showMessage('没有可导出的数据', false);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/Bill/waybill/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(waybillResultRows)
+                });
+                if (!res.ok) {
+                    showMessage('导出失败', false);
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `运单结算结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('导出成功', true);
+            } catch (e) {
+                showMessage('导出失败: ' + e.message, false);
+            }
+        }
+
+        function clearWaybillResult() {
+            waybillResultRows = [];
+            document.getElementById('waybillFile').value = '';
+            document.getElementById('waybillSummary').style.display = 'none';
+            document.getElementById('waybillResultTable').style.display = 'none';
+            document.getElementById('waybillTableBody').innerHTML = '';
+            document.getElementById('btnExportWaybill').disabled = true;
+        }
+
+        function downloadCustomerQuoteTemplate() {
+            window.location.href = `${API_URL}/CustomerQuote/template`;
+        }
+
+        function uploadCustomerQuoteFile(endpoint, successMsg) {
+            const fileInput = document.getElementById('customerQuoteFile');
+            if (!fileInput.files.length) {
+                showMessage('请选择 Excel 文件', false);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            fetch(`${API_URL}/CustomerQuote/${endpoint}`, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        showMessage(res.message || '处理失败', false);
+                        return;
+                    }
+                    showCustomerQuoteResult(res.data, successMsg);
+                })
+                .catch(e => showMessage('请求失败: ' + e.message, false));
+        }
+
+        function previewCustomerQuote() {
+            uploadCustomerQuoteFile('preview', '预览完成');
+        }
+
+        function importCustomerQuote() {
+            if (!confirm('确认将客户报价写入数据库？任一行校验失败将整批回滚。')) return;
+            uploadCustomerQuoteFile('', '已写入数据库');
+        }
+
+        function showCustomerQuoteResult(data, title) {
+            customerQuoteResultData = data;
+            const rows = data.wideRows || [];
+            const longRows = data.longRows || [];
+            renderCustomerQuoteTable(rows, longRows);
+            const summary = document.getElementById('customerQuoteSummary');
+            summary.style.display = 'block';
+            const errCount = rows.filter(r => r.errorMessage).length
+                + (data.longRows || []).filter(r => r.errorMessage).length;
+            const longCount = (data.longRows || []).length;
+            summary.innerHTML = `
+                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(data.format || '—')}；
+                工作表「${escapeHtml(data.sheetName || '')}」。
+                宽表 ${rows.length} 条${longCount ? `，公斤段 ${longCount} 条` : ''}。
+                ${data.savedToDatabase ? ` 已更新 <strong>${data.lanesUpserted ?? 0}</strong> 条线路、写入 <strong>${data.rulesUpserted}</strong> 条报价规则。` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">校验失败 ${errCount} 行。</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
+            `;
+            document.getElementById('btnExportCustomerQuote').disabled = rows.length === 0;
+            showMessage(title, errCount === 0);
+        }
+
+        function renderCustomerQuoteTable(rows, longRows) {
+            const table = document.getElementById('customerQuoteResultTable');
+            const tbody = document.getElementById('customerQuoteTableBody');
+            const allRows = rows.length + longRows.length;
+            if (!allRows) {
+                table.style.display = 'none';
+                tbody.innerHTML = '';
+                return;
+            }
+            table.style.display = 'table';
+            const wideHtml = rows.map(r => `
+                <tr class="${r.errorMessage ? 'row-error' : ''}">
+                    <td>${r.rowNumber}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) : '成功')}</td>
+                    <td>${escapeHtml(r.customerCode)}</td>
+                    <td>${escapeHtml(r.province)}</td>
+                    <td>${fmt(r.price_2_3)}</td>
+                    <td>${fmt(r.baseFee)}</td>
+                    <td><strong>${fmt(r.expectedPrice3Kg)}</strong></td>
+                </tr>
+            `).join('');
+            const longHtml = longRows.slice(0, 200).map(r => `
+                <tr class="${r.errorMessage ? 'row-error' : ''}">
+                    <td>${r.rowNumber}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : '成功'}</td>
+                    <td>${escapeHtml(r.customerCode)}</td>
+                    <td>${escapeHtml(r.province)}</td>
+                    <td>${escapeHtml(r.weightBracket)}=${fmt(r.unitPrice)}</td>
+                    <td>${fmt(r.baseFee)}</td>
+                    <td>—</td>
+                </tr>
+            `).join('');
+            tbody.innerHTML = wideHtml + longHtml;
+        }
+
+        async function exportCustomerQuoteResult() {
+            if (!customerQuoteResultData?.wideRows?.length) {
+                showMessage('没有可导出的宽表数据', false);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/CustomerQuote/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(customerQuoteResultData)
+                });
+                if (!res.ok) {
+                    showMessage('导出失败', false);
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `客户报价导入结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('导出成功', true);
+            } catch (e) {
+                showMessage('导出失败: ' + e.message, false);
+            }
+        }
+
+        function clearCustomerQuoteResult() {
+            customerQuoteResultData = null;
+            document.getElementById('customerQuoteFile').value = '';
+            document.getElementById('customerQuoteSummary').style.display = 'none';
+            document.getElementById('customerQuoteResultTable').style.display = 'none';
+            document.getElementById('customerQuoteTableBody').innerHTML = '';
+            document.getElementById('btnExportCustomerQuote').disabled = true;
+        }
+
+        window.onload = () => showPage('site');
     </script>
 </body>
 </html>

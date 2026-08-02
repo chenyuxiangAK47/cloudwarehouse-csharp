@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CloudWarehouse.Pricing.Core\CloudWarehouse.Pricing.Core.csproj" />
+  </ItemGroup>
+
 </Project>

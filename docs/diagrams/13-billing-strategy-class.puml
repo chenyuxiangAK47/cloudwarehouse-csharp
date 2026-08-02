@@ -1,0 +1,80 @@
+@startuml CloudWarehouse_Billing_Strategy_Pattern
+title Billing Strategy Pattern (Phase 2) — Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "CloudWarehouse.Pricing.Core / Billing" {
+
+  class BillingContext {
+    + Weight : decimal
+    + ActiveRules : IReadOnlyList<PriceRule>
+  }
+
+  interface IBillingStrategy {
+    + StrategyName : string
+    + CanHandle(context) : bool
+    + Calculate(context) : PriceCalculateResult?
+  }
+
+  class TierBillingStrategy {
+    + StrategyName = "区间计费(≤5kg)"
+    + CanHandle(context) : bool
+    + Calculate(context) : PriceCalculateResult?
+  }
+
+  class OverweightBillingStrategy {
+    + StrategyName = "续重计费(>5kg)"
+    + CanHandle(context) : bool
+    + Calculate(context) : PriceCalculateResult?
+  }
+
+  interface IBillingStrategyResolver {
+    + Resolve(context) : IBillingStrategy?
+    + RegisteredStrategyNames : IReadOnlyList<string>
+  }
+
+  class DefaultBillingStrategyResolver {
+    + Resolve(context) : IBillingStrategy?
+  }
+
+  class FeeCalculationEngine {
+    + Calculate(rules, weight, orderDate)
+    + CalculateActive(rules, weight)
+  }
+
+  class FeeRuleCalculator <<static facade>> {
+    {static} + Calculate(...)
+    {static} + CalculateActive(...)
+  }
+
+  class DualTrackFeeCalculator <<application>> {
+    + CalculateAsync(WaybillImportRow)
+  }
+
+  note as Future <<planned>>
+    Future concrete strategies (Open/Closed):
+    - VolumetricBillingStrategy
+    - StepBillingStrategy
+    - IrregularParcelStrategy
+    Register in BillingStrategyFactory only.
+  end note
+}
+
+IBillingStrategy <|.. TierBillingStrategy
+IBillingStrategy <|.. OverweightBillingStrategy
+IBillingStrategyResolver <|.. DefaultBillingStrategyResolver
+DefaultBillingStrategyResolver --> IBillingStrategy : selects
+FeeCalculationEngine --> IBillingStrategyResolver
+FeeRuleCalculator --> FeeCalculationEngine : delegates
+DualTrackFeeCalculator ..> FeeCalculationEngine : via cost/quote services
+IBillingStrategy --> BillingContext : uses
+IBillingStrategy ..> PriceCalculateResult : returns
+Future .. DefaultBillingStrategyResolver
+
+' --- Presentation script (EN) ---
+' 1. We refactored fee calculation from if/else into Strategy Pattern for billing variants.
+' 2. TierBillingStrategy handles ≤5kg brackets; OverweightBillingStrategy handles >5kg.
+' 3. New schemes (volumetric, step) extend IBillingStrategy without changing FeeRuleCalculator callers.
+
+@enduml

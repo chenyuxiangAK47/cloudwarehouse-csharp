@@ -1,0 +1,64 @@
+@startuml CloudWarehouse_Use_Case_Diagram
+left to right direction
+title System Use Case Diagram
+
+actor "Warehouse Admin" as Admin
+actor "Supplier\n(indirect)" as Supplier
+actor "System\n(scheduled / background)" as Sys
+
+rectangle "CloudWarehouse System" {
+
+  package "Master Data Management" {
+    usecase "Create Site" as UC1
+    usecase "Update Site" as UC2
+    usecase "Delete Site" as UC3
+    usecase "Create Destination" as UC4
+    usecase "Update Destination" as UC5
+    usecase "Delete Destination" as UC6
+  }
+
+  package "Price Table Management" {
+    usecase "Download Standard Template" as UC7
+    usecase "Upload Price Table Preview" as UC8
+    usecase "Confirm Import Price Table" as UC9
+    usecase "Export Price Table Result" as UC10
+    usecase "Execute Data Validation" as UC11
+    usecase "View Import Error Details" as UC12
+  }
+
+  package "Core Business" {
+    usecase "View Price Rule List" as UC13
+    usecase "Calculate Shipping Fee" as UC14
+  }
+}
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+Admin --> UC9
+Admin --> UC10
+Admin --> UC13
+Admin --> UC14
+
+Supplier ..> UC8 : provides Excel file
+Supplier ..> UC9 : provides Excel file
+
+Sys --> UC11
+
+UC9 ..> UC11 : <<include>>
+UC12 ..> UC9 : <<extend>>
+note right of UC9
+  extension point:
+  import failed
+end note
+
+@enduml
+
+' 1. Warehouse admin is the primary actor; supplier only supplies files indirectly.
+' 2. Use cases follow the business flow: master data, price table import, then rules and fee trial.
+' 3. Confirm import includes validation; failed imports extend to error detail review.

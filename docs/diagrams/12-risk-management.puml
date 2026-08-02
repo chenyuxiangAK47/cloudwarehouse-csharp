@@ -1,0 +1,18 @@
+@startsalt CloudWarehouse_Risk_Register
+{
+{T+
+**Risk Register** — Project · Technical · Security (CloudWarehouse MVP)
+
+. | **Project** | **Technical** | **Security**
+**R1 / T1 / S1** | Sprint overrun (Excel S2 +39%) | Legacy 3-row headers mis-parse | No authentication on API
+Mitigation | Preview + re-baseline estimates | Auto row 1/3 detect + template | **Plan:** JWT + roles
+**R2 / T2 / S2** | Solo scope creep | Partial import corrupts prices | CORS AllowAll (MVP)
+Mitigation | ADR + Must/Should backlog | SQL txn — full rollback (ADR-4) | **Plan:** restrict origins
+**R3 / T3 / S3** | Local SQL vs CI drift | Wrong DB unique index | Secrets + Excel upload
+Mitigation | schema.sql + CI 37 tests | fix-price-rules-index.sql | User Secrets; .xlsx whitelist
+}
+}
+@endsalt
+
+' Export PNG for PPT slide 14 (Risk Management).
+' Pair with oral script in docs/project-management/risk-management-slide.md

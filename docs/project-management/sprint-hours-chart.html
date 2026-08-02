@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sprint Estimated vs Actual Hours</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: Segoe UI, system-ui, sans-serif; margin: 2rem; background: #fafafa; }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
+    p { color: #555; font-size: 0.9rem; margin-top: 0; }
+    .wrap { max-width: 720px; background: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    canvas { max-height: 380px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sprint Estimated vs Actual Hours</h1>
+    <p>CloudWarehouse · 4-week sprint · team of 3 · screenshot for PPT item 4</p>
+    <canvas id="chart"></canvas>
+  </div>
+  <script>
+    const labels = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4'];
+    const estimated = [48, 44, 56, 50];
+    const actual = [52, 61, 51, 47];
+    new Chart(document.getElementById('chart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Estimated', data: estimated, backgroundColor: '#90CAF9', borderColor: '#42A5F5', borderWidth: 1 },
+          { label: 'Actual', data: actual, backgroundColor: '#81C784', borderColor: '#43A047', borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          title: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, max: 70, title: { display: true, text: 'Hours' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

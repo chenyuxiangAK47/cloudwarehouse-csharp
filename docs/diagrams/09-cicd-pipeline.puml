@@ -1,0 +1,27 @@
+@startuml CloudWarehouse_CICD_Pipeline
+title CI/CD Pipeline — GitHub Actions
+
+|#LightBlue|Developer|
+start
+:git push or open PR\nto main branch;
+
+|#LightGreen|GitHub Actions\nubuntu-latest|
+:Checkout repository;
+:Setup .NET SDK 9.x;
+:dotnet restore\nCloudWarehouse.sln;
+:dotnet test (Release)\n+ Coverlet coverage;
+:Install ReportGenerator;
+:Generate HTML coverage report;
+:Upload artifacts\n(coverage-report,\ncoverage-cobertura);
+
+|#LightBlue|Developer|
+:Review workflow run\n(green checkmark);
+:Download coverage-report\nfor evidence;
+
+stop
+
+@enduml
+
+' 1. Every push to main triggers automated restore, build, and test on GitHub Actions.
+' 2. We collect code coverage and publish HTML artifacts for audit evidence.
+' 3. This satisfies the course requirement for demonstrable CI/CD, recordable on video.

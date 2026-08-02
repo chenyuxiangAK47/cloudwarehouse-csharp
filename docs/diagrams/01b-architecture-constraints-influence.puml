@@ -1,0 +1,31 @@
+@startuml CloudWarehouse_Constraint_Influence
+title Key Constraints -> Architectural Outcomes - Bottom
+left to right direction
+skinparam defaultFontSize 11
+skinparam rectangleBorderColor #34495e
+skinparam packageStyle rectangle
+
+package "Constraints -> Outcomes" {
+
+  rectangle "Constraint\nCourse timeline" as C1 #FFF3E0
+  rectangle "Constraint\nSQL Server required" as C2 #FFF3E0
+  rectangle "Constraint\nSupplier Excel varies" as C3 #FFF3E0
+
+  rectangle "Outcome\nMonolith + MVP scope" as D1 #ECEFF1
+  rectangle "Outcome\nDapper + schema.sql" as D2 #ECEFF1
+  rectangle "Outcome\nDual parser + template" as D3 #ECEFF1
+
+  C1 -[#E74C3C,thickness=2]-> D1 : drives
+  C2 -[#E74C3C,thickness=2]-> D2 : drives
+  C3 -[#E74C3C,thickness=2]-> D3 : drives
+}
+
+legend bottom
+  **Hard constraints:** .NET 9 + SQL Server | rules by import only | any row error => full rollback
+endlegend
+
+@enduml
+
+' 1. External constraints directly shaped our architecture, not optional preferences.
+' 2. SQL Server and timeline pushed us to monolith plus Dapper with a hand-written schema.
+' 3. Messy supplier Excel drove dual-format parsing and a downloadable standard template.

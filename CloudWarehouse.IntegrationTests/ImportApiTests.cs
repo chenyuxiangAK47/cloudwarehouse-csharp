@@ -113,6 +113,23 @@ public class ImportApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task ImportPriceTable_MatrixWithNewDestination_PreviewListsDestinationToCreate()
+    {
+        using var stream = PriceTableExcelFactory.CreateDestinationMatrixWorkbook(
+            ws => PriceTableExcelFactory.FillMatrixRow(ws, 2, "集成测试省_" + Guid.NewGuid().ToString("N")[..6]));
+        using var content = BuildFileContent(stream, "矩阵.xlsx");
+
+        var response = await _client.PostAsync("/api/Import/price-table/preview", content);
+        var body = await JsonTestHelper.ReadApiAsync<ApiResponse<PriceTableImportResult>>(response);
+
+        Assert.NotNull(body);
+        Assert.True(body.Success, body.Message);
+        Assert.All(body.Data!.Rows, r => Assert.Equal("C001", r.SiteCode));
+        Assert.Contains(body.Data.MasterDataToCreate, x => x.StartsWith("目的地 ", StringComparison.Ordinal));
+        Assert.DoesNotContain(body.Data.MasterDataToCreate, x => x.StartsWith("站点 ", StringComparison.Ordinal));
+    }
+
     private static MultipartFormDataContent BuildFileContent(Stream stream, string fileName)
     {
         var content = new MultipartFormDataContent();

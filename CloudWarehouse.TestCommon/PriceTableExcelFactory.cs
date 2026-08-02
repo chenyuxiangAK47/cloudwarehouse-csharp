@@ -37,10 +37,11 @@ public static class PriceTableExcelFactory
         return stream;
     }
 
-    public static void FillSampleRow(IXLWorksheet ws, int row, string destCode, string destination)
+    public static void FillSampleRow(
+        IXLWorksheet ws, int row, string destCode, string destination, string siteCode = "C001")
     {
         ws.Cell(row, 1).Value = new DateTime(2026, 5, 7);
-        ws.Cell(row, 2).Value = "C001";
+        ws.Cell(row, 2).Value = siteCode;
         ws.Cell(row, 3).Value = destCode;
         ws.Cell(row, 4).Value = destination;
         ws.Cell(row, 5).Value = 1.6;
@@ -92,6 +93,50 @@ public static class PriceTableExcelFactory
         workbook.SaveAs(stream);
         stream.Position = 0;
         return stream;
+    }
+
+    /// <summary>目的地矩阵价目表（无站点列），导入时默认站点 C001。</summary>
+    public static MemoryStream CreateDestinationMatrixWorkbook(
+        params Action<IXLWorksheet>[] dataRowConfigurators)
+    {
+        using var workbook = new XLWorkbook();
+        var ws = workbook.AddWorksheet("价格表");
+
+        ws.Cell(1, 1).Value = "目的地";
+        ws.Cell(1, 2).Value = "0kg<X<=0.3kg";
+        ws.Cell(1, 3).Value = "0.3kg<X<=0.5kg";
+        ws.Cell(1, 4).Value = "0.5kg<X<=1kg";
+        ws.Cell(1, 5).Value = "1kg<X<=2kg";
+        ws.Cell(1, 6).Value = "2kg<X<=3kg";
+        ws.Cell(1, 7).Value = "3kg<X<=4kg";
+        ws.Cell(1, 8).Value = "4kg<X<=5kg";
+        ws.Cell(1, 9).Value = "面单费";
+        ws.Cell(1, 10).Value = "续重(元/kg)";
+
+        foreach (var configure in dataRowConfigurators)
+            configure(ws);
+
+        if (dataRowConfigurators.Length == 0)
+            FillMatrixRow(ws, 2, "矩阵测试省");
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
+
+    public static void FillMatrixRow(IXLWorksheet ws, int row, string destination)
+    {
+        ws.Cell(row, 1).Value = destination;
+        ws.Cell(row, 2).Value = 1.6;
+        ws.Cell(row, 3).Value = 1.7;
+        ws.Cell(row, 4).Value = 2.1;
+        ws.Cell(row, 5).Value = 3.3;
+        ws.Cell(row, 6).Value = 3.9;
+        ws.Cell(row, 7).Value = 5;
+        ws.Cell(row, 8).Value = 6;
+        ws.Cell(row, 9).Value = 3.5;
+        ws.Cell(row, 10).Value = 0.7;
     }
 
     public static MemoryStream CreateHeaderOnlyWorkbook()

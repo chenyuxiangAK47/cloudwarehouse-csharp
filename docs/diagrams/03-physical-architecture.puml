@@ -1,0 +1,53 @@
+@startuml CloudWarehouse_Physical_Architecture
+title Physical Architecture — Runtime and Nodes
+
+skinparam node {
+  BackgroundColor #F0F8FF
+  BorderColor #2980b9
+  FontSize 11
+}
+skinparam component {
+  BackgroundColor #ECF0F1
+  BorderColor #34495e
+  FontSize 10
+}
+
+node "Client PC" as Client {
+  component "Chrome / Edge" as Browser
+}
+
+node "Developer workstation\n(single-machine demo)" as Workstation {
+  component "Kestrel host\nCloudWarehouse.Backend\n:5001 HTTP" as Kestrel
+  component "SQL Server instance\n:1433 TDS" as MSSQL
+}
+
+cloud "GitHub Cloud" as GH {
+  component "Git repository" as Repo
+  component "Actions runner\nubuntu-latest" as Runner
+}
+
+Browser -[#2980b9,thickness=2]-> Kestrel : HTTP :5001
+Kestrel -[#27ae60,thickness=2]-> MSSQL : ADO.NET / TCP 1433
+
+actor "Developer" as Dev
+Dev -[#E74C3C,dashed]-> Repo : git push (HTTPS)
+Runner -[#34495e,dashed]-> Repo : git clone
+Runner -[#34495e,dashed]-> Runner : dotnet test\n(no link to local DB)
+
+note right of Kestrel
+  Static files: wwwroot/
+  Config: appsettings.json
+  DDL: database/schema.sql
+end note
+
+note bottom of Workstation
+  Future production option:
+  IIS reverse proxy + dedicated DB server
+  (out of course MVP scope)
+end note
+
+@enduml
+
+' 1. Demo runs on one machine: browser talks to Kestrel, Kestrel talks to SQL Server.
+' 2. CI runs on GitHub-hosted Ubuntu; it builds and tests code without touching our local database.
+' 3. The same codebase can later move to IIS plus a separate database server.

@@ -1,0 +1,46 @@
+@startuml CloudWarehouse_Architecture_Constraints_and_Decisions
+title Architecture Constraints & Decisions (use 01a + 01b for slides)
+top to bottom direction
+skinparam rectangle { BorderColor #34495e FontSize 10 }
+skinparam packageStyle rectangle
+
+' ========== TOP: ADR (compact 2×3) ==========
+package "TOP — Architecture Decisions (ADR)" #E8F4FC {
+  together {
+    rectangle "ADR-1\nDapper" as A1
+    rectangle "ADR-2\nMonolith" as A2
+    rectangle "ADR-3\nExcel rules" as A3
+  }
+  together {
+    rectangle "ADR-4\nTxn rollback" as A4
+    rectangle "ADR-5\nClosedXML" as A5
+    rectangle "ADR-6\nGitHub CI" as A6
+  }
+  A1 -[hidden]right- A2
+  A2 -[hidden]right- A3
+  A4 -[hidden]right- A5
+  A5 -[hidden]right- A6
+  A1 -[hidden]down- A4
+}
+
+' ========== BOTTOM: Constraint influence ==========
+package "BOTTOM — Constraints → Outcomes" #FFF8E1 {
+  together {
+    rectangle "Timeline" as C1 #FFF3E0
+    rectangle "SQL Server" as C2 #FFF3E0
+    rectangle "Excel formats" as C3 #FFF3E0
+  }
+  together {
+    rectangle "Monolith MVP" as D1 #ECEFF1
+    rectangle "Dapper + SQL" as D2 #ECEFF1
+    rectangle "Dual template" as D3 #ECEFF1
+  }
+  C1 -[#E74C3C,thickness=2]-> D1
+  C2 -[#E74C3C,thickness=2]-> D2
+  C3 -[#E74C3C,thickness=2]-> D3
+}
+
+@enduml
+
+' For PPT: export 01a (top) and 01b (bottom) as two PNGs on one slide.
+' Presentation: ADR first (30s), then constraint arrows (30s) within 1 minute total.

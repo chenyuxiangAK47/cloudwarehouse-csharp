@@ -1,0 +1,12 @@
+@startgantt
+title Project Roadmap - 4-Week Internship (recommended)
+
+Project starts 2026-05-06
+
+[Sprint 1 - Master data + ERD] lasts 7 days and is colored in LightGreen
+[Sprint 2 - Excel dual-format] lasts 7 days and is colored in LightGreen
+[Sprint 3 - Rules + calculate] lasts 7 days and is colored in LightGreen
+[Sprint 4 - Tests + CI] lasts 7 days and is colored in LightGreen
+[M5 - PPT + demo videos] lasts 3 days and is colored in LightBlue
+
+@endgantt
