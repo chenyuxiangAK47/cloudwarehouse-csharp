@@ -48,10 +48,11 @@ public class CustomerQuoteApiTests : IClassFixture<CloudWarehouseWebApplicationF
         var response = await _client.PostAsync("/api/CustomerQuote", content);
         var body = await JsonTestHelper.ReadApiAsync<ApiResponse<CustomerQuoteImportResult>>(response);
 
-        if (body!.Data?.Warnings.Any(w => w.Contains("未能连接数据库", StringComparison.Ordinal)) == true)
+        // CI / no SQL Server: skip instead of fail
+        if (DatabaseAvailability.IsUnavailable(body))
             return;
 
-        Assert.True(body.Success, body.Message);
+        Assert.True(body!.Success, body.Message);
         Assert.True(body.Data!.SavedToDatabase);
         Assert.True(body.Data.RulesUpserted > 0);
     }

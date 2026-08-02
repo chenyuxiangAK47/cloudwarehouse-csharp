@@ -107,7 +107,7 @@ public class BillApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
         var quoteResponse = await _client.PostAsync("/api/CustomerQuote", quoteContent);
         var quoteBody = await JsonTestHelper.ReadApiAsync<ApiResponse<CustomerQuoteImportResult>>(quoteResponse);
 
-        if (quoteBody?.Data?.Warnings.Any(w => w.Contains("未能连接数据库", StringComparison.Ordinal)) == true)
+        if (DatabaseAvailability.IsUnavailable(quoteBody))
             return true;
 
         Assert.True(quoteBody!.Success, quoteBody.Message);
@@ -131,7 +131,7 @@ public class BillApiTests : IClassFixture<CloudWarehouseWebApplicationFactory>
             var costResponse = await _client.PostAsync("/api/Import/price-table", costContent);
             var costBody = await JsonTestHelper.ReadApiAsync<ApiResponse<PriceTableImportResult>>(costResponse);
 
-            if (costBody?.Data?.Warnings.Any(w => w.Contains("未能连接数据库", StringComparison.Ordinal)) == true)
+            if (DatabaseAvailability.IsUnavailable(costBody))
                 return true;
 
             Assert.True(costBody!.Success, costBody.Message);
