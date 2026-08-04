@@ -121,14 +121,16 @@
             font-size: 0.875rem;
             color: var(--muted);
         }
-        input, select {
+        input, select, textarea {
             padding: 0.55rem 0.75rem;
             width: min(320px, 100%);
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 0.9rem;
+            font-family: inherit;
         }
-        input:focus, select:focus {
+        textarea { width: min(720px, 100%); }
+        input:focus, select:focus, textarea:focus {
             outline: 2px solid rgba(13, 110, 253, 0.35);
             border-color: var(--primary);
         }
@@ -258,6 +260,55 @@
         }
         .row-error { background: #fff5f5 !important; }
         .actions { white-space: nowrap; }
+        .assistant-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .assistant-chips button {
+            background: #e8f4f2;
+            color: #0a5c52;
+            border: 1px solid #b8ddd7;
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .assistant-chips button:hover { background: #d4ebe7; }
+        .assistant-answer {
+            white-space: pre-wrap;
+            background: #f7fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        .assistant-meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+        .assistant-citations {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0;
+        }
+        .assistant-citations li {
+            border-left: 3px solid var(--accent);
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8fbfb;
+            font-size: 0.88rem;
+        }
+        .assistant-citations .cite-title { font-weight: 600; color: var(--nav-bg); }
+        .assistant-citations .cite-score { color: var(--muted); font-size: 0.8rem; }
+        #assistantQuestion {
+            min-height: 72px;
+            resize: vertical;
+        }
     </style>
 </head>
 <body>
@@ -275,6 +326,7 @@
             <button type="button" data-page="import" onclick="showPage('import')">成本价导入</button>
             <button type="button" data-page="customerquote" onclick="showPage('customerquote')">客户报价导入</button>
             <button type="button" data-page="waybill" onclick="showPage('waybill')">运单导入</button>
+            <button type="button" data-page="assistant" onclick="showPage('assistant')">计价规则检索</button>
         </nav>
 
         <div class="message" id="message" role="alert"></div>
@@ -707,6 +759,42 @@
                 </table>
             </div>
         </div>
+
+        <div id="assistant" class="page">
+            <h2>计价规则检索</h2>
+            <p class="page-subtitle">
+                内置规则知识库查阅工具：本地关键词 / TF-IDF 检索 + 引用片段；可选配置大模型仅作改写。
+                <strong>不参与计价计算</strong>，正式金额以运单导入 / FeeCalculationEngine 为准。匹配分过低会返回「未找到」。
+            </p>
+            <div class="card">
+                <h3>查询</h3>
+                <p class="hint" style="margin-top:0">可点示例，或自行输入业务问题：</p>
+                <div class="assistant-chips" id="assistantChips">
+                    <button type="button" onclick="askAssistantPreset('为什么云南0.3kg应付是1.50不是最新的1.30？')">历史报价 / 云南 0.3kg</button>
+                    <button type="button" onclick="askAssistantPreset('应收和应付双轨计价分别怎么取价？')">双轨计价</button>
+                    <button type="button" onclick="askAssistantPreset('重量取整规则是什么？超过5kg怎么算？')">重量取整</button>
+                    <button type="button" onclick="askAssistantPreset('93演示正确的Excel导入顺序是什么？')">导入顺序</button>
+                    <button type="button" onclick="askAssistantPreset('计费策略模式Strategy Pattern怎么设计的？')">Strategy 模式</button>
+                </div>
+                <label for="assistantQuestion">问题</label>
+                <textarea id="assistantQuestion" placeholder="例如：目的省为空的退件费行为什么对比失败？"></textarea>
+                <div class="btn-row" style="margin-top:0.75rem">
+                    <button type="button" class="btn btn-primary" onclick="askAssistant()">查询</button>
+                    <button type="button" class="btn btn-secondary" onclick="loadAssistantKnowledge()">查看知识库</button>
+                </div>
+            </div>
+            <div class="card" id="assistantResultCard" style="display:none">
+                <h3>回答</h3>
+                <div class="assistant-meta" id="assistantMeta"></div>
+                <div class="assistant-answer" id="assistantAnswer"></div>
+                <h4 style="margin:1rem 0 0.35rem;font-size:1rem">引用片段</h4>
+                <ul class="assistant-citations" id="assistantCitations"></ul>
+            </div>
+            <div class="card" id="assistantKbCard" style="display:none">
+                <h3>已加载知识源</h3>
+                <ul id="assistantKbList"></ul>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -746,6 +834,7 @@
                 loadDestinationsForSelect();
                 loadPriceRules();
             }
+            else if (pageId === 'assistant') loadAssistantKnowledge();
         }
 
         function showMessage(msg, success) {
@@ -1723,6 +1812,76 @@
             document.getElementById('customerQuoteResultTable').style.display = 'none';
             document.getElementById('customerQuoteTableBody').innerHTML = '';
             document.getElementById('btnExportCustomerQuote').disabled = true;
+        }
+
+        function askAssistantPreset(q) {
+            document.getElementById('assistantQuestion').value = q;
+            askAssistant();
+        }
+
+        async function askAssistant() {
+            const question = document.getElementById('assistantQuestion').value.trim();
+            if (!question) {
+                showMessage('请先输入问题', false);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/Assistant/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, topK: 3 })
+                });
+                const result = await res.json();
+                if (!result.success) {
+                    showMessage(result.message || '助手调用失败', false);
+                    return;
+                }
+                const data = result.data;
+                document.getElementById('assistantResultCard').style.display = 'block';
+                document.getElementById('assistantMeta').textContent =
+                    `模式：${data.mode} · 有依据：${data.grounded ? '是' : '否'}`;
+                document.getElementById('assistantAnswer').textContent = data.answer || '';
+                const ul = document.getElementById('assistantCitations');
+                ul.innerHTML = '';
+                (data.citations || []).forEach(c => {
+                    const li = document.createElement('li');
+                    li.innerHTML =
+                        `<div class="cite-title">${escapeHtml(c.title)}</div>` +
+                        `<div class="cite-score">${escapeHtml(c.source)} · score ${c.score}</div>` +
+                        `<div>${escapeHtml(c.snippet)}</div>`;
+                    ul.appendChild(li);
+                });
+                if (!(data.citations || []).length) {
+                    ul.innerHTML = '<li>无引用片段</li>';
+                }
+            } catch (e) {
+                showMessage('助手调用失败: ' + e.message, false);
+            }
+        }
+
+        async function loadAssistantKnowledge() {
+            try {
+                const res = await fetch(`${API_URL}/Assistant/knowledge`);
+                const result = await res.json();
+                if (!result.success) return;
+                const card = document.getElementById('assistantKbCard');
+                const list = document.getElementById('assistantKbList');
+                list.innerHTML = '';
+                (result.data || []).forEach(k => {
+                    const li = document.createElement('li');
+                    li.textContent = `${k.source} — ${k.title}（${k.sections} 个片段）`;
+                    list.appendChild(li);
+                });
+                card.style.display = 'block';
+            } catch (_) { /* ignore for idle load */ }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         window.onload = () => showPage('site');

@@ -1,5 +1,5 @@
 @startuml CloudWarehouse_Billing_Strategy_Pattern
-title Billing Strategy Pattern (Phase 2) — Class Diagram
+title Billing Strategy Pattern (Implemented) — Class Diagram
 
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
@@ -9,6 +9,9 @@ package "CloudWarehouse.Pricing.Core / Billing" {
   class BillingContext {
     + Weight : decimal
     + ActiveRules : IReadOnlyList<PriceRule>
+    + LengthCm / WidthCm / HeightCm : decimal?
+    + VolumetricDivisor : decimal
+    + VolumetricWeightKg : decimal?
   }
 
   interface IBillingStrategy {
@@ -19,14 +22,15 @@ package "CloudWarehouse.Pricing.Core / Billing" {
 
   class TierBillingStrategy {
     + StrategyName = "区间计费(≤5kg)"
-    + CanHandle(context) : bool
-    + Calculate(context) : PriceCalculateResult?
   }
 
   class OverweightBillingStrategy {
     + StrategyName = "续重计费(>5kg)"
-    + CanHandle(context) : bool
-    + Calculate(context) : PriceCalculateResult?
+  }
+
+  class VolumetricBillingStrategy {
+    + StrategyName = "体积重计费"
+    note: when vol weight > physical,\ncharge using max weight via tier/over
   }
 
   interface IBillingStrategyResolver {
@@ -36,11 +40,12 @@ package "CloudWarehouse.Pricing.Core / Billing" {
 
   class DefaultBillingStrategyResolver {
     + Resolve(context) : IBillingStrategy?
+    + CreateDefault() : resolver
   }
 
   class FeeCalculationEngine {
-    + Calculate(rules, weight, orderDate)
-    + CalculateActive(rules, weight)
+    + Calculate(rules, weight, orderDate, dims?)
+    + CalculateActive(rules, weight, dims?)
   }
 
   class FeeRuleCalculator <<static facade>> {
@@ -53,28 +58,30 @@ package "CloudWarehouse.Pricing.Core / Billing" {
   }
 
   note as Future <<planned>>
-    Future concrete strategies (Open/Closed):
-    - VolumetricBillingStrategy
+    Further strategies (still Open/Closed):
     - StepBillingStrategy
     - IrregularParcelStrategy
-    Register in BillingStrategyFactory only.
+    Register in CreateDefault / DI only.
   end note
 }
 
 IBillingStrategy <|.. TierBillingStrategy
 IBillingStrategy <|.. OverweightBillingStrategy
+IBillingStrategy <|.. VolumetricBillingStrategy
 IBillingStrategyResolver <|.. DefaultBillingStrategyResolver
-DefaultBillingStrategyResolver --> IBillingStrategy : selects
+DefaultBillingStrategyResolver --> IBillingStrategy : selects (order)
 FeeCalculationEngine --> IBillingStrategyResolver
 FeeRuleCalculator --> FeeCalculationEngine : delegates
 DualTrackFeeCalculator ..> FeeCalculationEngine : via cost/quote services
 IBillingStrategy --> BillingContext : uses
 IBillingStrategy ..> PriceCalculateResult : returns
+VolumetricBillingStrategy ..> TierBillingStrategy : delegates chargeable
+VolumetricBillingStrategy ..> OverweightBillingStrategy : delegates chargeable
 Future .. DefaultBillingStrategyResolver
 
 ' --- Presentation script (EN) ---
-' 1. We refactored fee calculation from if/else into Strategy Pattern for billing variants.
-' 2. TierBillingStrategy handles ≤5kg brackets; OverweightBillingStrategy handles >5kg.
-' 3. New schemes (volumetric, step) extend IBillingStrategy without changing FeeRuleCalculator callers.
+' 1. Fee calculation uses Strategy Pattern: Tier, Overweight, and Volumetric.
+' 2. Volumetric proves Open/Closed: new class + DI registration, callers unchanged.
+' 3. Dual-track billing still uses FeeCalculationEngine as system of record.
 
 @enduml

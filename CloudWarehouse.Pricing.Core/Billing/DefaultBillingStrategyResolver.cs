@@ -12,8 +12,13 @@ public sealed class DefaultBillingStrategyResolver : IBillingStrategyResolver
             throw new ArgumentException("At least one IBillingStrategy must be registered.", nameof(strategies));
     }
 
+    /// <summary>体积重优先，再区间/续重——演示 Open/Closed 扩展注册顺序。</summary>
     public static DefaultBillingStrategyResolver CreateDefault() =>
-        new([new TierBillingStrategy(), new OverweightBillingStrategy()]);
+        new([
+            new VolumetricBillingStrategy(),
+            new TierBillingStrategy(),
+            new OverweightBillingStrategy()
+        ]);
 
     public IBillingStrategy? Resolve(BillingContext context) =>
         _strategies.FirstOrDefault(s => s.CanHandle(context));

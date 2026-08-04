@@ -1,0 +1,50 @@
+@startuml CloudWarehouse_Sequence_Rule_Knowledge_Lookup
+title Value Added — Built-in Rule Knowledge Lookup (keyword / TF-IDF)
+
+actor "Warehouse Admin" as User
+participant "index.html\n计价规则检索" as UI
+participant "AssistantController" as AC
+participant "QuoteAssistantService" as QA
+participant "KeywordRetriever\n(TF-IDF lexical)" as Ret
+participant "KnowledgeBaseLoader" as KB
+participant "Optional LLM\n(OpenAI if ApiKey)" as LLM
+note right of QA
+  Assistive lookup only.
+  Score below MinScore => retrieval-miss.
+  Does NOT call FeeCalculationEngine
+  or mutate PriceRules / BillLines.
+end note
+
+User -> UI : ask question\n(or click preset chip)
+UI -> AC : POST /api/Assistant/ask\n{ question, topK }
+activate AC
+AC -> QA : AskAsync(request)
+activate QA
+
+QA -> Ret : Retrieve(query, topK)
+activate Ret
+Ret -> KB : Load() markdown chunks
+activate KB
+KB --> Ret : KnowledgeChunk[]
+deactivate KB
+Ret --> QA : ranked hits + scores
+deactivate Ret
+
+alt no hits or score < MinScore
+  QA --> AC : mode=retrieval-miss\ngrounded=false
+else OpenAI ApiKey configured
+  QA -> LLM : chat.completions\n(context = top chunks)
+  activate LLM
+  LLM --> QA : grounded answer
+  deactivate LLM
+  QA --> AC : mode=optional-llm\n+ citations
+else default (no paid API)
+  QA --> AC : mode=kb-extractive\nanswer from snippets\n+ citations
+end
+
+AC --> UI : ApiResponse\nAssistantAskResponse
+deactivate QA
+deactivate AC
+UI -> User : show answer + citation cards\n(mode badge)
+
+@enduml

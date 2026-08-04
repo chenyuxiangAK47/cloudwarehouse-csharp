@@ -41,13 +41,15 @@ note right of Kestrel
 end note
 
 note bottom of Workstation
-  Future production option:
-  IIS reverse proxy + dedicated DB server
-  (out of course MVP scope)
+  HA / redundancy: NONE in MVP (single node).
+  Backup: manual SQL Server .bak (RPO ≈ 24h, RTO ≈ rebuild + restore).
+  Network: demo binds 0.0.0.0:5001 (LAN) or localhost;
+  no TLS; file upload whitelist .xlsx/.xlsm + size limit.
+  Future: IIS reverse proxy + dedicated DB + automated backup.
 end note
 
 @enduml
 
 ' 1. Demo runs on one machine: browser talks to Kestrel, Kestrel talks to SQL Server.
 ' 2. CI runs on GitHub-hosted Ubuntu; it builds and tests code without touching our local database.
-' 3. The same codebase can later move to IIS plus a separate database server.
+' 3. MVP has no HA; backup/RPO/RTO are stated explicitly for the physical view.

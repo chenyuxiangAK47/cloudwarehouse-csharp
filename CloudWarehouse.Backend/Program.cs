@@ -10,6 +10,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
 builder.Services.AddControllers();
 
 // Billing Strategy Pattern — register concrete strategies + resolver + engine (DI)
+// Order matters for IEnumerable<IBillingStrategy>: volumetric first, then tier, then overweight
+builder.Services.AddSingleton<IBillingStrategy, VolumetricBillingStrategy>();
 builder.Services.AddSingleton<IBillingStrategy, TierBillingStrategy>();
 builder.Services.AddSingleton<IBillingStrategy, OverweightBillingStrategy>();
 builder.Services.AddSingleton<IBillingStrategyResolver, DefaultBillingStrategyResolver>();
@@ -21,6 +23,13 @@ builder.Services.AddScoped<CustomerQuoteImportService>();
 builder.Services.AddScoped<CustomerQuoteCalculateService>();
 builder.Services.AddScoped<IDualTrackFeeCalculator, DualTrackFeeCalculator>();
 builder.Services.AddScoped<BillImportService>();
+
+// Freight / quote assistant (RAG-lite) — assistive layer, not system of record
+builder.Services.AddSingleton<IKnowledgeBaseLoader, KnowledgeBaseLoader>();
+builder.Services.AddSingleton<IKeywordRetriever, KeywordRetriever>();
+builder.Services.AddScoped<IQuoteAssistantService, QuoteAssistantService>();
+builder.Services.AddHttpClient("QuoteAssistantLlm");
+
 builder.Services.AddCors(p => p.AddPolicy("AllowAll", b =>
 {
     b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();

@@ -16,4 +16,8 @@
     <ProjectReference Include="..\CloudWarehouse.Pricing.Core\CloudWarehouse.Pricing.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="KnowledgeBase\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

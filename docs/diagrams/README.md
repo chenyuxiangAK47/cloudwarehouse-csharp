@@ -17,6 +17,7 @@ Render online: https://www.plantuml.com/plantuml/uml/
 | `09-cicd-pipeline.puml` | CI/CD activity |
 | `13-billing-strategy-class.puml` | **Billing Strategy Pattern class diagram** (Phase 2) |
 | `14-sequence-waybill-dual-track.puml` | **Waybill preview dual-track pricing sequence** (FE → API → DualTrack → Strategy → DB) |
+| `15-sequence-quote-assistant-rag.puml` | **Value Added:** Built-in rule knowledge lookup (TF-IDF → MinScore gate → optional LLM → citations) |
 
 DevSecOps evidence (repo root / CI):
 - `.github/workflows/ci.yml` — tests, coverage, NuGet vulnerable scan artifact

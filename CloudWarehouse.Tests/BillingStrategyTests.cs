@@ -47,6 +47,47 @@ public class BillingStrategyTests
     }
 
     [Fact]
+    public void Factory_ResolvesVolumetric_WhenVolWeightExceedsPhysical()
+    {
+        // 40×40×40 / 6000 = 10.667kg > physical 2kg
+        var ctx = new BillingContext
+        {
+            Weight = 2m,
+            ActiveRules = SampleRules(),
+            LengthCm = 40, WidthCm = 40, HeightCm = 40
+        };
+        var strategy = BillingStrategyFactory.Resolve(ctx);
+        Assert.IsType<VolumetricBillingStrategy>(strategy);
+    }
+
+    [Fact]
+    public void VolumetricStrategy_UsesChargeableWeight_ForOverweightBand()
+    {
+        var rules = SampleRules();
+        var result = FeeRuleCalculator.Calculate(
+            rules, 2m, new DateTime(2026, 1, 9),
+            lengthCm: 40, widthCm: 40, heightCm: 40);
+
+        Assert.NotNull(result);
+        Assert.StartsWith("体积重计费", result!.BillingType);
+        // chargeable ≈ 10.667 → 3.5 + (10.667-5)*0.7 ≈ 7.467
+        Assert.Equal(7.47m, result.TotalPrice);
+    }
+
+    [Fact]
+    public void VolumetricStrategy_DoesNotOverride_WhenPhysicalHeavier()
+    {
+        // 10×10×10 / 6000 ≈ 0.167 < physical 0.3 → stay on Tier
+        var ctx = new BillingContext
+        {
+            Weight = 0.3m,
+            ActiveRules = SampleRules(),
+            LengthCm = 10, WidthCm = 10, HeightCm = 10
+        };
+        Assert.IsType<TierBillingStrategy>(BillingStrategyFactory.Resolve(ctx));
+    }
+
+    [Fact]
     public void TierStrategy_YunNan03kg_MatchesHistoricalPayableShape()
     {
         var rules = SampleRules();
@@ -64,7 +105,6 @@ public class BillingStrategyTests
         var result = FeeRuleCalculator.Calculate(rules, 10m, new DateTime(2026, 1, 9));
         Assert.NotNull(result);
         Assert.Equal("续重计费(>5kg)", result!.BillingType);
-        // 3.5 + (10-5)*0.7 = 7.0
         Assert.Equal(7.0m, result.TotalPrice);
     }
 
@@ -88,7 +128,8 @@ public class BillingStrategyTests
         var names = BillingStrategyFactory.RegisteredStrategyNames;
         Assert.Contains("区间计费(≤5kg)", names);
         Assert.Contains("续重计费(>5kg)", names);
-        Assert.Equal(2, names.Count);
+        Assert.Contains("体积重计费", names);
+        Assert.Equal(3, names.Count);
     }
 
     [Fact]

@@ -15,9 +15,19 @@ public static class FeeRuleCalculator
     public static PriceCalculateResult? Calculate(
         IEnumerable<PriceRule> rules,
         decimal weight,
-        DateTime orderDate) =>
-        DefaultEngine.Calculate(rules, weight, orderDate);
+        DateTime orderDate,
+        decimal? lengthCm = null,
+        decimal? widthCm = null,
+        decimal? heightCm = null,
+        decimal volumetricDivisor = 6000m) =>
+        DefaultEngine.Calculate(rules, weight, orderDate, lengthCm, widthCm, heightCm, volumetricDivisor);
 
-    public static PriceCalculateResult? CalculateActive(IList<PriceRule> rules, decimal weight) =>
-        DefaultEngine.CalculateActive(rules, weight);
+    public static PriceCalculateResult? CalculateActive(
+        IList<PriceRule> rules,
+        decimal weight,
+        decimal? lengthCm = null,
+        decimal? widthCm = null,
+        decimal? heightCm = null,
+        decimal volumetricDivisor = 6000m) =>
+        DefaultEngine.CalculateActive(rules, weight, lengthCm, widthCm, heightCm, volumetricDivisor);
 }

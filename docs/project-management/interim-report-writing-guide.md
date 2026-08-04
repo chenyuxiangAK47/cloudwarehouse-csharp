@@ -3,7 +3,7 @@ CloudWarehouse 云仓管理系统中期实习报告
 The CloudWarehouse project is an internally developed logistics pricing management system designed to streamline freight rate administration for warehouse operations. The system addresses the inefficiencies associated with manual handling of supplier-provided Excel-based price lists, which often suffer from inconsistent formatting and complex tiered pricing structures. This interim report presents a comprehensive overview of the project's progress during a four-week internship at a software development organization, focusing on the successful delivery of Phase 1 functionalities and outlining the strategic roadmap for future enhancements.
 The core business problem stems from the fragmented nature of master data (Sites, Destinations, Customers) and the lack of a standardized process for importing and validating multi-tiered freight pricing rules. Current practices lead to frequent human errors, difficulty in maintaining up-to-date rates, and an inability to perform instant freight cost simulations. To resolve these issues, the primary objectives for Phase 1 were to establish a robust database foundation, implement a flexible Excel import mechanism capable of parsing diverse formats (standard, legacy three-row headers, and destination matrix), develop a trial calculation engine for freight fees, and ensure code quality through automated testing and continuous integration. These deliverables have been successfully completed, as evidenced by a fully functional prototype running at http://localhost:5001.
 The project scope for this phase is deliberately focused on a single-tenant, browser-accessible administrative interface deployed on a local SQL Server instance. Key in-scope features include CRUD operations for master data, the aforementioned Excel import functionality, and the freight trial calculation API. Out-of-scope items, deferred to Phase 2 or beyond, include order fulfillment workflows, deep integration with Warehouse Management Systems (WMS), production-grade authentication and authorization (RBAC), and high-availability deployment configurations. The primary stakeholder for this system is the warehouse operations or quotation administrator, who is responsible for managing pricing data and generating quotes. The author served as a solo full-stack developer, taking ownership of all aspects of the project lifecycle, including requirements analysis, system design, implementation, testing, and documentation.
-A summary of the key deliverables achieved in Phase 1 includes a complete database schema with Entity-Relationship Diagram (ERD), a fully operational price table import feature with preview capability, a reliable freight trial calculation function, and a suite of over forty automated tests integrated into a GitHub Actions CI pipeline. This report will subsequently delve into the technical architecture, development methodology, risk management strategies, and quality assurance measures that underpinned this delivery. In direct response to mid-term review feedback, this document has been significantly expanded to provide greater depth in critical areas such as Domain-Driven Design (DDD), the modular monolith architectural style, and the planned evolution towards a Strategy Pattern for billing complexity, ensuring a thorough academic and practical exposition of the work conducted.
+A summary of the key deliverables achieved in Phase 1 includes a complete database schema with Entity-Relationship Diagram (ERD), a fully operational price table import feature with preview capability, a reliable freight trial calculation function, and a suite of over forty automated tests integrated into a GitHub Actions CI pipeline. This report will subsequently delve into the technical architecture, development methodology, risk management strategies, and quality assurance measures that underpinned this delivery. In direct response to mid-term review feedback, this document has been significantly expanded to provide greater depth in critical areas such as Domain-Driven Design (DDD), the modular monolith architectural style, and the subsequent Phase-2 implementation of a Strategy Pattern for billing complexity, ensuring a thorough academic and practical exposition of the work conducted.
 3. Technology Stack
 3.1 Stack Overview
 The CloudWarehouse system is built upon a carefully selected set of technologies designed to meet the specific demands of a logistics pricing management system within a constrained four-week development timeline. The backend is powered by ASP.NET Core 9 with C#, chosen for its robust performance, built-in dependency injection, and cross-platform capabilities, which facilitate rapid development and deployment. Data persistence is handled by Microsoft SQL Server, providing a reliable relational database management system, with data access orchestrated through Dapper, a lightweight Object-Relational Mapper (ORM). For frontend presentation, the system employs a static HTML/JavaScript interface, deliberately avoiding complex Single-Page Application (SPA) frameworks to accelerate delivery and align the project focus on backend architecture. Excel file processing, a core business requirement, is managed using the ClosedXML library, which supports both reading diverse supplier formats and generating standardized templates. The quality assurance pillar is supported by the xUnit testing framework, complemented by WebApplicationFactory for integration testing, ensuring comprehensive test coverage. Finally, the entire development lifecycle is automated through a GitHub Actions Continuous Integration (CI) pipeline configured to run on the ubuntu-latest runner, guaranteeing code quality with every commit.1
@@ -99,17 +99,18 @@ M2	Import Preview	S2	Standard Excel template generated; parsing logic for both s
 M3	Rules & Pricing	S3	PriceRules table supports transactional upsert; freight trial calculation API (/api/PriceRule/calculate) returns correct results; calculation integrated into UI.	Done	Section 14, Section 18 (QA).
 M4	QA & CI	S4	Test suite exceeds 40 unit and integration tests; GitHub Actions CI pipeline configured and passing; code coverage reports generated as artifacts.	Done	Sections 15–16 (Deployment & CI), Section 18.
 M5	Documentation	S4	All PlantUML diagrams completed; interim report and presentation slides prepared; demo video recorded.	In Progress	Appendix (Diagrams, Report).
-M6+	Billing Strategies	Phase 2	Strategy Pattern implemented to manage multiple billing variants; corresponding class diagram and refactored calculation service.	Planned	Section 20 (Future Roadmap).
+M6	Billing Strategies	Phase 2 (Done)	Strategy Pattern live: Tier / Overweight / Volumetric strategies, FeeCalculationEngine, class + sequence diagrams, unit tests.	Done	docs/diagrams/13-billing-strategy-class.puml, Section 20.2–20.3, BillingStrategyTests
+M6b	Rule knowledge lookup	Phase 2 (Done)	Built-in keyword/TF-IDF rule lookup UI + API; MinScore miss path; 15-question eval test; optional LLM rewrite only if ApiKey set.	Done	/api/Assistant/ask, QuoteAssistantEvalTests, Section 20.9
 
-The evidence for the completed milestones (M1–M4) is substantiated by the functional system and the artifacts documented throughout this report. For instance, M1 is evidenced by the Entity-Relationship Diagram and the operational CRUD interfaces for master data.1 M2 and M3 are demonstrated through the price import and trial calculation workflows detailed in Section 14, supported by screenshots of the UI. M4 is validated by the green build status in GitHub Actions and the coverage reports discussed in Section 18.1
-6.3 Phase 2 Milestones (Forward Look)
-Looking beyond Phase 1, a forward-looking roadmap has been established to guide the evolution of the CloudWarehouse system. These planned milestones (M6 and beyond) address the architectural and functional enhancements identified during the Phase 1 development and in response to mid-term feedback.1
-The primary focus for Phase 2 is the systematic management of increasing billing complexity. M6 is dedicated to the implementation of the Strategy Pattern for billing calculations. This milestone will involve refactoring the existing PriceCalculator logic into a family of interchangeable strategy classes (e.g., TierBillingStrategy, OverweightBillingStrategy), making the system extensible for future billing types like volumetric or penalty-based pricing.1 The completion criterion for M6 is a stable, deployed refactor accompanied by an updated class diagram.
-Subsequent milestones address foundational production concerns deferred in the MVP. M7 targets the implementation of Authentication and Authorization, moving from the current open localhost access to a secured system using JWT and Role-Based Access Control (RBAC).1 M8 represents a Pilot Microservice Extraction, where one of the well-defined bounded contexts (e.g., the Import context) is separated from the monolithic codebase into an independently deployable service. This milestone validates the modular monolith's design by testing the feasibility of a split based on the established DDD boundaries.1
-ID	Name	Target Sprint	Key Dependency
-M6	Billing Strategy Pattern	Sprint 5	M3 (Stable Pricing Rules Model)
-M7	Authentication (JWT/RBAC)	Sprint 6	—
-M8	Microservice Pilot (Import Service)	Sprint 7–8	M6, Established Context Boundaries
+The evidence for the completed milestones (M1–M4, M6) is substantiated by the functional system and the artifacts documented throughout this report. For instance, M1 is evidenced by the Entity-Relationship Diagram and the operational CRUD interfaces for master data.1 M2 and M3 are demonstrated through the price import and trial calculation workflows detailed in Section 14, supported by screenshots of the UI. M4 is validated by the green build status in GitHub Actions and the coverage reports discussed in Section 18. M6 is evidenced by CloudWarehouse.Pricing.Core/Billing/* and diagram 13.1
+6.3 Remaining Phase 2 Milestones (Forward Look)
+Looking beyond the delivered Strategy refactor, remaining Phase 2 milestones address production concerns deferred in the MVP.1
+M7 targets the implementation of Authentication and Authorization (JWT / RBAC).1 M8 represents a Pilot Microservice Extraction of one bounded context (e.g., Import).1
+ID	Name	Target Sprint	Key Dependency	Status
+M6	Billing Strategy Pattern	Sprint 5	M3	Done (Tier/Overweight/Volumetric)
+M6b	Rule knowledge lookup	Sprint 5	KnowledgeBase md	Done (lookup tool, not settlement SoR)
+M7	Authentication (JWT/RBAC)	Sprint 6	—	Planned
+M8	Microservice Pilot (Import Service)	Sprint 7–8	M6, Context Boundaries	Planned
 
 6.4 Milestone Timeline Diagram
 The temporal achievement of these milestones is visually represented in a Gantt-style timeline diagram, generated from the PlantUML source file docs/diagrams/10-roadmap-milestones.puml.1 This diagram illustrates the sequential and sometimes overlapping nature of the milestones across the four-week sprint cadence. It clearly shows M1 concluding in Sprint 1, M2 spanning much of Sprint 2 due to the Excel parsing complexities, and M3 and M4 being achieved in Sprints 3 and 4, respectively. The diagram also visually demarcates Phase 1 from the forward-looking Phase 2 milestones, providing an at-a-glance view of the project's past trajectory and future direction.1 The timeline serves as a powerful visual complement to the detailed status dashboard, reinforcing the narrative of structured, milestone-driven development.
@@ -381,22 +382,22 @@ Rejected Options:
 | :--- | :--- |
 | Implementing full JWT/RBAC authentication in Phase 1 | This would have consumed a disproportionate amount of the limited sprint capacity (likely an entire sprint), jeopardizing the delivery of core business features1. |
 | Chosen: Defer authentication to Phase 2 | This aligned with the MVP philosophy of prioritizing “Must-Have” functionality (MoSCoW from Section 4) and allowed for a focused delivery of the price management system1. |
-13.4 ADR-8: Billing Strategy Pattern (Planned)
-• Status:Proposed (For Phase 2)
+13.4 ADR-8: Billing Strategy Pattern (Implemented)
+• Status:Accepted — Implemented in Phase 2 (code + diagrams + tests)
 • Context:The current Phase 1 system handles two billing types: tiered pricing for weights ≤5kg (BillingType=1) and overweight pricing for weights >5kg (BillingType=2)1. Business requirements indicate future needs for more complex billing variants, such as volumetric weight calculation, step pricing, irregular parcel surcharges, and late payment penalties1. Hardcoding these new rules into the existingPriceCalculatorclass would lead to a large, complex, and difficult-to-maintain method riddled withif-elseorswitchstatements.
-• Decision:To manage this anticipated growth in billing complexity, it is formally proposed to refactor the pricing engine in Phase 2 using theStrategy Pattern1. This involves defining a commonIBillingStrategyinterface with aCalculate(context)method. Each billing variant (Tier, Overweight, Volumetric, etc.) would be implemented in its own concrete strategy class (e.g.,TierBillingStrategy,VolumetricBillingStrategy)1.
+• Decision:Implemented Strategy Pattern: IBillingStrategy + TierBillingStrategy + OverweightBillingStrategy + VolumetricBillingStrategy, selected by DefaultBillingStrategyResolver, orchestrated by FeeCalculationEngine. Dual-track receivable/payable uses this engine as system of record.
 • Consequences:
-○ Positive (Planned):Encapsulates each billing algorithm, making the system extensible. New billing types can be added by creating a new strategy class without modifying existing logic (Open/Closed Principle)1. Improves code testability and maintainability. Clearly links to the Phase 2 milestone M6 (“Billing Strategy Pattern”)1.
-○ Negative (Planned):Introduces some initial refactoring overhead. Requires design of a strategy selection mechanism (e.g., a factory mappingBillingTypeenum to strategy instances) and potentially a more complex context object to pass necessary data1.
-○ Evidence:This decision is a direct response to mid-term supervisory feedback requesting deeper consideration of billing complexity1. It is elaborated in Section 20.2 (Billing Complexity Analysis table) and Section 20.3, which includes a textual class diagram description and a three-step extension process1.
+○ Positive: Encapsulates each algorithm; Volumetric added by registering a new class without changing BillImport callers (Open/Closed). Tests cover tier/overweight history shapes and volumetric chargeable weight.
+○ Negative: Resolver order matters; Excel import does not yet pass L/W/H (volumetric demonstrated via engine API/tests).
+○ Evidence: CloudWarehouse.Pricing.Core/Billing/*, docs/diagrams/13-billing-strategy-class.puml, 14-sequence-waybill-dual-track.puml, BillingStrategyTests.
 Rejected Options:
 | Option | Rejected Because |
 | :--- | :--- |
 | Continuing with monolithic if-else logic in PriceCalculator | This approach becomes unmanageable and error-prone as the number of billing variants increases, directly conflicting with the need for a maintainable system in Phase 21. |
-| Chosen: Adopt Strategy Pattern in Phase 2 | This pattern is a classic and appropriate solution for dynamically selecting an algorithm, providing a clear path to manage future billing complexity1. |
+| Chosen: Strategy Pattern (implemented) | Classic fit for selectable algorithms; Volumetric proves Open/Closed extension. |
 13.5 Constraints-to-Outcomes Diagram
 The architectural decisions documented in this chapter and the preceding ADR section were not made in isolation. They were significantly influenced by the key project constraints, which in turn shaped the final outcomes of the Phase 1 system.
-The primary constraints included: a four-week timeline for a solo developer, the requirement to handle existing, messy supplier Excel formats, and the goal of delivering a demonstrable core MVP. These constraints directly led to outcomes such as the choice of a modular monolith for rapid iteration, the auto-detection of Excel headers to ensure usability, the deferral of authentication to focus on business logic, and the planning of the Strategy Pattern as a forward-looking remedy for the simplified initial billing implementation1. This diagram visually encapsulates the causal relationship between these limiting factors and the architectural trade-offs that defined the CloudWarehouse MVP.
+The primary constraints included: a four-week timeline for a solo developer, the requirement to handle existing, messy supplier Excel formats, and the goal of delivering a demonstrable core MVP. These constraints directly led to outcomes such as the choice of a modular monolith for rapid iteration, the auto-detection of Excel headers to ensure usability, the deferral of authentication to focus on business logic, and — after mid-term feedback — an implemented Strategy Pattern refactor rather than leaving billing complexity as a paper plan only.
 14. Core Use Case Execution Flow
 14.1 Primary Use Case: Price Table Import (UC-06/UC-07)
 The price table import functionality is identified as the primary use case for detailed examination, as it represents the most complex and critical business process within the CloudWarehouse system. This process, encompassing both preview (UC-06) and commit (UC-07) phases, directly addresses the core business problem of ingesting supplier-provided Excel price lists with inconsistent formatting and complex tiered pricing structures. The successful implementation of this use case validates the system’s ability to handle real-world data variability and ensure data integrity through transactional operations.1
@@ -614,7 +615,7 @@ US-4.5	As a developer/author, I need to create all PlantUML diagrams (ERD, archi
 19.3 Product Backlog (Phase 2)
 The Product Backlog for Phase 2 outlines the planned enhancements and evolution of the CloudWarehouse system beyond the MVP. These items represent the "Should-have" and "Could-have" features deferred from Phase 1, as well as new capabilities identified to handle growing business complexity.1 The backlog is prioritized to guide future development Sprints, with a focus on architectural refinement, security, and scalability.
 ID	User Story	Priority	Sprint (Planned)	Status	Rationale / Link to Phase 2 Plan
-US-5.1	As an admin, I want the system to calculate freight using a configurable Strategy Pattern for new billing types (e.g., volumetric, step pricing, irregular parcel), so that complex and varied logistics contracts can be supported without modifying core logic.	Must	5	Planned	Addresses billing complexity. Directly implements the plan from ADR-8 and Section 20.3.
+US-5.1	As an admin, I want the system to calculate freight using a configurable Strategy Pattern for new billing types (e.g., volumetric, step pricing, irregular parcel), so that complex and varied logistics contracts can be supported without modifying core logic.	Must	5	Done (Tier/Overweight/Volumetric)	Strategy live; see ADR-8 and Section 20.3.
 US-5.2	As an admin, I want to log into the system using JWT-based authentication, so that access is secured and user actions can be audited.	Must	6	Planned	Mitigates security risk S1. Implements the chosen "Standalone JWT/RBAC" option from Section 17.4.
 US-5.3	As an operations user, I want to import price tables with up to 10,000 rows within a defined SLA (< 180 seconds), so that large-scale price updates are practical.	Should	6	Planned	Addresses performance and scalability. Requires streaming read implementation per risk mitigation T3 in Section 17.3.
 US-5.4	As an admin, I want Role-Based Access Control (RBAC) to differentiate between "viewer," "editor," and "admin" roles, so that system permissions are appropriately managed.	Should	6	Planned	Complements authentication (US-5.2) for a production-grade security posture.
@@ -632,36 +633,41 @@ In summary, the User Story Backlog serves as the definitive record of what was b
 The mid-term review provided critical feedback on the initial presentation, highlighting areas where the project’s depth and future planning could be enhanced. This report has been structured to directly address these concerns, ensuring a comprehensive and academically rigorous exposition. The following table maps each piece of feedback to the specific sections where it has been addressed.
 Feedback	Response in this report
 Too simple / monolith	Sections 9, 11, and 20.4 provide a detailed justification for the modular monolith architectural style chosen for the MVP, explaining its benefits for rapid iteration within a four-week timeframe and outlining a clear evolution path towards microservices.
-Billing variants	Sections 20.2 and 20.3 are dedicated to analyzing current and future billing complexity. A detailed plan for implementing the Strategy Pattern to manage diverse billing types (e.g., tiered, overweight, volumetric) is presented, including a textual class diagram and extension process.
+Billing variants	IMPLEMENTED: Strategy Pattern with Tier / Overweight / Volumetric (Section 20.2–20.3, ADR-8, diagram 13). Dual-track waybill sequence: diagram 14.
 More architecture diagrams	The report incorporates multiple architecture perspectives: logical architecture (Section 9), physical deployment (Section 10), DDD bounded contexts (Section 11), sequence diagrams for core flows (Section 14), and CI/CD activity diagrams (Section 16). All diagrams are generated from PlantUML source files (*.puml).
 Physical infra details	Section 10 provides a granular inventory of the runtime environment, including nodes, operating systems, software, ports (5001 for Kestrel, 1433 for SQL Server), network configuration, and an explicit statement on the absence of high availability in Phase 1 with plans for Phase 2.
-Evidence of work	Every major section concludes with an Evidence subsection listing required screenshots, diagrams, or code snippets. This includes CI pipeline success (Section 15), test coverage reports (Section 18), risk mitigation proofs (Section 17), and a complete user story backlog (Section 19).
+Evidence of work	CI/CodeQL workflows, PlantUML sources, BillingStrategyTests, QuoteAssistantEvalTests (15-Q hit-rate). Final appendix still needs UI/CI screenshots.
+Honest DDD scope	DDD-informed modular split (diagram 05); not a full domain-layer framework with domain events.
 
 20.2 Billing Complexity Analysis
-The current MVP supports a foundational but limited set of billing logic, primarily focused on the immediate business need. However, the logistics domain inherently involves numerous billing variants. The following table categorizes these types, maps their implementation status, and outlines the planned mechanism for future extensibility via the Strategy Pattern.1
-Billing Type	Description	Phase 1 Status	Phase 2 Plan	Planned Strategy Class
-Tiered Pricing (≤5kg)	Fixed price for discrete weight intervals (e.g., 0-0.3kg, 0.3-0.5kg, ..., 4-5kg).	✅ Implemented	Refactor into a dedicated strategy	TierBillingStrategy
-Overweight Pricing (>5kg)	Base fee plus a per-kilogram rate for weight exceeding 5kg.	✅ Implemented	Refactor into a dedicated strategy	OverweightBillingStrategy
-Volumetric / Dimensional Weight	Charge based on package volume (L×W×H/divisor) when it exceeds physical weight.	❌ Not supported	Planned addition	VolumetricBillingStrategy
-Step Pricing	Price changes at specific weight thresholds (different from contiguous tiers).	❌ Not supported	Planned for complex contracts	StepBillingStrategy
-Irregular Parcel Surcharge	Additional fee for non-standard shapes or handling requirements.	❌ Not supported	Planned addition	IrregularParcelStrategy
-Fuel Surcharge / Late Penalty	Percentage-based or fixed add-ons dependent on external factors or service terms.	❌ Not supported	Planned for advanced billing	PenaltyBillingStrategy
+Billing variants and implementation status after the Strategy refactor:
+Billing Type	Description	Status	Strategy Class
+Tiered Pricing (≤5kg)	Fixed price for discrete weight intervals.	✅ Implemented	TierBillingStrategy
+Overweight Pricing (>5kg)	Base fee + per-kg above 5kg.	✅ Implemented	OverweightBillingStrategy
+Volumetric / Dimensional Weight	When L×W×H/6000 > physical weight, charge by volumetric weight via tier/overweight algorithms.	✅ Implemented (engine API + unit tests; Excel path does not yet supply L/W/H)	VolumetricBillingStrategy
+Step Pricing	Non-contiguous step thresholds.	❌ Planned	StepBillingStrategy
+Irregular Parcel Surcharge	Non-standard shape surcharge.	❌ Planned	IrregularParcelStrategy
+Fuel Surcharge / Late Penalty	External add-ons.	❌ Planned	PenaltyBillingStrategy
 
-The analysis reveals that while the core PriceCalculator in Phase 1 uses conditional logic (if-else/switch) to handle the first two types, this approach becomes unsustainable with additional variants. The planned transition to a Strategy Pattern will encapsulate each billing algorithm into a separate, interchangeable class, significantly improving maintainability and scalability.1
-20.3 Planned Strategy Pattern Design
-To address the burgeoning billing complexity, a refactoring to the Strategy Pattern is formally planned for Phase 2. This design pattern defines a family of algorithms (billing strategies), encapsulates each one, and makes them interchangeable. The BillingContext can then delegate the calculation to a concrete strategy without being aware of its internal logic.1
-Textual Class Diagram:
-- IBillingStrategy (Interface): Declares the common Calculate(BillingContext context): decimal method.
-- TierBillingStrategy (Concrete Strategy): Implements the calculation for weight-tiered pricing as currently defined in PriceCalculator.
-- OverweightBillingStrategy (Concrete Strategy): Implements the base fee + per-kg calculation for overweight parcels.
-- VolumetricBillingStrategy, StepBillingStrategy, ... (Future Concrete Strategies): Implement their respective billing algorithms.
-- BillingContext: Maintains a reference to an IBillingStrategy object and is configured with the appropriate strategy based on the BillingType or other rule attributes. It provides the Calculate() method that delegates to the current strategy.
-- BillingStrategyFactory: Responsible for creating and returning the correct concrete strategy instance based on input parameters (e.g., BillingType enum, rule metadata).
-Three-Step Extension Process for New Billing Types:1
-1.  Implement IBillingStrategy: Create a new class (e.g., VolumetricBillingStrategy) containing the specific calculation logic.
-2.  Register in Factory/DI: Update the BillingStrategyFactory or Dependency Injection container to map a new BillingType enum value (e.g., BillingType.Volumetric) to the new strategy class.
-3.  Update Rule Mapping: Ensure the PriceRuleMapper or import logic can correctly assign the new BillingType to price rules parsed from Excel.
-This design ensures that adding a new billing variant does not require modifications to the core BillingContext, PriceRuleCalculateService, or existing strategies, adhering to the Open/Closed Principle.
+Phase 1 used conditional logic for the first two types; Phase 2 replaced that with Strategy classes. Volumetric demonstrates Open/Closed: new class + DI registration, FeeRuleCalculator callers unchanged for physical-weight-only paths.
+
+20.3 Implemented Strategy Pattern Design
+Live structure (see docs/diagrams/13-billing-strategy-class.puml):
+- IBillingStrategy: CanHandle(context) + Calculate(context)
+- TierBillingStrategy / OverweightBillingStrategy / VolumetricBillingStrategy
+- DefaultBillingStrategyResolver (registration order: Volumetric → Tier → Overweight)
+- FeeCalculationEngine (injectable) + FeeRuleCalculator static facade
+- DualTrackFeeCalculator for receivable (customer quote) vs payable (cost)
+
+Before → After (narrative for viva):
+- Before: FeeRuleCalculator / PriceCalculator branched on weight with if/else.
+- After: resolver selects strategy; historical date filtering remains in FeeCalculationEngine; dual-track waybill flow unchanged at BillImportService boundary (diagram 14).
+
+Three-Step Extension Process (validated by adding Volumetric):
+1. Implement IBillingStrategy.
+2. Register in DefaultBillingStrategyResolver.CreateDefault() and Program.cs DI (order matters).
+3. Optionally extend import/API to pass new context fields (e.g., L/W/H).
+
 20.4 Microservice Evolution Roadmap
 The current modular monolith is a deliberate starting point, but the bounded contexts identified in Section 11 provide natural seams for future service extraction. The evolution towards a microservices architecture is envisioned as a multi-phase, incremental process, not a big-bang rewrite.1
 Candidate Service	Core Responsibility	Data Owned	Trigger for Extraction
@@ -679,15 +685,34 @@ The decision to split the modular monolith into independent microservices will b
 5. Quantified Performance Demand: The freight trial calculation endpoint (/api/PriceRule/calculate) sustains a Query Per Second (QPS) rate exceeding a predefined threshold (e.g., 50 QPS), indicating a need for dedicated, optimized infrastructure.
 20.6 Quantified Phase 2 Plan
 A forward-looking, quantified work plan is essential for realistic Phase 2 planning. The following table outlines key initiatives, their dependencies, target sprints, and estimated effort.1
-Work Package	Owner	Depends On	Target Sprint	Estimated Effort
-Strategy Pattern Refactor	Author (Solo Developer)	Stable PriceRules model (M3)	Sprint 5	40 hours
-JWT Authentication & Basic RBAC	Author	—	Sprint 6	24 hours
-Import Microservice Spike (Pilot)	Author	Strategy Pattern refactor completed	Sprint 7–8	60 hours
-Performance Testing & Baseline	Author	Core APIs stable	Sprint 6	20 hours
-Production Deployment Pipeline (CD)	Author	Authentication in place	Sprint 8	30 hours
-Volumetric Billing Strategy Implementation	Author	Strategy Pattern framework	Sprint 9	25 hours
+Work Package	Owner	Depends On	Target Sprint	Estimated Effort	Status
+Strategy Pattern Refactor (+ Volumetric)	Author	M3	Sprint 5	~36 hours actual	Done
+Rule knowledge lookup (keyword/TF-IDF + eval)	Author	KnowledgeBase	Sprint 5	~10 hours actual	Done
+JWT Authentication & Basic RBAC	Author	—	Sprint 6	24 hours	Planned
+Import Microservice Spike (Pilot)	Author	Strategy done	Sprint 7–8	60 hours	Planned
+Performance Testing & Baseline	Author	Core APIs stable	Sprint 6	20 hours	Planned (still required for appendix)
+Production Deployment Pipeline (CD)	Author	Authentication	Sprint 8	30 hours	Planned
 
-This plan represents approximately 199 hours of development work, aligning with the capacity learned from Phase 1 sprints. It prioritizes foundational architectural improvements (Strategy Pattern, Auth) before undertaking more complex distributed systems work (microservice extraction).
+Remaining planned work focuses on Auth, performance baselines, and optional service extraction — not re-planning Strategy, which is already implemented.
+20.9 Built-in Rule Knowledge Lookup (Value Added — honest scope)
+This feature is a **built-in rule knowledge lookup** for warehouse admins (UI tab「计价规则检索」), not an AI settlement engine.
+• Retrieval: local markdown KnowledgeBase chunks + Chinese/English keyword / TF-IDF scoring (`KeywordRetriever`).
+• Gate: `Assistant:MinScore` (default 0.35); below threshold → mode `retrieval-miss` (no invented answer).
+• Generation: default `kb-extractive` (snippet assembly). Optional `optional-llm` only if `Assistant:OpenAI:ApiKey` is configured.
+• Boundary: never writes PriceRules/BillLines; FeeCalculationEngine remains system of record.
+• Eval evidence: `QuoteAssistantEvalTests` — 15 golden questions, assert ≥80% top-1 source hit rate; plus low-relevance miss test.
+• Diagram: docs/diagrams/15-sequence-quote-assistant-rag.puml
+Forbidden viva phrases for this feature: “RAG intelligent pricing”, “AI billing system”, “full semantic RAG”. Preferred: “rule knowledge lookup / assistive FAQ retrieval”.
+
+20.10 Language Discipline (anti-overclaim)
+| Avoid | Prefer |
+|---|---|
+| Complete DDD implementation | DDD-informed modular monolith / bounded-context folders |
+| Full DevSecOps / DAST completed | CI + CodeQL SAST configured; DAST/Trivy optional demo |
+| Many complex billing strategies in production Excel | Tier + Overweight in settlement path; Volumetric via engine API/tests; more types planned |
+| Production HA | Single-node MVP; manual backup; HA planned |
+| Microservices architecture (as current) | Modular monolith with extraction triggers |
+
 20.7 Known Limitations
 Honest acknowledgment of the current Minimum Viable Product's limitations is crucial for setting correct expectations and guiding future development priorities.1
 1. No Authentication/Authorization: The MVP runs with no user authentication, relying on network isolation (localhost). This is unsuitable for any multi-user or production deployment.
@@ -710,4 +735,4 @@ G	Viva Q&A and Supervisor Feedback Log	log file from mid-term review
 20. Any Other Business and Future Roadmap
 In conclusion, this interim report has comprehensively documented the successful delivery of the CloudWarehouse system's Phase 1 objectives within a rigorous four-week internship period. The journey began with a clear identification of business pain points related to fragmented master data and unstructured Excel-based pricing, leading to the establishment of well-defined goals for a functional prototype. As outlined in the initial overview, these goals—centered on CRUD operations, a resilient Excel import mechanism, and a trial calculation engine—have been met with demonstrable evidence, including a complete database schema, a working import feature, and a robust CI pipeline with over forty passing tests 1.
 The subsequent chapters have systematically validated the approach taken, moving from the high-level project overview to the intricate details of technology selection, architectural design, and quality assurance. By rigorously applying principles of Domain-Driven Design and adopting a modular monolith architecture, the project has achieved a balance between rapid MVP delivery and long-term maintainability. The detailed exploration of bounded contexts, architecture decision records, and core use case flows provides a transparent account of the engineering decisions made, directly addressing the supervisory feedback for greater depth in these areas 1. Furthermore, the explicit acknowledgment of risks, such as the complexity of legacy Excel formats and the current lack of authentication, coupled with concrete mitigation strategies and future plans, demonstrates a mature and reflective approach to software development.
-Looking ahead, the roadmap for Phase 2 is clearly articulated, transforming the current system from a functional prototype into a scalable and extensible platform. The planned refactoring of the billing logic using the Strategy Pattern is poised to elegantly manage increasing complexity, while the vision for a microservice evolution, triggered by specific, measurable conditions, ensures that architectural changes are driven by necessity rather than speculation 1. This interim report, therefore, serves not only as a record of past accomplishments but also as a strategic blueprint for future innovation, embodying the iterative and forward-thinking ethos of modern software engineering practice.
+Looking ahead, the roadmap for Phase 2 is clearly articulated, transforming the current system from a functional prototype into a scalable and extensible platform. The implemented Strategy Pattern refactor manages billing variants (Tier/Overweight/Volumetric), while remaining complexity, while the vision for a microservice evolution, triggered by specific, measurable conditions, ensures that architectural changes are driven by necessity rather than speculation 1. This interim report, therefore, serves not only as a record of past accomplishments but also as a strategic blueprint for future innovation, embodying the iterative and forward-thinking ethos of modern software engineering practice.

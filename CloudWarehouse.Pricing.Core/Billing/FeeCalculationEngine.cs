@@ -18,7 +18,11 @@ public sealed class FeeCalculationEngine
     public PriceCalculateResult? Calculate(
         IEnumerable<PriceRule> rules,
         decimal weight,
-        DateTime orderDate)
+        DateTime orderDate,
+        decimal? lengthCm = null,
+        decimal? widthCm = null,
+        decimal? heightCm = null,
+        decimal volumetricDivisor = 6000m)
     {
         var active = rules
             .Where(r => r.Status == 1
@@ -28,10 +32,16 @@ public sealed class FeeCalculationEngine
             .ThenBy(r => r.MinWeight)
             .ToList();
 
-        return CalculateActive(active, weight);
+        return CalculateActive(active, weight, lengthCm, widthCm, heightCm, volumetricDivisor);
     }
 
-    public PriceCalculateResult? CalculateActive(IList<PriceRule> rules, decimal weight)
+    public PriceCalculateResult? CalculateActive(
+        IList<PriceRule> rules,
+        decimal weight,
+        decimal? lengthCm = null,
+        decimal? widthCm = null,
+        decimal? heightCm = null,
+        decimal volumetricDivisor = 6000m)
     {
         if (weight <= 0 || rules.Count == 0)
             return null;
@@ -39,7 +49,11 @@ public sealed class FeeCalculationEngine
         var context = new BillingContext
         {
             Weight = weight,
-            ActiveRules = rules is List<PriceRule> list ? list : rules.ToList()
+            ActiveRules = rules is List<PriceRule> list ? list : rules.ToList(),
+            LengthCm = lengthCm,
+            WidthCm = widthCm,
+            HeightCm = heightCm,
+            VolumetricDivisor = volumetricDivisor
         };
 
         return _resolver.Resolve(context)?.Calculate(context);
