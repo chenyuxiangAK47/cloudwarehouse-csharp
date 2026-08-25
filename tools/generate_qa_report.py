@@ -14,8 +14,9 @@ from pathlib import Path
 def parse_test_lines(text: str) -> list[dict[str, int | str]]:
     rows: list[dict[str, int | str]] = []
 
+    # VSTest one-liner (Linux CI / English): Passed! - Failed: 0, Passed: 83, ...
     en_pattern = re.compile(
-        r"Passed!\s+-\s+Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)"
+        r"(?:Passed!|Failed!)\s+-\s+Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)"
     )
     for line in text.splitlines():
         m = en_pattern.search(line)
@@ -40,12 +41,40 @@ def parse_test_lines(text: str) -> list[dict[str, int | str]]:
     if rows:
         return rows
 
+    # VSTest multi-line block (common on ubuntu-latest with normal verbosity):
+    #   Total tests: 83
+    #        Passed: 83
+    #        Failed: 0
+    #       Skipped: 0
+    names = [
+        "CloudWarehouse.Tests",
+        "CloudWarehouse.IntegrationTests",
+        "CloudWarehouse.E2ETests",
+    ]
+    block_re = re.compile(
+        r"Total tests:\s*(\d+)\s*\n\s*Passed:\s*(\d+)\s*\n\s*Failed:\s*(\d+)\s*\n\s*Skipped:\s*(\d+)",
+        re.MULTILINE,
+    )
+    for i, m in enumerate(block_re.finditer(text)):
+        total, passed, failed, skipped = map(int, m.groups())
+        rows.append(
+            {
+                "name": names[i] if i < len(names) else f"TestProject{i + 1}",
+                "failed": failed,
+                "passed": passed,
+                "skipped": skipped,
+                "total": total,
+            }
+        )
+    if rows:
+        return rows
+
     # Chinese `dotnet test` console output (Windows)
+    # Variants: 通过数 / 已通过 ; 失败数 / 失败
     zh_total = re.findall(r"测试总数:\s*(\d+)", text)
-    zh_passed = re.findall(r"通过数:\s*(\d+)", text)
-    zh_failed = re.findall(r"失败数:\s*(\d+)", text)
-    zh_skipped = re.findall(r"跳过数:\s*(\d+)", text)
-    names = ["CloudWarehouse.Tests", "CloudWarehouse.IntegrationTests", "CloudWarehouse.E2ETests"]
+    zh_passed = re.findall(r"(?:通过数|已通过):\s*(\d+)", text)
+    zh_failed = re.findall(r"(?:失败数|失败):\s*(\d+)", text)
+    zh_skipped = re.findall(r"(?:跳过数|已跳过):\s*(\d+)", text)
     for i, total_s in enumerate(zh_total):
         total = int(total_s)
         passed = int(zh_passed[i]) if i < len(zh_passed) else total
@@ -104,6 +133,7 @@ def build_html(
     perf_lines: list[str],
     coverage_summary: str,
     vuln_scan: str,
+    e2e_log: str,
     sha: str,
     ref: str,
     run_id: str,
@@ -179,6 +209,14 @@ def build_html(
   <h2>Performance smoke</h2>
   {perf_block}
 
+  <h2>Playwright UI E2E (§8.3.2)</h2>
+  <p>
+    Formal CI artefact:
+    <a href="e2e/e2e-playwright-test.txt">e2e/e2e-playwright-test.txt</a>
+    · Actions artefact name <code>e2e-playwright-results</code>
+  </p>
+  <pre>{html.escape(e2e_log.strip()[:6000])}</pre>
+
   <h2>Coverage summary</h2>
   <p><a href="coverage/index.html">Open full HTML coverage report</a></p>
   <pre>{html.escape(coverage_summary.strip())}</pre>
@@ -203,6 +241,7 @@ def main() -> int:
     perf = extract_perf_lines(text)
     coverage = read_optional(Path("coveragereport/Summary.txt"))
     vuln = read_optional(Path("vulnerable-packages.txt"))
+    e2e = read_optional(Path("e2e-playwright-test.txt"))
 
     sha = os.environ.get("GITHUB_SHA", "local")
     ref = os.environ.get("GITHUB_REF_NAME", "local")
@@ -216,6 +255,7 @@ def main() -> int:
         perf_lines=perf,
         coverage_summary=coverage,
         vuln_scan=vuln,
+        e2e_log=e2e,
         sha=sha,
         ref=ref,
         run_id=run_id,

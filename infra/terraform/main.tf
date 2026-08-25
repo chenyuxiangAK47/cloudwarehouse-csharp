@@ -10,7 +10,8 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.110"
+      # 4.x required for App Service application_stack.dotnet_version = "9.0"
+      version = "~> 4.24"
     }
   }
 }

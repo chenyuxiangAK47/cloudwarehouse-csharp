@@ -7,8 +7,13 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 if (!builder.Environment.IsEnvironment("Testing"))
-    // 0.0.0.0 = allow LAN via http://host-ip:5001; localhost also works
-    builder.WebHost.UseUrls("http://0.0.0.0:5001");
+{
+    // Prefer ASPNETCORE_URLS / --urls (CI DAST); else default LAN bind for local demo
+    var configuredUrls = builder.Configuration["urls"]
+        ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    if (string.IsNullOrWhiteSpace(configuredUrls))
+        builder.WebHost.UseUrls("http://0.0.0.0:5001");
+}
 
 builder.Services.AddControllers();
 

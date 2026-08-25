@@ -25,3 +25,13 @@ Thumbs.db
 ## Secrets (do not commit)
 appsettings.Development.json
 *.pfx
+
+## Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
