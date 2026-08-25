@@ -1,10 +1,13 @@
+using System.Text;
 using CloudWarehouse.Backend.Helpers.Billing;
 using CloudWarehouse.Backend.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 if (!builder.Environment.IsEnvironment("Testing"))
-    // 0.0.0.0 = 允许局域网/远程用 http://本机IP:5001 访问；仅本机可用 http://localhost:5001
+    // 0.0.0.0 = allow LAN via http://host-ip:5001; localhost also works
     builder.WebHost.UseUrls("http://0.0.0.0:5001");
 
 builder.Services.AddControllers();
@@ -35,11 +38,36 @@ builder.Services.AddCors(p => p.AddPolicy("AllowAll", b =>
     b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
 }));
 
+var demoJwtEnabled = builder.Configuration.GetValue("Auth:DemoJwt:Enabled", false);
+if (demoJwtEnabled)
+{
+    var signingKey = builder.Configuration["Auth:DemoJwt:SigningKey"]
+        ?? "CloudWarehouse-Demo-Signing-Key-32chars!!";
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(o =>
+        {
+            o.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "CloudWarehouse.Demo",
+                ValidAudience = "CloudWarehouse.Demo",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey))
+            };
+        });
+}
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 app.UseCors("AllowAll");
 app.UseDefaultFiles();
 app.UseStaticFiles();
+if (demoJwtEnabled)
+    app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

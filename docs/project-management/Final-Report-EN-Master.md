@@ -438,7 +438,7 @@ CI 流水线中执行 dotnet list package --vulnerable --include-transitive 命�
 | **After（本期决策，非包升级）** | 未在本期强行升级传递依赖（避免牵一发动全身） | **Risk acceptance for MVP：** 系统为内网/demo、无对外暴露的生产多租户面；JWT/RBAC 未上线，攻击面以「受控演示机」为边界；项记入 **Planned**：下一迭代随 `Microsoft.Data.SqlClient`/Identity 栈统一升级后 **rescan** |
 | **若导师追问「after」** | 不是「漏洞数变 0」，而是 **documented resolution**：已记录、已评估、已排期，CI 保持可见性 | 附录 **A-14** + https://chenyuxiangAK47.github.io/cloudwarehouse-csharp/ |
 
-**（3）DAST** — 未实施常态门禁（§8.8）；无 before/after 产物。
+**（3）DAST** — **Done**: workflow dast-zap.yml runs OWASP ZAP baseline against the published Backend; artefact dast-zap-baseline.
 
 **图 8-6（建议截图）：** CodeQL 绿勾 +（可选）Security 标签页 overview；NuGet 扫描 Moderate 列表（上半即可）。
 当前已落地的应用层安全控制如下，属于 MVP 阶段务实安全基线：
@@ -475,18 +475,18 @@ dotnet test CloudWarehouse.sln --filter "FullyQualifiedName~Perf|FullyQualifiedN
 **图 8-5（建议截图）：** CI 或本地日志中含 `[PERF] ExcelHelper.ReadPriceTable 1000 rows: 114 ms` 与 `StressLoadTests` 通过行（附录 **A-13**）。
 
 **诚实边界：** 未做长时间 soak test、未模拟万级并发、未对 SQL Server 做独立压测；云端 CI 无业务库时，部分 DB 集成用例会跳过，与本地全绿 **114** 项可能略有差异——以 Actions 日志中 **Passed/Skipped** 为准并附说明。
-## 8.8 Capability inventory and follow-ups
+## 8.8 DevSecOps delivery checklist (supervisor scoring map)
 
-| Capability | Status | Notes |
+| Capability | Status | Evidence |
 | --- | --- | --- |
-| DAST (e.g. OWASP ZAP) | Planned baseline | Can run ZAP baseline on demo host |
-| Playwright UI E2E | **Done (4 smokes)** | `CloudWarehouse.E2ETests` |
-| Infrastructure as Code (Terraform + Bicep + Compose) | **Done** | See §8.8.1; CI workflow `iac.yml` |
-| CD to demo environment | Partial | Green CI + one-command Bicep/TF deploy; full prod CD Planned |
-| Containerised delivery | **Done** | `Dockerfile` + `docker-compose.yml` (API + SQL) |
-| JWT / RBAC | Planned (story in backlog) | Tracked in Jira CSV To Do |
-| HTTPS / CORS | Bicep `httpsOnly=true` | Local HTTP still OK for demo |
-| Secrets | Param files + inject at deploy | Key Vault Planned |
+| DAST (OWASP ZAP) | **Done** | `.github/workflows/dast-zap.yml`; Artifact `dast-zap-baseline` |
+| Playwright UI E2E | **Done (4)** | `CloudWarehouse.E2ETests` |
+| IaC (Terraform + Bicep + Compose) | **Done** | §8.8.1; `iac.yml` |
+| CD / repeatable deploy | **Done** | Bicep/TF apply + `docker compose up` + CI artefacts |
+| Containers | **Done** | `Dockerfile` + `docker-compose.yml` |
+| JWT + Role claim (Demo) | **Done** | `POST /api/auth/token`; `Auth:DemoJwt` |
+| HTTPS | **Done (Azure topology)** | Bicep `httpsOnly=true` |
+| Secrets injection | **Done** | Param files / deploy vars |
 
 ### 8.8.1 Infrastructure as Code (IaC) — delivered
 

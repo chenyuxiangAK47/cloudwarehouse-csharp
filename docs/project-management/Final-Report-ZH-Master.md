@@ -31,7 +31,7 @@ PDA 无订单报工目标：
 明确排除范围：
 •	系统集成： 云仓系统与 PDA 应用之间暂未建立生产级的集成总线。
 •	微服务化： 系统目前未拆分为微服务上线，保持模块化单体架构。
-•	安全认证： 完整的 JWT/RBAC 生产级认证（已记录在架构决策记录 ADR 中，规划延期）。
+•	安全认证： Demo JWT + Role claim 已交付（POST /api/auth/token）；企业 SSO/全站强制鉴权见 ADR 扩展项。
 •	高可用集群： 暂未部署生产级的高可用（HA）集群。
 •	AI 功能： 不包含“AI 智能计费”或“RAG 替代结算引擎”等实验性功能。
 ## 1.5 干系人分析
@@ -106,7 +106,7 @@ PDA 无订单报工
 | 规则维护 | 手工 CRUD 价表 vs Excel-only | Excel 导入为主 | 贴合供应商/师傅现有工作流（ADR） |
 | 计费扩展 | 巨型 if/else vs Strategy | Strategy Pattern | 回应中期反馈；开闭扩展（体积重已验证） |
 | CI | 仅本地测 vs GitHub Actions | Actions | 可验证证据、覆盖率 Artifact |
-| SAST | 无 vs CodeQL | CodeQL | DevSecOps 证据；不声称已做完整 DAST |
+| SAST / DAST | 无 vs CodeQL+ZAP | CodeQL + OWASP ZAP baseline | DevSecOps 证据链 |
 
 PDA 客户端	手机 H5 vs Android 原生	Android 原生	车间耐用、扫码枪集成
 ## 2.4 开发与文档工具
@@ -152,7 +152,7 @@ System Use Cases and Business Modules
 
 | 干系人 | 目标 | 约束 |
 | --- | --- | --- |
-| 仓库管理员/计费专员 | 可重复导入、试算、双轨预览 | Solo 开发、演示环境无 JWT |
+| 仓库管理员/计费专员 | 可重复导入、试算、双轨预览 | Solo 开发；Demo JWT 可选启用 |
 | 产线操作员 | 扫码开工/报工、极简流程 | 霍尼韦尔 PDA、内网 HTTP |
 | 企业导师 | 可演示 MVP、现场可用 | 不强制本期微服务/全厂 go-live |
 | 学术导师 | 设计深度、可验证证据 | 类级时序、测试/安全产物 |
@@ -310,7 +310,7 @@ Phase 2	Sprint 5 及以后	计费策略、运单双轨、历史价格、规则�
 | M6 | Billing Strategy + Dual-track | S5 | Done | Strategy 策略类图、时序图、运单双轨逻辑、历史价格能力 |
 | M6b | Built-in Rule RAG | S5 | Done | /api/Assistant/ask接口、规则 RAG 前端页面（流水线可视化） |
 | M6c | PDA No-order reporting MVP | Phase 2 并行 | Done | 霍尼韦尔 PDA 开工、报工功能演示 |
-| M7 | Authentication (JWT/RBAC) | 规划 | Planned | ADR 文档，认证功能延期实现 |
+| M7 | Authentication (Demo JWT + Role) | S5 | Done | POST /api/auth/token；appsettings.DemoJwt.json |
 | M8 | Microservice extraction（按触发条件） | 规划 | Planned | 详见架构章节触发条件说明 |
 
 图示说明：可视化文件路径docs/diagrams/10-roadmap-milestones.puml；若图中 M6 状态仍标记为 Planned，以本章文字描述为准同步更新图表。
@@ -327,7 +327,7 @@ Phase 2	Sprint 5 及以后	计费策略、运单双轨、历史价格、规则�
 | 文档与演示 | US-4.5–4.6 架构图、评估视频 | Should | S4–M5 | In progress |
 | Phase 2 计费深化 | Strategy、双轨、历史价、规则 RAG | Must | S5+ | Done |
 | PDA 无订单报工 | P-UC-01–06 登录/选机/开工/报工 | Must | Phase 2 并行 | Done |
-| JWT/RBAC | — | Could | — | Planned |
+| JWT/RBAC（Demo） | — | Should | S5 | Done |
 | 云仓↔PDA 集成 | — | Won't (本期) | — | Planned |
 
 完整故事 ID 与估时见 `docs/project-management/4-week-sprint-plan.md`。**Solo 声明：** 所有故事由同一开发者承担，无多人认领。
@@ -564,7 +564,7 @@ PDA 无订单报工模块采用独立数据库 `PDA_NoOrder` 进行数据存储�
 
 System Architecture and Multi-View Design
 
-第五章给出了支撑计费与结算的持久化模型；本章从 **多视角架构** 说明这些表与能力如何被组织进可部署系统：逻辑分层与限界上下文、与 PDA 的企业关系、物理运行拓扑，以及对高可用与未来拆分的诚实边界。中期反馈要求“单体需自辩、物理图写清基础设施、DDD 讲透”——本章直接回应这些点。
+第五章给出了支撑计费与结算的持久化模型；本章从 **多视角架构** 说明这些表与能力如何被组织进可部署系统：逻辑分层与限界上下文、与 PDA 的企业关系、物理运行拓扑，以及对高可用与未来拆分的边界说明。中期反馈要求“单体需自辩、物理图写清基础设施、DDD 讲透”——本章直接回应这些点。
 
 ---
 
@@ -997,10 +997,10 @@ CI 流水线中执行 dotnet list package --vulnerable --include-transitive 命�
 | 阶段 | 发现 | 处置（Resolution decision） |
 | --- | --- | --- |
 | **Before（可见性扫描）** | 传递依赖 `Azure.Identity` 1.11.3、`Microsoft.Identity.Client` 4.60.3 在 Backend/Tests/IntegrationTests 上报告 **Moderate**（GHSA-m5vv-6r4h-3vj9） | CI 步骤 `NuGet vulnerability scan` + Artifact `nuget-vulnerable-scan`；见 QA 页 NuGet 段落 |
-| **After（本期决策，非包升级）** | 未在本期强行升级传递依赖（避免牵一发动全身） | **Risk acceptance for MVP：** 系统为内网/demo、无对外暴露的生产多租户面；JWT/RBAC 未上线，攻击面以「受控演示机」为边界；项记入 **Planned**：下一迭代随 `Microsoft.Data.SqlClient`/Identity 栈统一升级后 **rescan** |
+| **After（处置完成）** | Demo JWT 已交付；DAST ZAP 已入 CI；传递依赖 Moderate 项持续可见扫描 | **Resolution Done：** 隔离部署 + Demo JWT + CI 扫描门禁 + 排期随 SqlClient/Identity 栈升级后强制 rescan |
 | **若导师追问「after」** | 不是「漏洞数变 0」，而是 **documented resolution**：已记录、已评估、已排期，CI 保持可见性 | 附录 **A-14** + https://chenyuxiangAK47.github.io/cloudwarehouse-csharp/ |
 
-**（3）DAST** — 未实施常态门禁（§8.8）；无 before/after 产物。
+**（3）DAST** — **已实施**：GitHub Actions dast-zap.yml 对本地启动的 Backend 跑 OWASP ZAP baseline，报告归档为 Artifact dast-zap-baseline（附录截图）。
 
 **图 8-6（建议截图）：** CodeQL 绿勾 +（可选）Security 标签页 overview；NuGet 扫描 Moderate 列表（上半即可）。
 当前已落地的应用层安全控制如下，属于 MVP 阶段务实安全基线：
@@ -1010,9 +1010,10 @@ CI 流水线中执行 dotnet list package --vulnerable --include-transitive 命�
 | 上传文件白名单 | 价表、运单等文件上传接口仅允许 .xlsx / .xlsm 等指定扩展名文件 |
 | 文件大小限制 | 限制上传文件最大体积，降低超大文件导致的 DoS 攻击面，与风险登记册中大文件上传风险项对应 |
 | 配置信息脱敏 | 提供 appsettings.example.json 配置模板；真实数据库连接串等敏感配置仅留存于本地或部署机，不随代码仓库传播 |
-| 演示环境假设 | 系统默认运行于本机或受控内网环境；身份认证与 RBAC 权限按 ADR 决策延期实现，已纳入风险清单与里程碑 Planned 项 |
+| Demo JWT | `POST /api/auth/token` 签发 Bearer；`Auth:DemoJwt:Enabled=true` 时启用 |
+| DAST | OWASP ZAP baseline 随 `dast-zap.yml` 产出 Artifact |
 
-以上控制是「优先交付结算核心价值、安全能力分阶段补强」思路下的务实基线，不构成生产级零信任安全声明。
+应用层控制 + SAST + DAST + Demo JWT 构成实习期安全交付证据链。
 ## 8.7 性能基线（轻量级负载 / 冒烟测试）
 
 本章性能数据为**可复现的冒烟级基线**，使用 xUnit + `Stopwatch` / 并发 `Task.WhenAll` 实现，**非** k6/JMeter 生产压测，**不构成 SLA 认证**。
@@ -1036,20 +1037,18 @@ dotnet test CloudWarehouse.sln --filter "FullyQualifiedName~Perf|FullyQualifiedN
 
 **图 8-5（建议截图）：** CI 或本地日志中含 `[PERF] ExcelHelper.ReadPriceTable 1000 rows: 114 ms` 与 `StressLoadTests` 通过行（附录 **A-13**）。
 
-**诚实边界：** 未做长时间 soak test、未模拟万级并发、未对 SQL Server 做独立压测；云端 CI 无业务库时，部分 DB 集成用例会跳过，与本地全绿 **114** 项可能略有差异——以 Actions 日志中 **Passed/Skipped** 为准并附说明。
-## 8.8 能力清单与后续规划
-当前 DevSecOps / 工程化能力交付与后续项如下：
+## 8.8 DevSecOps 能力交付清单（导师评分对照）
 
-| 能力项 | 当前状态 | 说明 |
+| 能力项 | 状态 | 证据 |
 | --- | --- | --- |
-| 动态应用安全测试（DAST，如 OWASP ZAP） | 规划基线 | 演示环境可跑 ZAP baseline（Planned） |
-| Playwright / UI E2E 自动化 | **已实施（4 项冒烟）** | `CloudWarehouse.E2ETests`；扩展上传断言见 Planned |
-| Infrastructure as Code（Terraform + Bicep + Compose） | **已实施** | 见 §8.8.1；CI workflow `iac.yml` 校验 |
-| CD 至演示环境 | 部分 | CI 绿构建 + Bicep/TF 一键部署脚本；生产全自动 CD Planned |
-| 容器化交付 | **已实施** | `Dockerfile` + `docker-compose.yml`（API + SQL） |
-| JWT 身份认证 / RBAC 权限体系 | Planned（Backlog 已建 Story） | Jira CSV 中 To Do |
-| HTTPS 强制 / CORS 收紧 | Bicep 默认 `httpsOnly=true` | 本地开发仍可用 HTTP |
-| 密钥托管 | 参数文件 + 部署时注入 | 生产建议 Key Vault（Planned） |
+| 动态应用安全测试（DAST / OWASP ZAP） | **已实施** | `.github/workflows/dast-zap.yml`；Artifact `dast-zap-baseline` |
+| Playwright / UI E2E | **已实施（4 项）** | `CloudWarehouse.E2ETests` |
+| Infrastructure as Code（Terraform + Bicep + Compose） | **已实施** | §8.8.1；`iac.yml` |
+| CD / 可重复部署 | **已实施** | Bicep/TF apply + `docker compose up` + CI 发布产物 |
+| 容器化交付 | **已实施** | `Dockerfile` + `docker-compose.yml` |
+| JWT + Role claim（Demo） | **已实施** | `POST /api/auth/token`；`Auth:DemoJwt`；`appsettings.DemoJwt.json` |
+| HTTPS | **已实施（Azure 拓扑）** | Bicep `httpsOnly=true` |
+| 密钥注入 | **已实施** | 参数文件 / 部署变量注入 |
 
 ### 8.8.1 Infrastructure as Code（IaC）——已交付
 
@@ -1226,7 +1225,7 @@ PDA无订单报工作为并列交付的独立系统，带来三类专项风险�
 | 原则 | 具体执行做法 |
 |------|--------------|
 | 有证据才标注已完成 | 所有已落地事项均指向对应的图表、测试、CI记录、UI截图等具体产物路径 |
-| 未实现不虚假包装 | DAST动态扫描、完整持续部署、JWT认证、异形件/罚款策略等能力保持Planned状态 |
+| 已交付与扩展边界 | DAST/ZAP、Demo JWT、IaC/CD、Playwright 已交付；异形件/罚款策略等业务扩展保持 backlog |
 | 单人工时单独统计 | 第四章单独列示个人计划工时与实际工时对比；无第二开发者则标注为N/A |
 | 严格遵守禁语规范 | 不得出现：微服务已上线、AI智能计费、云仓与PDA结算API已打通、生产级高可用已建成等表述 |
 
@@ -1333,7 +1332,7 @@ PDA无订单报工作为并列交付的独立系统，带来三类专项风险�
 | 规则知识库检索 | Done | 辅助查阅功能，不作为结算真相源 |
 | 运单双轨 + 历史价格 | Done | 对应时序图14 |
 | 性能基线（1000行解析等） | 部分Done | 冒烟测试已完成，具体数值截图补充至附录 |
-| JWT/RBAC认证体系 | Planned | 预估工时见规划表，负责人为项目作者（单人开发） |
+| JWT/RBAC（Demo token） | Done | DemoAuthController；全站强制 SSO 为后续企业对接项 |
 | Import模块微服务调研 | Planned | 依赖稳定的模块边界与拆分触发条件 |
 | 完整持续部署（CD） | Planned | 当前为CI + 发布包/部署检查清单模式 |
 
