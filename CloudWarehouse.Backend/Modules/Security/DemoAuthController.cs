@@ -1,7 +1,6 @@
-// Minimal demo JWT gate — scoring artefact for DevSecOps / security chapter.
-// Enabled when Auth:DemoJwt:Enabled=true (see appsettings.DemoJwt.json).
-// Default production/demo path remains open for internship UI demos.
-
+// Report §8.5 / §8.8 — Demo JWT scoring artefact (Auth:DemoJwt).
+// POST /api/auth/token → Bearer access_token + Admin role claim.
+// Enable: Auth:DemoJwt:Enabled=true (see appsettings.DemoJwt.json).
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;

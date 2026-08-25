@@ -1,3 +1,6 @@
+// Report §8.3.2 — Playwright UI smoke E2E (Category=E2E).
+// Verifies index.html primary nav + Waybill / Customer Quote / Rule RAG panels.
+// CI: install Chromium then `dotnet test CloudWarehouse.E2ETests`.
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
