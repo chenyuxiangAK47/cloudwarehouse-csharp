@@ -67,7 +67,7 @@ public class SiteAndStaticApiTests : IClassFixture<CloudWarehouseWebApplicationF
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains("云仓管理系统", html);
-        Assert.Contains("客户管理", html);
+        Assert.Contains("Cloud Warehouse Management", html);
+        Assert.Contains("Customer Management", html);
     }
 }
