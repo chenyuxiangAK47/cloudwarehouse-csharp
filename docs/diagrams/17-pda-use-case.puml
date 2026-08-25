@@ -1,0 +1,49 @@
+@startuml PDA_NoOrder_Use_Case
+left to right direction
+title PDA No-Order Reporting — Use Case Diagram
+
+actor "Line Operator" as Op
+actor "Supervisor\n(optional)" as Sup
+
+rectangle "PDA No-Order Reporting" {
+
+  usecase "Login" as UC01
+  usecase "Select line / group / machine" as UC02
+  usecase "Start job" as UC03
+  usecase "Pause / resume" as UC04
+  usecase "Report completion" as UC05
+  usecase "Query history" as UC06
+  usecase "Scan barcode" as UCScan
+  usecase "Exception / anomaly check\n(optional ops)" as UC07
+}
+
+Op --> UC01
+Op --> UC02
+Op --> UC03
+Op --> UC04
+Op --> UC05
+Op --> UC06
+
+Sup ..> UC06 : review records
+Sup ..> UC07 : ops review (if used)
+
+UC01 ..> UCScan : <<include>>
+UC02 ..> UCScan : <<include>>
+UC03 ..> UCScan : <<include>>
+UC05 ..> UCScan : <<include>>
+
+note right of UCScan
+  Honeywell scan SDK / wedge input
+  (employee QR, device code, batch / drawing)
+end note
+
+note bottom of UC07
+  Delivered as ops tooling (anomaly scan / export);
+  not required for core start–report happy path.
+end note
+
+@enduml
+
+' 1. Primary actor is the line operator; supervisor is optional for history / anomaly review.
+' 2. Core flow: Login → select line/group/machine → Start → Report → Query; Pause/resume is supported.
+' 3. Scan barcode is included by login, selection, start, and report for shop-floor speed.

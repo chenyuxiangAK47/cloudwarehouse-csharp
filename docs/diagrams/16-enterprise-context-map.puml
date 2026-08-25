@@ -1,0 +1,34 @@
+@startuml CloudWarehouse_Enterprise_Context_Map
+title Enterprise Context Map — Factory Digital Ops Landscape
+
+skinparam packageStyle rectangle
+skinparam rectangle {
+  BackgroundColor #F8F9FA
+  BorderColor #2C3E50
+  RoundCorner 8
+}
+
+rectangle "CloudWarehouse\nBilling & Pricing BC\n.NET Modular Monolith\n— DELIVERED (this internship)" as CW #D5F5E3
+rectangle "PDA No-Order Reporting\nShop-floor Execution BC\nAndroid + Spring Boot\n— DELIVERED (this internship)" as PDA #FCF3CF
+
+rectangle "Siemens Mendix\nOps / Citizen App BC\n(factory landscape)" as MX #EAF2F8
+rectangle "Ops Safety Dashboard\nVisualization BC\n(factory landscape)" as DS #F5E6E8
+
+CW -[#27AE60,thickness=2]-> CW : internal modules\nMasterData / Import\nPricing / Billing / Helper
+
+PDA -[#27AE60,thickness=2]-> PDA : own stack\nApp / API / PDA_NoOrder DB
+
+PDA ..[#7F8C8D,dashed].> CW : <<Planned>>\ncross-system join
+MX ..[#95A5A6,dashed].> CW : <<Planned>>
+DS ..[#95A5A6,dashed].> CW : <<Planned>>
+PDA ..[#95A5A6,dashed].> DS : <<Planned>>
+MX ..[#95A5A6,dashed].> DS : <<Planned>>
+
+legend left
+  |= Style |= Meaning |
+  | Green solid boxes + solid loops | Systems delivered now |
+  | Dashed grey arrows | Future integration only |
+  | Light boxes | Factory landscape (not this internship) |
+endlegend
+
+@enduml

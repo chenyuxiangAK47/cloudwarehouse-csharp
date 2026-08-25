@@ -1,0 +1,82 @@
+# 七段视频 × 官方 Rubric（必看 slide 33–38）对照缺口
+
+说明：✔ 稿子已覆盖 | △ 弱/刚补 | ✖ 官方有、我们没说清（要补录或口播加一句）
+诚实原则：没做的说 Planned/N/A，不要装做完。
+
+============================================================
+1 Management（≤5 min）
+============================================================
+官方项 | 状态 | 备注
+-------|------|----
+1 Goals / pain points | ✔ | Part 2
+2 Journey map / scope / backlog | ✔ | 路线图 + MoSCoW
+3 SCRUM / sprint | ✔ | Part 3
+3 Tracking tool (e.g. JIRA) | △→补 | 我们用 hours CSV + 工时图，不是 JIRA——必须说清楚
+3 Burndown charts | △→补 | Solo 无经典 burndown；用 Planned vs Actual 柱状图代替并说明
+4 Planned vs Actual hours | ✔ | Part 5；Solo = personal hours
+5 Client/Sponsor management | △→已补 | Part 6（若旧视频没这句要补录）
+
+============================================================
+2 Architecture（≤10 min）
+============================================================
+官方项 | 状态 | 备注
+-------|------|----
+Logical decisions / overview | ✔ | Modular Monolith + 分层
+DDD diagrams | ✔ | 05
+Logical deployment | ✔ | 企业图 + PDA/云仓逻辑
+Physical decisions / tech stack | ✔ | 03
+Physical + networking | ✔ | 端口/SQL/内网
+Physical deployment | ✔ | 04 + 21
+Security threats + mitigation | △→补 | 有上传/鉴权延期；要明确 threat→mitigation；Part 8 若丢了要加回
+
+============================================================
+3 Software Design（≤5 min）
+============================================================
+官方项 | 状态 | 备注
+-------|------|----
+Use case diagram | △→补 | 主要在 Architecture；Design 视频应闪 06 或一句 “critical use case = waybill dual-track / PDA start-report”
+Class + sequence | ✔ | 13/14/20/22
+Analysis → design | △→补 | 加一句：从用例到 Strategy/时序
+Design pattern | ✔ | Strategy
+Data schemas / models | ✔ | ERD 07（+可选 18）
+
+============================================================
+4 DevSecOps（≤10 min）
+============================================================
+官方项 | 状态 | 备注
+-------|------|----
+CI/CD pipelines | ✔ | Actions + ci.yml；CD 未做已说
+Unit / integration artifacts | ✔ | test log + coverage
+Load/stress | △ | 只有 light smoke——说一句即可
+SAST CodeQL | ✔ | 
+DAST | ✔ 缺口 | 明确未做
+Container Mgmt / Trivy | ✖→补 | 本期未容器化，N/A Planned
+Vuln resolution + rescan | △→补 | NuGet 有扫描；说“可见性优先，未做强制门禁+rescan闭环”
+Compliance as Code / IaC | ✖→补 | 无 Terraform；Git history = version audit trail
+Regulatory SOC2/HIPAA/GDPR | ✖→补 | 本项目不适用/未宣称合规认证
+
+============================================================
+5 Value Added（≤5 min）
+============================================================
+官方项 | 状态 | 备注
+-------|------|----
+Meet minimum internship requirements | △→补 | 收束加一句：报告+七视频+可运行系统+CI 证据
+Accepted by sponsor / preferably going live | △→已补 | PDA 现场在用；不说全厂替换 go-live
+Advanced/innovative area | △→补 | 明确：Strategy+双轨深度；Rule RAG = lexical FAQ assist（不是 GenAI 计费）
+
+============================================================
+6 App Demo / 7 CI/CD Demo
+============================================================
+Live system demo | ✔ | 06 checklist
+DevSecOps demo | ✔ | 07；与 04 可重叠
+
+============================================================
+补录优先级（已经定稿的视频）
+============================================================
+P0 必补（评分点硬）：01 Client/Sponsor；05 Sponsor accepted；04 Containers/IaC/Regulatory 缺口三句；02 Security threat-mitigation（若旧片没有）
+P1 建议补：01 tracking tool + no burndown；03 use case + analysis-to-design；05 minimum requirements + innovative framing
+P2 可只写报告不补视频：完整 DAST rescan、Trivy 实操
+
+补录技巧：不必整段重来。01 / 02 / 04 / 05 各稿末尾已有「片尾补录 ADD-ON」——旧片结尾直接接录即可。
+官方没要求为这些缺口再加新 PPT/新图；对着镜头口述，或继续展示已有工时图 / Actions 即可。
+03 / 06 / 07 可不补。

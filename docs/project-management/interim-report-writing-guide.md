@@ -100,7 +100,7 @@ M3	Rules & Pricing	S3	PriceRules table supports transactional upsert; freight tr
 M4	QA & CI	S4	Test suite exceeds 40 unit and integration tests; GitHub Actions CI pipeline configured and passing; code coverage reports generated as artifacts.	Done	Sections 15–16 (Deployment & CI), Section 18.
 M5	Documentation	S4	All PlantUML diagrams completed; interim report and presentation slides prepared; demo video recorded.	In Progress	Appendix (Diagrams, Report).
 M6	Billing Strategies	Phase 2 (Done)	Strategy Pattern live: Tier / Overweight / Volumetric strategies, FeeCalculationEngine, class + sequence diagrams, unit tests.	Done	docs/diagrams/13-billing-strategy-class.puml, Section 20.2–20.3, BillingStrategyTests
-M6b	Rule knowledge lookup	Phase 2 (Done)	Built-in keyword/TF-IDF rule lookup UI + API; MinScore miss path; 15-question eval test; optional LLM rewrite only if ApiKey set.	Done	/api/Assistant/ask, QuoteAssistantEvalTests, Section 20.9
+M6b	Built-in Rule RAG	Phase 2 (Done)	Lexical RAG UI + API (Retrieve→Augment→Generate); MinScore miss path; 15-Q eval; optional LLM rewrite if ApiKey set. Not a settlement engine.	Done	/api/Assistant/ask, QuoteAssistantEvalTests, Section 20.9, diagram 15
 
 The evidence for the completed milestones (M1–M4, M6) is substantiated by the functional system and the artifacts documented throughout this report. For instance, M1 is evidenced by the Entity-Relationship Diagram and the operational CRUD interfaces for master data.1 M2 and M3 are demonstrated through the price import and trial calculation workflows detailed in Section 14, supported by screenshots of the UI. M4 is validated by the green build status in GitHub Actions and the coverage reports discussed in Section 18. M6 is evidenced by CloudWarehouse.Pricing.Core/Billing/* and diagram 13.1
 6.3 Remaining Phase 2 Milestones (Forward Look)
@@ -566,9 +566,9 @@ Code coverage measurement and reporting are integral to the QA strategy. The Cov
 18.6 Non-Functional Test Plan (Performance)
 Recognizing that Phase 1's MVP scope deferred in-depth performance validation, a forward-looking Non-Functional Test Plan has been established for Phase 2. This plan defines measurable performance targets for key system operations, moving beyond anecdotal evidence to quantifiable service level objectives (SLOs) 1.
 Scenario	Target	Phase 1 Status	Phase 2 Plan
-Import 1000 rows	< 30 seconds	[Planned]	Implement and execute load test using k6 or JMeter.
+Import 1000 rows (parse)	< 30 seconds	✅ Measured in Import1000RowPerfTests (ExcelHelper.ReadPriceTable)	Also generate file via scripts/generate-1000-row-price-table.ps1 for UI timing screenshot
 Import 10,000 rows	< 180 seconds	[Planned]	Test with streaming read implementation (mitigation for technical risk T3).
-Calculate API p95 latency	< 200 milliseconds	[Planned]	Profile and optimize database queries and caching strategy.
+Calculate API / engine	p95-ish local baseline	✅ FeeCalculationPerfSmokeTests (1000× CalculateActive)	Profile DB path separately when SQL available.
 System availability under concurrent users	99.5% uptime	[Planned]	Deploy to a staging environment and run extended soak tests.
 
 This plan directly addresses the future enhancements mentioned in the project overview, ensuring that as complexity grows in Phase 2 with the Strategy Pattern and potential microservices, the system's performance and reliability are quantitatively validated 1.
@@ -694,15 +694,15 @@ Performance Testing & Baseline	Author	Core APIs stable	Sprint 6	20 hours	Planned
 Production Deployment Pipeline (CD)	Author	Authentication	Sprint 8	30 hours	Planned
 
 Remaining planned work focuses on Auth, performance baselines, and optional service extraction — not re-planning Strategy, which is already implemented.
-20.9 Built-in Rule Knowledge Lookup (Value Added — honest scope)
-This feature is a **built-in rule knowledge lookup** for warehouse admins (UI tab「计价规则检索」), not an AI settlement engine.
-• Retrieval: local markdown KnowledgeBase chunks + Chinese/English keyword / TF-IDF scoring (`KeywordRetriever`).
-• Gate: `Assistant:MinScore` (default 0.35); below threshold → mode `retrieval-miss` (no invented answer).
+20.9 Built-in Rule RAG (Value Added — honest scope)
+This feature is a **built-in rule RAG** for warehouse admins (UI tab「规则 RAG」): Retrieve → Augment → Generate over local markdown KnowledgeBase. It is **not** an AI settlement engine.
+• Retrieval: local markdown chunks + Chinese/English keyword / TF-IDF with phrase/title boosts (`KeywordRetriever`).
+• Gate: `Assistant:MinScore` (default 0.28); below threshold → mode `retrieval-miss` (no invented answer).
 • Generation: default `kb-extractive` (snippet assembly). Optional `optional-llm` only if `Assistant:OpenAI:ApiKey` is configured.
 • Boundary: never writes PriceRules/BillLines; FeeCalculationEngine remains system of record.
 • Eval evidence: `QuoteAssistantEvalTests` — 15 golden questions, assert ≥80% top-1 source hit rate; plus low-relevance miss test.
 • Diagram: docs/diagrams/15-sequence-quote-assistant-rag.puml
-Forbidden viva phrases for this feature: “RAG intelligent pricing”, “AI billing system”, “full semantic RAG”. Preferred: “rule knowledge lookup / assistive FAQ retrieval”.
+Forbidden viva phrases for this feature: “RAG intelligent pricing”, “AI billing system”, “full semantic / vector RAG in production”. Preferred: “built-in rule RAG / assistive FAQ retrieval (lexical)”.
 
 20.10 Language Discipline (anti-overclaim)
 | Avoid | Prefer |

@@ -1,0 +1,142 @@
+# 视频 6 · App Demo 联合清单（云仓 + PDA）
+时长：≤5 分钟（建议 4.5–4.8）
+目标：真界面操作，少讲理论；OBS 开摄像头。
+
+============================================================
+录前准备（一次搞定）
+============================================================
+
+【云仓】
+- 地址：http://localhost:5001/
+- 启动（若打不开）：在仓库根目录
+  `dotnet run --project CloudWarehouse.Backend --urls http://localhost:5001`
+- 数据库里最好已有：站点、目的地、客户、成本价规则、客户报价
+  （录视频时不要现场从零导完整价表，会超时）
+- 若库是空的、Preview 算不出钱：先快速导这两份（可录前做完，视频里说 already imported）：
+  1) Cost Import ← `d:\tools\cloudwarehouse-csharp\excel\93-成本表-单独.xlsx`
+     或 `93-中通晋州-成本-标准格式.xlsx`
+  2) Customer Quote Import ← `d:\tools\cloudwarehouse-csharp\excel\93-客户报价-单独.xlsx`
+
+【PDA】
+- Android Studio 打开：`d:\PDA-dev\mes-noorder-pda`
+- Run configuration：**mockDebug**（英文界面 + Offline Demo 红条）
+- 不需要工厂内网，不需要 Spring Boot（mock 本地数据）
+
+============================================================
+云仓：要导入什么？现场演示什么？
+============================================================
+
+## 录前导入（视频里可跳过操作，口播一句即可）
+
+| 导入什么 | 菜单 | 文件 | 干啥用 |
+|----------|------|------|--------|
+| 成本价（应付） | Cost Import / 成本价导入 | `excel\93-成本表-单独.xlsx` 或 `93-中通晋州-成本-标准格式.xlsx` | 算应付中转费 |
+| 客户报价（应收） | Customer Quote Import | `excel\93-客户报价-单独.xlsx` | 算应收中转费 |
+
+口播一句：
+EN: Cost and quote tables are already imported. I go straight to waybill preview.
+
+## 现场必演示（这是云仓核心）
+
+| 步骤 | 点哪里 | 用哪个文件 |
+|------|--------|------------|
+| 1 | 左侧 **Waybill Import** | — |
+| 2 | 选文件 | **`excel\2026-01-账单明细-单独.xlsx`** |
+| 3 | 点 **Preview Parse**（先别点 Confirm Import） | — |
+| 4 | 指汇总 + 结果表 | 看 Recv. Transit Fee / Pay. Transit Fee / Profit |
+
+要让老师看到的点：
+- 按发货日取历史价
+- 应收 vs 应付双轨
+- 和表内费用对比（能对上 / 对不上能解释）
+
+备用运单文件（上面那个不行时）：
+`excel\小二小店测试sheet.xlsx`
+
+## 云仓不要现场做（省时间）
+
+- 不要完整演示 Sites / Destinations 增删改
+- 不要现场从头导成本+报价（除非库空、Preview 没金额）
+- 不要点 Confirm Import to Database（Preview 够了）
+- Rule RAG 可选：有时间点 1 个预设问题；超时直接砍
+
+============================================================
+PDA：演示什么？
+============================================================
+
+用 **mockDebug**。红条写 Offline Demo 是正常的，口播承认即可。
+
+## 复制用的码
+
+员工码（登录页粘贴）：
+`123456;Demo User;Gear Line`
+
+机台：
+`GH01`
+
+开工图号/工序（Start 页可手输或组合码）：
+`Q26-W830E102.040;Turn-Mill`
+
+批号：随便手输一串，例如 `BATCH-DEMO-001`
+
+## 现场点击路径（约 2 分钟）
+
+1. **Login**
+   - 粘贴员工码 → **Apply Code & Login**（或 Login）
+   - Line 应出现 Gear Line
+2. **选机**
+   - 输入/确认设备 **GH01**，或手选 Hobbing Cluster → 机床
+3. **Start**
+   - Batch No.：`BATCH-DEMO-001`
+   - Drawing / Process：`Q26-W830E102.040` + `Turn-Mill`（或组合码）
+   - 提交 → 看到 **Start succeeded**
+4. **Report**
+   - 同一机台报工 → 看到 **Report succeeded**
+
+要让老师看到的点：
+- 无正式工单也能开工报工
+- 扫码/手输批号与图号工序
+- 报工机台对齐开工机台
+
+## PDA 不要做
+
+- 不要切 prod 连工厂内网（家里会挂）
+- 不要演示和云仓 API 对接
+- 挂起 Suspend 可砍，时间紧就跳过
+
+============================================================
+整段时间轴（对着念）
+============================================================
+
+| 段 | 时长 | 屏幕 | 你做什么 |
+|----|------|------|----------|
+| 开场 | 15s | 云仓首页或封面 | 说两套系统 |
+| 云仓 | 2 min | Waybill Preview | 上传账单明细 → Preview → 指双轨列 |
+| 切换 | 10s | — | Next, PDA offline mock |
+| PDA | 2 min | 模拟器 | 登录 → GH01 → Start → Report |
+| 收束 | 15s | 任一 | 云仓对账，PDA 记现场。Thank you. |
+
+开场 EN：
+Okay, hello everyone. This is the App Demo.
+I show two working systems: CloudWarehouse freight billing, and PDA no-order reporting.
+
+收束 EN：
+CloudWarehouse checks freight with dual-track preview.
+PDA captures start and report when there is no formal order.
+Thank you.
+
+============================================================
+文件速查
+============================================================
+
+云仓必传（现场）：
+  d:\tools\cloudwarehouse-csharp\excel\2026-01-账单明细-单独.xlsx
+
+云仓预导（录前，可选）：
+  d:\tools\cloudwarehouse-csharp\excel\93-成本表-单独.xlsx
+  d:\tools\cloudwarehouse-csharp\excel\93-客户报价-单独.xlsx
+
+PDA 工程：
+  d:\PDA-dev\mes-noorder-pda → Run **mockDebug**
+
+禁话：两套已打通；微服务已上线；AI 计费；覆盖率大于 80%

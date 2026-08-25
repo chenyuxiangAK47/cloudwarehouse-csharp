@@ -38,5 +38,8 @@ public class FeeCalculationPerfSmokeTests
         // Generous bound for CI runners; local machines are typically far faster.
         Assert.True(sw.ElapsedMilliseconds < 200,
             $"1000 CalculateActive calls took {sw.ElapsedMilliseconds} ms");
+
+        Console.WriteLine(
+            $"[PERF] FeeRuleCalculator.CalculateActive x1000: {sw.ElapsedMilliseconds} ms");
     }
 }

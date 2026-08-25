@@ -1,0 +1,76 @@
+七段视频 · 图来源清单（仓库内）
+路径根：docs/diagrams/  或  docs/project-management/
+结论：演讲稿里点名的 PlantUML 图，仓库里都有（见下表「有」）。
+截图类（浏览器 / Actions / PDA 真机）不是 puml，录屏时现抓。
+
+============================================================
+视频 1 Management
+============================================================
+PPT自做封面 / 痛点两列 / MoSCoW     → 无 puml，PPT 页
+10-roadmap-milestones.puml         → 有
+sprint-hours-chart.html 截屏       → 有（docs/project-management/）
+12-risk-management.puml            → 有（可选）
+
+============================================================
+视频 2 Architecture
+============================================================
+06-use-case-diagram.puml           → 有
+17-pda-use-case.puml               → 有（可选闪）
+02-logical-architecture.puml       → 有
+05-ddd-bounded-contexts.puml       → 有
+16-enterprise-context-map.puml     → 有
+19-pda-logical-architecture.puml   → 有
+03-physical-architecture.puml      → 有
+04-deployment-diagram.puml         → 有
+21-pda-deployment.puml             → 有（可选）
+01a-architecture-decisions-adr.puml → 有（安全/ADR 可选）
+01b-architecture-constraints-influence.puml → 有（可选）
+
+============================================================
+视频 3 Software Design
+============================================================
+13-billing-strategy-class.puml     → 有
+14-sequence-waybill-dual-track.puml → 有
+07-erd.puml                        → 有
+20-sequence-pda-start-report.puml  → 有
+22-pda-class-overview.puml         → 有
+18-pda-erd.puml                    → 有（可选）
+
+============================================================
+视频 4 DevSecOps
+============================================================
+09-cicd-pipeline.puml              → 有
+GitHub Actions CI 绿勾             → 截图（非 puml）
+.github/workflows/ci.yml           → 有
+coverage-report Artifact           → Actions 下载后截图
+CodeQL 绿勾                        → 截图
+安全控制 / 缺口页                  → PPT 自做
+
+============================================================
+视频 5 Value Added
+============================================================
+16-enterprise-context-map.puml     → 有
+运单 Preview UI                    → 浏览器截图
+Rule RAG UI                        → 浏览器截图
+15-sequence-quote-assistant-rag.puml → 有（可选）
+PDA 真机录屏                       → 设备录屏
+20-sequence-pda-start-report.puml  → 有
+异常巡检截图                       → 有则贴（可选）
+
+============================================================
+视频 6 App Demo
+============================================================
+基本不靠架构图：localhost:5001 实机 + PDA 真机
+可选封面 PPT 一页
+
+============================================================
+视频 7 CI/CD Demo
+============================================================
+09-cicd-pipeline.puml              → 有（可选）
+Actions / Artifact / ci.yml / CodeQL → 浏览器与 IDE 实机
+
+============================================================
+导出提醒
+============================================================
+PlantUML → PNG：VS Code PlantUML 或 https://www.plantuml.com/plantuml/uml/
+工时图：浏览器打开 sprint-hours-chart.html → 截屏

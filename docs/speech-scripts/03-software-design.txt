@@ -1,0 +1,141 @@
+视频 3 · Software Design Assessment
+时长：约 5 分钟（官方上限；超时先缩短 ERD 和 PDA 类图）
+形式：中英一段一段对照。英语短句、So 连接、好念。
+
+【展示什么 | 怎么准备】（录前看）
+顺序 | 展示什么 | 怎么准备
+1 | 封面 | 未来做 PPT：Software Design · CloudWarehouse + PDA
+2 | 设计范围 | PPT：左云仓 / 右 PDA；可闪 06-use-case 一句「关键用例」
+3 | Strategy 类图 | 展示图：docs/diagrams/13-billing-strategy-class.puml
+4 | 双轨时序 | 展示图：docs/diagrams/14-sequence-waybill-dual-track.puml
+5 | 云仓 ERD | 展示图：docs/diagrams/07-erd.puml
+6 | PDA 时序 | 展示图：docs/diagrams/20-sequence-pda-start-report.puml
+7 | PDA 类图 | 展示图：docs/diagrams/22-pda-class-overview.puml
+8 | PDA ERD（可选） | 展示图：docs/diagrams/18-pda-erd.puml
+9 | 收束 | 未来做 PPT：云仓 Strategy/双轨 + PDA 时序/类图小结
+
+============================================================
+口播稿
+============================================================
+
+--- Part 0 封面 · 约 25 秒 · 展示：封面 ---
+
+ZH:
+各位老师好。这是 Software Design Assessment。
+我讲两套系统的详细设计。
+云仓这边：用 Strategy 管不同计费算法，再用时序图讲应收应付怎么走。
+PDA 这边：用类图和开工到报工的时序，讲现场规则怎么落地。
+
+EN:
+Okay, hello everyone. This is part three, Software Design Assessment.
+I will talk about detailed design for two systems.
+For CloudWarehouse: Strategy for different fee methods, and a sequence for receivable and payable.
+For PDA: a class diagram, and a start-to-report sequence for shop-floor rules.
+
+--- Part 1 设计范围 · 约 35 秒 · 展示：范围 PPT ---
+
+ZH:
+软件设计主要看两条线。从分析到设计：架构视频里的用例图定关键路径；这里落到类图、时序和模式。
+关键用例：云仓运单双轨对比；PDA 开工到报工。
+第一条，云仓：运单导入预览，应收和应付一起算、一起比。中期也要求有设计模式，还有类图时序。
+第二条，PDA：登录选机以后，开工，再报工。中间有扫码、挂起续开，报工还要对齐开工机台。
+另外说一句：规则查询不算结算。真正算钱的是 FeeCalculationEngine。
+
+EN:
+So there are two main design lines. From analysis to design: the use case diagram in the architecture video sets the critical paths; here I land class diagrams, sequences, and a pattern.
+Critical use cases: CloudWarehouse dual-track waybill compare, and PDA start-to-report.
+First, CloudWarehouse: upload waybill, preview, then compare receivable and payable. Mid-term asked for a design pattern, plus class and sequence diagrams.
+Second, PDA: after login and machine select, start work, then report work. You can scan, pause, resume. And report must use the same machine as start.
+One more point: rule lookup is not billing. The fee engine is FeeCalculationEngine.
+
+--- Part 2 云仓 Strategy · 约 70 秒 · 展示：13 ---
+
+ZH:
+Phase 2 以后，区间价、续重、体积重，我拆成策略类。
+接口叫 IBillingStrategy。下面有 Tier、Overweight、Volumetric。外面还有 Resolver 和 FeeCalculationEngine。
+好处很简单：以后要加体积重，主要是加一个类，再注册一下。导入主流程不用再堆一大坨 if else。
+这也迎合了中期反馈：计费要用设计模式。
+
+EN:
+So in Phase 2, I split tier price, overweight, and volume weight into Strategy classes.
+The interface is IBillingStrategy. Under it we have Tier, Overweight, and Volumetric.
+Outside that, we have a Resolver and FeeCalculationEngine.
+Why this way? If I need volume weight later, I mostly add one class and register it.
+I do not rewrite a big if-else in the import flow.
+So this matches the mid-term ask for a design pattern.
+
+--- Part 3 云仓双轨时序 · 约 75 秒 · 展示：14 ---
+
+ZH:
+流程大概是：上传 Excel，进 BillImportService，解析，每行重量取整，再进 DualTrackFeeCalculator。
+应付走成本价 PriceRules。应收走客户报价。两边共用同一个计费引擎，再和表里的中转费对比。
+双轨是应用层在协调。历史价靠生效日、失效日过滤，不会永远只拿最新价。
+
+EN:
+The flow is like this: upload Excel, go to BillImportService, parse the file, round weight for each row, then DualTrackFeeCalculator.
+Payable uses cost price rules. Receivable uses customer quote rules.
+Both sides use the same fee engine, then compare with the fee on the sheet.
+Dual track is controlled in the app layer.
+For history price, we filter by start date and end date, so we do not always take the newest price.
+
+--- Part 4 云仓 ERD · 约 35 秒 · 展示：07 ---
+
+ZH:
+Excel 一页价表，进库会变成很多条规则行。
+规则有生效日和失效日，所以能按发货日取历史价。
+这些表都在同一个云仓库里，也符合模块化单体。
+
+EN:
+One Excel price sheet can become many rule rows in the database.
+Each rule has a start date and an end date, so we can pick history price by ship date.
+All these tables stay in one CloudWarehouse database. That fits the Modular Monolith.
+
+--- Part 5 PDA 时序 · 约 65 秒 · 展示：20 ---
+
+ZH:
+接下来看 PDA。
+时序上是：工人，PDA App，Spring Boot，还有 PDA_NoOrder 库。
+扫批号的时候，会去掉 XK 和竖线，而且是整框替换，避免连扫把字叠在一起。
+图号和工序可以用组合码，中间用分号分开。
+挂起以后再续开：图号工序可以沿用，机台允许换。
+但报工时，机台必须等于最近一次开工机台，不然会拦住。
+
+EN:
+Next is the PDA sequence.
+You can see the worker, the PDA app, Spring Boot, and the PDA_NoOrder database.
+When we scan a batch number, we remove the XK and the pipe mark.
+Also, we replace the whole field, so a second scan will not glue text together.
+Drawing and process can come in one combo code, with semicolons.
+After pause, resume can keep drawing and process, but the machine can change.
+For report, the machine must match the latest start machine. If not, the API blocks it.
+
+--- Part 6 PDA 类图 · 约 50 秒 · 展示：22，可选 18 ---
+
+ZH:
+类图是按真实代码分层画的。
+手机端有 StartWorkActivity、ReportWorkActivity，还有 ScannerManager、ScanInputHelper。
+服务端是 NoOrderController，再到 NoOrderService，再到 NoOrderRepository。
+数据落在自己的库 PDA_NoOrder。
+
+EN:
+The class diagram follows the real code layers.
+On the phone side: StartWorkActivity, ReportWorkActivity, ScannerManager, and ScanInputHelper.
+On the server side: NoOrderController, then NoOrderService, then NoOrderRepository.
+Data goes into its own database, PDA_NoOrder.
+
+--- Part 7 收束 · 约 30 秒 · 展示：收束 PPT ---
+
+ZH:
+小结一下。
+云仓：Strategy 管算法，双轨时序管结算流程，ERD 管规则版本。
+PDA：时序和类图管现场规则，扫码、续开、报工对齐机台。谢谢。
+
+EN:
+So, short summary.
+CloudWarehouse: Strategy for fee methods, dual-track sequence for billing flow, ERD for rule versions.
+PDA: sequence and class diagrams for shop-floor rules — scan, resume, and report on the start machine.
+Thank you.
+
+============================================================
+禁话：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+============================================================

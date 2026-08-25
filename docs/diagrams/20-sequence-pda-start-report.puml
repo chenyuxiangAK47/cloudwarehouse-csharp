@@ -1,0 +1,56 @@
+@startuml PDA_Sequence_Start_Then_Report
+title PDA Happy Path — Start Job then Report Completion
+
+actor "Line Operator" as Op
+participant "PDA App\n(Android)" as App
+participant "Scan SDK" as Scan
+participant "Spring Boot API\n(NoOrderController)" as API
+database "SQL Server\nPDA_NoOrder" as DB
+
+== Login & context ==
+Op -> App : open app / enter or scan employee ID
+App -> Scan : read barcode (optional)
+Scan --> App : employee code
+App -> API : POST /api/login
+activate API
+API -> DB : lookup pda_user
+DB --> API : user
+API --> App : UserDto
+deactivate API
+
+Op -> App : select Line / MachineGroup / Machine\n(or scan device code)
+App -> API : GET /api/lines , /api/procedures , /api/devices
+activate API
+API -> DB : read master / device context
+DB --> API : lists
+API --> App : Line / Procedure / Device DTOs
+deactivate API
+
+== Start job ==
+Op -> App : enter/scan batch + drawing/procedure
+App -> Scan : scan batch / drawing (optional)
+Scan --> App : barcode payload
+App -> API : POST /api/work/start
+activate API
+API -> DB : INSERT pda_work_start
+DB --> API : ok
+API --> App : success
+deactivate API
+App --> Op : start confirmed
+
+== Report completion ==
+Op -> App : report on same context\n(scan if needed)
+App -> API : POST /api/work/report
+activate API
+API -> DB : INSERT pda_work_report\n(+ business checks vs latest start)
+DB --> API : ok
+API --> App : success
+deactivate API
+App --> Op : report confirmed
+
+note over App, API
+  Optional failure: validation / device mismatch
+  → API returns error; PDA shows message.
+end note
+
+@enduml

@@ -1,0 +1,139 @@
+视频 6 · App Demo
+时长：不超过 5 分钟（建议约 4.5–4.8 分）
+形式：中英一段一段对照。英语短句、简单词。真系统录屏为主。
+
+【展示什么 | 怎么准备】（录前看）
+顺序 | 展示什么 | 怎么准备
+0 | 可选封面 5 秒 | 未来做 PPT：App Demo · CloudWarehouse + PDA
+1 | 云仓首页 | http://localhost:5001 已启动，库有数据
+2 | 运单 Preview | 核心：双轨对比汇总（价表可预导入）
+3 | Rule RAG（可砍） | 点 1 个预设问题
+4 | 切 PDA | 真机或稳定录屏，可后期拼接
+5 | PDA 登录 | 员工码或账号进主页
+6 | PDA 选机 | 产线 → 机群 → 机床
+7 | PDA 开工 | 扫批号（去 XK|）→ 图号/工序 → 提交成功
+8 | PDA 报工 | 报工成功页（对齐开工机台）
+— | 成本报价导入全过程 | 可砍：口播说价表已预导入
+
+============================================================
+口播稿
+============================================================
+
+--- Part 开场 · 约 20 秒 · 展示：封面或首页 ---
+
+ZH:
+各位老师好。这是 App Demo。
+我演示两套能跑的系统：CloudWarehouse 云仓结算，还有 PDA 无订单报工。
+以真实界面为主，少讲理论。
+
+EN:
+Okay, hello everyone. This is the App Demo.
+I show two working systems: CloudWarehouse freight billing, and PDA no-order reporting.
+I use real screens. Less theory.
+
+--- Part 云仓入口 · 约 20 秒 · 展示：导航 ---
+
+ZH:
+云仓管理端有站点、目的地、客户、价格规则、成本价导入、客户报价导入、运单导入、规则查询。
+下面直接进入结算主路径。
+
+EN:
+CloudWarehouse admin has Sites, Destinations, Customers, Price Rules, Cost Import, Quote Import, Waybill Import, and Rule RAG.
+Next I go straight to the main billing path.
+
+--- Part 主路径说明 · 约 15 秒 · 展示：运单页 ---
+
+ZH:
+标准顺序是先入库成本价和客户报价，再上传运单做预览对比。
+为控制时间，价表已预先导入。我直接演示运单预览和双轨对比。
+
+EN:
+Normal order is: import cost and quote first, then upload waybills for preview compare.
+To save time, price tables are already imported. I demo waybill preview and dual-track compare now.
+
+--- Part 运单预览 · 约 85 秒 · 展示：上传 Preview ---
+
+ZH:
+上传账单明细，点 Preview。
+系统按发货日匹配历史成本和客户报价，用 Strategy 引擎分别算应付和应收，再和表内中转费对比。
+请看摘要：成功笔数、差异笔数。
+成功行说明机器结果和账单一致。告警或失败行常见是退件、拦截等特殊行，可以解释，不是黑盒。
+这一步把 Excel 对账变成可重复、可截图的闭环。
+
+EN:
+Upload the bill sheet, then click Preview.
+The system matches history cost and customer quote by ship date, calculates payable and receivable with the Strategy engine, then compares with sheet freight.
+Please look at the summary: success count and difference count.
+Success rows match the bill. Warning or fail rows are often return or hold cases. We can explain them. Not a black box.
+This turns Excel check into a repeatable, screenshot-ready loop.
+
+--- Part Rule RAG · 约 20 秒 · 展示：点示例（可整段删） ---
+
+ZH:
+管理员忘了规则可以点示例查阅。只读，不改账单金额。
+
+EN:
+If an admin forgets a rule, click a sample question. Read only. It does not change bill money.
+
+--- Part 切 PDA · 约 10 秒 ---
+
+ZH:
+接下来切到产线：霍尼韦尔 PDA 无订单报工。
+和云仓是前后场：现场记产量，仓库对运费。本 Demo 不展示两套系统的生产级 API 联调。
+
+EN:
+Next, the shop floor: Honeywell PDA no-order reporting.
+Front and back: shop floor records output, warehouse checks freight. This demo does not show a production API link.
+
+--- Part PDA 登录选机 · 约 25 秒 · 展示：真机 ---
+
+ZH:
+登录进入应用，选择产线、机群、机床。
+场景是夜班或临时加工没有正式 MES 工单，仍要采集工序和产量。
+
+EN:
+Log in, then pick line, group, and machine.
+Scene: night or rush work has no formal MES order, but we still capture process and output.
+
+--- Part PDA 开工 · 约 45 秒 · 展示：真机扫码 ---
+
+ZH:
+进入开工页。
+扫批号。枪像键盘输入。有 XK 竖线前缀会自动去掉。整框替换，避免连扫叠字。
+图号工序可手输，或扫组合码，图号分号工序名。
+提交开工成功。
+数据经 API 写入独立库，形成可追查流水。
+
+EN:
+Open start-work page.
+Scan the batch number. The gun types like a keyboard. XK pipe prefix is removed. Whole field replace stops sticky double scan.
+Drawing and process can be typed, or scanned as drawing semicolon process name.
+Submit start success.
+Data goes through API into its own database as a traceable record.
+
+--- Part PDA 报工 · 约 35 秒 · 展示：真机 ---
+
+ZH:
+报工页提交成功。
+真机上能看到约束：报工机台必须和最近一次开工一致。挂起后续开换机后，要在新机上报工。
+请看成功提示。无工单现场闭环跑通。
+
+EN:
+Report page submit success.
+The device shows the rule: report machine must match the latest start machine. After pause and resume on another machine, report on that new machine.
+Please see the success tip. The no-order loop works end to end.
+
+--- Part 收束 · 约 15 秒 ---
+
+ZH:
+App Demo 小结：云仓完成可核对的运单双轨预览；PDA 完成无工单登录、选机、开工、报工。
+两者都是能跑的 MVP。谢谢。
+
+EN:
+App Demo summary: CloudWarehouse shows dual-track waybill preview. PDA shows no-order login, machine select, start, and report.
+Both are working MVPs. Thank you.
+
+============================================================
+时间参考（秒）：开场20 入口说明35 运单85 RAG20 切PDA10 登录选机25 开工45 报工35 收束15 ≈ 290（删 RAG ≈ 4.5 分）
+禁话：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+============================================================

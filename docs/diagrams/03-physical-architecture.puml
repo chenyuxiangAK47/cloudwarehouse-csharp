@@ -1,5 +1,5 @@
 @startuml CloudWarehouse_Physical_Architecture
-title Physical Architecture — Runtime and Nodes
+title Physical Architecture — Runtime, Infra Details, Backup (MVP)
 
 skinparam node {
   BackgroundColor #F0F8FF
@@ -11,45 +11,94 @@ skinparam component {
   BorderColor #34495e
   FontSize 10
 }
+skinparam database {
+  BackgroundColor #E8F8F5
+  BorderColor #1ABC9C
+}
 
-node "Client PC" as Client {
+node "Client PC (LAN or local)" as Client {
   component "Chrome / Edge" as Browser
+  note right of Browser
+    OS: Windows 10/11
+    Access: http://host:5001
+  end note
 }
 
-node "Developer workstation\n(single-machine demo)" as Workstation {
-  component "Kestrel host\nCloudWarehouse.Backend\n:5001 HTTP" as Kestrel
-  component "SQL Server instance\n:1433 TDS" as MSSQL
+node "App + DB host\n(single-machine demo / 师傅机)" as Workstation {
+  component "OS: Windows 10/11\n.NET 9 runtime" as OS
+  component "Kestrel\nCloudWarehouse.Backend\nHTTP :5001\n(bind 0.0.0.0 or localhost)" as Kestrel
+  database "SQL Server\nDB: CloudWarehouse\nTDS :1433\nrecovery: FULL or SIMPLE" as MSSQL
+  component "Windows Firewall\ninbound allow TCP 5001\n(optional LAN demo)" as FW
+  component "App logs / console\n+ SSMS for ops checks" as Ops
+  OS --> Kestrel
+  OS --> MSSQL
+  FW ..> Kestrel : protects port
+  Ops ..> Kestrel
+  Ops ..> MSSQL
 }
 
-cloud "GitHub Cloud" as GH {
+node "Backup landing zone\n(same host or USB/NAS)" as BackupZone {
+  component "Manual *.bak files\n+ schema.sql in git\n+ publish zip (app bits)" as Bak
+}
+
+cloud "GitHub Cloud (CI only)" as GH {
   component "Git repository" as Repo
-  component "Actions runner\nubuntu-latest" as Runner
+  component "Actions runner\nubuntu-latest\nno prod DB link" as Runner
+  component "Artifacts:\ncoverage-report\n(+ vuln scan if enabled)" as Art
 }
 
-Browser -[#2980b9,thickness=2]-> Kestrel : HTTP :5001
-Kestrel -[#27ae60,thickness=2]-> MSSQL : ADO.NET / TCP 1433
+node "Planned redundancy\n(NOT deployed in MVP)" as Planned #E8E8E8 {
+  component "IIS / reverse proxy\n+ TLS terminate" as IIS #D0D0D0
+  component "Dedicated SQL host\nor Managed SQL" as SQL2 #D0D0D0
+  component "Automated daily backup\n+ optional warm standby" as AutoBak #D0D0D0
+}
 
-actor "Developer" as Dev
+Browser -[#2980b9,thickness=2]-> Kestrel : HTTP :5001\nREST + static wwwroot
+Kestrel -[#27ae60,thickness=2]-> MSSQL : ADO.NET / TCP 1433\nconn: DefaultConnection
+MSSQL -[#8E44AD,dashed,thickness=2]-> Bak : scheduled manual backup\n(weekly or before demo)
+Bak ..[#7F8C8D]> OS : restore path\n(RTO = reinstall app + restore bak)
+
+actor "Developer / Admin" as Dev
 Dev -[#E74C3C,dashed]-> Repo : git push (HTTPS)
 Runner -[#34495e,dashed]-> Repo : git clone
-Runner -[#34495e,dashed]-> Runner : dotnet test\n(no link to local DB)
+Runner -[#34495e,dashed]-> Art : upload
+Runner -[hidden]-> MSSQL
+
+Workstation ..[dashed,#95A5A6].. Planned : evolve when\nmulti-user / uptime required
 
 note right of Kestrel
-  Static files: wwwroot/
-  Config: appsettings.json
-  DDL: database/schema.sql
+  **Port map**
+  - 5001/tcp HTTP (app)
+  - 1433/tcp SQL (loopback or LAN)
+  **App bits**
+  - wwwroot/ static UI
+  - appsettings*.json
+  - database/*.sql in repo
+  **Upload controls**
+  - .xlsx/.xlsm whitelist
+  - request size limit
+  **TLS:** none in MVP (HTTP)
 end note
 
-note bottom of Workstation
-  HA / redundancy: NONE in MVP (single node).
-  Backup: manual SQL Server .bak (RPO ≈ 24h, RTO ≈ rebuild + restore).
-  Network: demo binds 0.0.0.0:5001 (LAN) or localhost;
-  no TLS; file upload whitelist .xlsx/.xlsm + size limit.
-  Future: IIS reverse proxy + dedicated DB + automated backup.
+note bottom of BackupZone
+  **HA / redundancy (MVP):** NONE — single node, no LB, no Always On.
+  **Backup strategy (implemented process):**
+  1) SSMS / sqlcmd → full .bak to Backup landing zone
+  2) Keep last N bak + git schema.sql as rebuild baseline
+  3) Before major demo / import: take fresh bak
+  **RPO ≈ 24h** (or last bak before change)
+  **RTO ≈ 30–90 min** (install runtime + restore bak + run app)
+  **DR drill:** documented restore from bak onto clean SQL instance.
+end note
+
+note bottom of Planned
+  Future HA options (documented, not claimed live):
+  separate DB VM, IIS+TLS, automated backup,
+  optional secondary SQL restore-lag standby.
 end note
 
 @enduml
 
-' 1. Demo runs on one machine: browser talks to Kestrel, Kestrel talks to SQL Server.
-' 2. CI runs on GitHub-hosted Ubuntu; it builds and tests code without touching our local database.
-' 3. MVP has no HA; backup/RPO/RTO are stated explicitly for the physical view.
+' 1. Physical view shows real ports, firewall, ops checks, and an explicit backup landing zone.
+' 2. MVP redundancy is honestly NONE; RPO/RTO and restore steps are written on the diagram.
+' 3. A grey "planned redundancy" node shows evolution without faking production HA today.

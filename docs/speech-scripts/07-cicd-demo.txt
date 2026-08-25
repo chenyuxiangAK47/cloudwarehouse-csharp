@@ -1,0 +1,127 @@
+视频 7 · CI/CD Demo
+时长：不超过 5 分钟（建议约 4 分）
+形式：中英对照。全程浏览器/IDE 实机；不必现场再 push。
+和视频 4 的区别：4 是 Assessment（讲全+缺口）；7 是短 Demo（只回放证据）。
+
+============================================================
+录前准备（就这些）
+============================================================
+
+[ ] 浏览器开好仓库 Actions（CI、CodeQL 都是绿的）
+    https://github.com/chenyuxiangAK47/cloudwarehouse-csharp/actions
+[ ] 先点开一条绿色 CI run，确认能进 build-test-coverage、能看到 Test with coverage
+[ ] 确认 Summary 底部 Artifacts 里有 coverage-report
+[ ] 本机或网页能打开 ci.yml：
+    d:\tools\cloudwarehouse-csharp\.github\workflows\ci.yml
+[ ] 摄像头 + 麦克风（要露脸）；分辨率 1920×1080
+[ ] 口播稿练一遍，掐在 4 分钟左右
+[ ] PPT 可选：一张封面就够；没有封面直接从 Actions 开场也行
+[ ] 活动图 09 可选，超时就不要
+
+不需要：现场 push、现场跑 dotnet test、完整 CD、DAST、真实连接串
+
+============================================================
+练习清单（屏幕点什么）
+============================================================
+
+顺序 | 时长 | 屏幕上点什么
+-----|------|-------------
+1 | ~20s | Actions 总览（或封面 5 秒再切过来）
+2 | ~35s | 左边点 CI → 指最新绿色 run
+3 | ~85s | 点进该 CI run → build-test-coverage → 展开 Test with coverage（Passed）→ 再 Summary → Artifacts → coverage-report
+4 | ~35s | 打开 ci.yml，指 on / Test with coverage / Upload coverage
+5 | ~40s | Actions 左边换 CodeQL SAST → 最新绿色 run
+6 | ~15s | 回到 Actions 总览，收束
+
+============================================================
+口播稿
+============================================================
+
+--- 1 开场 · 约 20 秒 · 屏幕：Actions 总览 ---
+
+ZH:
+各位老师好。这是 CI/CD Demo。
+我展示持续集成：自动测试、覆盖率 Artifact、CodeQL 静态扫描。
+
+EN:
+Okay, hello everyone. This is the CI/CD Demo.
+I will show continuous integration: auto tests, coverage Artifact, and CodeQL static scan.
+
+--- 2 绿勾 · 约 35 秒 · 屏幕：左边 CI → 绿色列表 ---
+
+操作：Actions → 左边 **CI** → 指最新绿色成功。
+
+ZH:
+项目在 GitHub。对 main 的 push 和 pull request 会触发 CI。
+请看 Actions，最近一次 CI 是绿色成功。
+
+EN:
+The project is on GitHub. Push and pull request to main start CI.
+Please look at Actions. The latest CI run is green.
+
+--- 3 CI 内部 · 约 85 秒 · 屏幕：点进绿色 CI run ---
+
+操作：
+1. 点进最新绿色 CI（例如 CI #8）
+2. 点 job：build-test-coverage
+3. 展开 **Test with coverage**，滚到 Passed
+4. 左边点 **Summary**，滚到底 **Artifacts** → 指 **coverage-report**
+   （可再点开看一眼 Summary.txt / HTML，别久留）
+
+ZH:
+进入这一次成功的 CI。
+步骤包括：检出代码、安装 .NET、还原、带覆盖率测试、生成覆盖率报告并上传 Artifact。
+请看测试通过。再打开 Artifact：coverage-report，看覆盖率摘要。
+这份产物可以放进最终报告附录。
+
+EN:
+Open this successful CI run.
+Steps: checkout, setup .NET, restore, test with coverage, build the coverage report, and upload Artifact.
+Please see tests pass. Then open Artifact coverage-report for the summary.
+This output can go into the final report appendix.
+
+--- 4 ci.yml · 约 35 秒 · 屏幕：打开 ci.yml ---
+
+操作：
+- 本机：`d:\tools\cloudwarehouse-csharp\.github\workflows\ci.yml`
+- 或网页：Code → `.github` → `workflows` → `ci.yml`
+指：`on:`、`Test with coverage`、`Upload coverage HTML report`
+
+ZH:
+CI 写在 ci.yml 里，进版本库。
+改计费或导入逻辑，合并前会跑同一套检查。
+
+EN:
+CI is defined in ci.yml in the repo.
+If fee or import logic changes, the same checks run before merge.
+
+--- 5 CodeQL · 约 40 秒 · 屏幕：CodeQL SAST 绿勾 ---
+
+操作：Actions → 左边 **CodeQL SAST** → 最新绿色 run → 指绿勾。
+
+ZH:
+还有 CodeQL 静态扫描，针对 C#。
+请看最近一次 CodeQL 成功。
+CI 偏功能回归，CodeQL 偏找代码问题。
+DAST 和完整 CD 发到生产，本期还没有。
+
+EN:
+There is also CodeQL static scan for C#.
+Please look at a recent green CodeQL run.
+CI covers function regression. CodeQL finds common code issues.
+DAST and full CD to production are not in this term.
+
+--- 6 收束 · 约 15 秒 · 屏幕：Actions 总览 ---
+
+操作：回到 Actions，一眼能看到 CI + CodeQL 都绿。
+
+ZH:
+小结：CloudWarehouse 有 GitHub Actions、自动测试、覆盖率 Artifact，还有 CodeQL。谢谢。
+
+EN:
+Summary: CloudWarehouse has GitHub Actions, auto tests, coverage Artifact, and CodeQL.
+Thank you.
+
+============================================================
+禁话（别念）：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%；已完整 CD 自动发生产
+============================================================

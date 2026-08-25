@@ -6,7 +6,7 @@
         <Configuration>
           <Format>cobertura</Format>
           <Include>[CloudWarehouse.Backend]*</Include>
-          <Exclude>[*.Tests]*,[*.IntegrationTests]*,[*.TestCommon]*</Exclude>
+          <Exclude>[*.Tests]*,[*.IntegrationTests]*,[*.E2ETests]*,[*.TestCommon]*</Exclude>
           <ExcludeByFile>**/obj/**,**/Migrations/**</ExcludeByFile>
         </Configuration>
       </DataCollector>

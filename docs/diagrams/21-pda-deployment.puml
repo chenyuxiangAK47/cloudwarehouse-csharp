@@ -1,0 +1,25 @@
+@startuml PDA_NoOrder_Deployment
+title PDA No-Order Reporting — Deployment (Demo / Intranet)
+
+node "Shop floor" {
+  artifact "Honeywell industrial PDA\nAndroid native app\n+ scan SDK" as PDA
+}
+
+node "Intranet host\n(demo / single VM)" {
+  artifact "Spring Boot API\nHTTP port e.g. 8080\n(demo may use 8081)" as API
+}
+
+node "SQL Server host" {
+  database "PDA_NoOrder\n(dedicated DB)" as DB
+}
+
+PDA --> API : HTTP/JSON\n(intranet)
+API --> DB : JDBC
+
+cloud "CloudWarehouse\n(separate deployable)" as CW #EEEEEE {
+  artifact "ASP.NET Core + own DB" as CWStack
+}
+
+API ..> CW : <<Planned>>
+
+@enduml

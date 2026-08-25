@@ -12,13 +12,13 @@ public interface IQuoteAssistantService
 }
 
 /// <summary>
-/// Built-in freight/quote rule knowledge retrieval (keyword / TF-IDF).
-/// Optional LLM rewrite only when Assistant:OpenAI:ApiKey is set.
-/// Never replaces FeeCalculationEngine as system of record.
+/// Built-in rule RAG: Retrieve (lexical TF-IDF) → Augment (citations) → Generate
+/// (extractive snippets, or optional LLM rewrite when ApiKey is set).
+/// Assistive FAQ only — never replaces FeeCalculationEngine as system of record.
 /// </summary>
 public sealed class QuoteAssistantService : IQuoteAssistantService
 {
-    public const double DefaultMinScore = 0.35;
+    public const double DefaultMinScore = 0.28;
 
     private readonly IKeywordRetriever _retriever;
     private readonly IKnowledgeBaseLoader _loader;
@@ -59,11 +59,12 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
                 Answer = "请输入具体问题，例如：「为什么云南 0.3kg 应付是 1.50 不是 1.30？」或「运单导入顺序是什么？」",
                 Mode = "validation",
                 Citations = [],
-                Grounded = false
+                Grounded = false,
+                PipelineSteps = ["validate"]
             };
         }
 
-        var topK = request.TopK <= 0 ? 3 : request.TopK;
+        var topK = request.TopK <= 0 ? 4 : request.TopK;
         var minScore = ParseMinScore();
         var hits = _retriever.Retrieve(question, topK)
             .Where(h => h.Score >= minScore)
@@ -83,10 +84,11 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
             {
                 Answer = "未找到足够相关的规则片段（匹配分低于阈值）。请换关键词，或直接查阅导入/计价文档。" +
                          "可试：双轨计价、历史报价、重量取整、导入顺序、计费策略。" +
-                         "说明：本工具仅检索内置规则说明，不参与运费结算计算。",
+                         "说明：本工具是内置规则 RAG（检索增强），仅供查阅，不参与运费结算计算。",
                 Mode = "retrieval-miss",
                 Citations = [],
-                Grounded = false
+                Grounded = false,
+                PipelineSteps = ["retrieve", "miss"]
             };
         }
 
@@ -101,10 +103,12 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
                     return new AssistantAskResponse
                     {
                         Answer = llmAnswer.Trim() +
-                                 "\n\n——\n说明：回答由检索片段 + 可选大模型改写生成，仅供查阅；正式金额以运单导入/计费引擎为准。",
+                                 "\n\n——\n说明：内置规则 RAG = 检索片段 + 可选大模型改写；仅供查阅。" +
+                                 "正式金额以运单导入 / FeeCalculationEngine 为准，本助手不改写账单。",
                         Mode = "optional-llm",
                         Citations = citations,
-                        Grounded = true
+                        Grounded = true,
+                        PipelineSteps = ["retrieve", "augment", "generate-llm"]
                     };
                 }
             }
@@ -119,7 +123,8 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
             Answer = BuildExtractiveAnswer(question, hits),
             Mode = "kb-extractive",
             Citations = citations,
-            Grounded = true
+            Grounded = true,
+            PipelineSteps = ["retrieve", "augment", "generate-extractive"]
         };
     }
 
@@ -136,7 +141,7 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
         IReadOnlyList<(KnowledgeChunk Chunk, double Score)> hits)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"针对「{question}」，从内置知识库检索到以下规则要点（本地关键词/TF-IDF，非向量语义搜索）：");
+        sb.AppendLine($"【内置规则 RAG】针对「{question}」完成检索增强生成（本地关键词/TF-IDF 检索 + 引用片段拼接；非向量库，非自动计价）：");
         sb.AppendLine();
 
         var i = 1;
@@ -148,7 +153,7 @@ public sealed class QuoteAssistantService : IQuoteAssistantService
             i++;
         }
 
-        sb.Append("边界：仅供规则查阅；不修改 PriceRules，不改写账单金额。正式结算以 FeeCalculationEngine 为准。");
+        sb.Append("边界：RAG 仅供规则 FAQ 查阅；不修改 PriceRules，不改写账单金额。正式结算以 FeeCalculationEngine 为准。");
         return sb.ToString().Trim();
     }
 

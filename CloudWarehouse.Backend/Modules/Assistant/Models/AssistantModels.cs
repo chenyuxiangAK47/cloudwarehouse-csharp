@@ -28,4 +28,7 @@ public sealed class AssistantAskResponse
     public required string Mode { get; init; }
     public required IReadOnlyList<CitationDto> Citations { get; init; }
     public bool Grounded { get; init; }
+
+    /// <summary>UI/demo: Retrieve → Augment → Generate (honest RAG stages).</summary>
+    public IReadOnlyList<string> PipelineSteps { get; init; } = [];
 }

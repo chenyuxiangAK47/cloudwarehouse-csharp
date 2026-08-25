@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>云仓管理系统</title>
+    <title>Cloud Warehouse Management</title>
     <style>
         :root {
             --bg: #f0f4f8;
@@ -276,6 +276,39 @@
             cursor: pointer;
         }
         .assistant-chips button:hover { background: #d4ebe7; }
+        .rag-pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0.85rem;
+        }
+        .rag-pipeline li {
+            flex: 1 1 140px;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.55rem 0.7rem;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .rag-pipeline li strong {
+            display: block;
+            color: var(--nav-bg);
+            font-size: 0.9rem;
+            margin-bottom: 0.15rem;
+        }
+        .rag-pipeline li.on {
+            background: #ecfdf5;
+            border-color: #86efac;
+            color: #166534;
+        }
+        .rag-pipeline li.miss {
+            background: #fff7ed;
+            border-color: #fdba74;
+            color: #9a3412;
+        }
         .assistant-answer {
             white-space: pre-wrap;
             background: #f7fafc;
@@ -290,6 +323,16 @@
             font-size: 0.85rem;
             color: var(--muted);
             margin-bottom: 0.5rem;
+        }
+        .assistant-mode-badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #075985;
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 0.35rem;
         }
         .assistant-citations {
             list-style: none;
@@ -313,109 +356,109 @@
 </head>
 <body>
     <header class="app-header">
-        <h1>云仓管理系统</h1>
-        <p>物流计价 — 站点、目的地、客户、价格表导入与运费试算</p>
+        <h1>Cloud Warehouse Management</h1>
+        <p>Logistics pricing — sites, destinations, customers, price table import &amp; freight calculation</p>
     </header>
 
     <div class="app-body">
-        <nav class="nav" aria-label="主导航">
-            <button type="button" data-page="site" class="active" onclick="showPage('site')">站点管理</button>
-            <button type="button" data-page="destination" onclick="showPage('destination')">目的地管理</button>
-            <button type="button" data-page="customer" onclick="showPage('customer')">客户管理</button>
-            <button type="button" data-page="pricerule" onclick="showPage('pricerule')">价格规则</button>
-            <button type="button" data-page="import" onclick="showPage('import')">成本价导入</button>
-            <button type="button" data-page="customerquote" onclick="showPage('customerquote')">客户报价导入</button>
-            <button type="button" data-page="waybill" onclick="showPage('waybill')">运单导入</button>
-            <button type="button" data-page="assistant" onclick="showPage('assistant')">计价规则检索</button>
+        <nav class="nav" aria-label="Main navigation">
+            <button type="button" data-page="site" class="active" onclick="showPage('site')">Sites</button>
+            <button type="button" data-page="destination" onclick="showPage('destination')">Destinations</button>
+            <button type="button" data-page="customer" onclick="showPage('customer')">Customers</button>
+            <button type="button" data-page="pricerule" onclick="showPage('pricerule')">Price Rules</button>
+            <button type="button" data-page="import" onclick="showPage('import')">Cost Price Import</button>
+            <button type="button" data-page="customerquote" onclick="showPage('customerquote')">Customer Quote Import</button>
+            <button type="button" data-page="waybill" onclick="showPage('waybill')">Waybill Import</button>
+            <button type="button" data-page="assistant" onclick="showPage('assistant')">Rule RAG</button>
         </nav>
 
         <div class="message" id="message" role="alert"></div>
 
         <div id="site" class="page active">
-            <h2>站点管理</h2>
-            <p class="page-subtitle">维护配送站/仓库主数据，支持手工维护或 Excel 批量导入。</p>
+            <h2>Site Management</h2>
+            <p class="page-subtitle">Maintain delivery station and warehouse master data. Manual entry or Excel bulk import.</p>
             <div class="card">
-                <h3>添加 / 编辑站点</h3>
+                <h3>Add / Edit Site</h3>
                 <input type="hidden" id="siteId">
                 <div class="input-row">
-                    <label for="siteCode">站点编号</label>
-                    <input type="text" id="siteCode" placeholder="如 C001">
+                    <label for="siteCode">Site Code</label>
+                    <input type="text" id="siteCode" placeholder="e.g. C001">
                 </div>
                 <div class="input-row">
-                    <label for="siteName">站点名称</label>
-                    <input type="text" id="siteName" placeholder="显示名称">
+                    <label for="siteName">Site Name</label>
+                    <input type="text" id="siteName" placeholder="Display name">
                 </div>
                 <div class="input-row">
-                    <label for="siteType">站点类型</label>
+                    <label for="siteType">Site Type</label>
                     <select id="siteType">
-                        <option value="1">配送站</option>
-                        <option value="2">中转站</option>
-                        <option value="3">仓库</option>
+                        <option value="1">Delivery Station</option>
+                        <option value="2">Transfer Hub</option>
+                        <option value="3">Warehouse</option>
                     </select>
                 </div>
                 <div class="input-row">
-                    <label for="expressCompany">快递公司</label>
-                    <input type="text" id="expressCompany" placeholder="快递公司">
+                    <label for="expressCompany">Courier</label>
+                    <input type="text" id="expressCompany" placeholder="Courier company">
                 </div>
                 <div class="input-row">
-                    <label for="contactPerson">联系人</label>
-                    <input type="text" id="contactPerson" placeholder="姓名">
+                    <label for="contactPerson">Contact Person</label>
+                    <input type="text" id="contactPerson" placeholder="Name">
                 </div>
                 <div class="input-row">
-                    <label for="contactPhone">联系电话</label>
-                    <input type="text" id="contactPhone" placeholder="手机号">
+                    <label for="contactPhone">Phone</label>
+                    <input type="text" id="contactPhone" placeholder="Mobile number">
                 </div>
                 <div class="input-row">
-                    <label for="address">地址</label>
-                    <input type="text" id="address" placeholder="详细地址">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" placeholder="Full address">
                 </div>
                 <div class="input-row">
-                    <label for="siteStatus">状态</label>
+                    <label for="siteStatus">Status</label>
                     <select id="siteStatus">
-                        <option value="1">启用</option>
-                        <option value="0">禁用</option>
+                        <option value="1">Active</option>
+                        <option value="0">Disabled</option>
                     </select>
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="saveSite()">保存</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearSiteForm()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSite()">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearSiteForm()">Clear</button>
                 </div>
             </div>
             <div class="card">
-                <h3>Excel 导入</h3>
+                <h3>Excel Import</h3>
                 <p class="import-hint">
-                    第 1 行表头：<strong>站点编号</strong>、<strong>站点名称</strong>（必填）；
-                    可选列：站点类型、快递公司、联系人、联系电话、地址、状态、备注。
-                    已存在编号将更新，新编号将插入。
+                    Row 1 headers: <strong>Site Code</strong>, <strong>Site Name</strong> (required);
+                    optional columns: Site Type, Courier, Contact Person, Phone, Address, Status, Remark.
+                    Existing codes are updated; new codes are inserted.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadSiteTemplate()">下载导入模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadSiteTemplate()">Download Import Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="siteFile">Excel 文件</label>
+                    <label for="siteFile">Excel File</label>
                     <input type="file" id="siteFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewSiteImport()">预览</button>
-                    <button type="button" class="btn btn-primary" onclick="commitSiteImport()">导入到数据库</button>
+                    <button type="button" class="btn btn-primary" onclick="previewSiteImport()">Preview</button>
+                    <button type="button" class="btn btn-primary" onclick="commitSiteImport()">Import to Database</button>
                 </div>
                 <div class="import-summary" id="siteImportSummary"></div>
             </div>
             <div class="toolbar">
-                <input type="text" id="siteSearch" placeholder="搜索编号或名称…" onkeyup="searchSite()">
-                <button type="button" class="btn btn-secondary" onclick="loadSites()">刷新</button>
+                <input type="text" id="siteSearch" placeholder="Search code or name…" onkeyup="searchSite()">
+                <button type="button" class="btn btn-secondary" onclick="loadSites()">Refresh</button>
             </div>
             <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>编号</th>
-                            <th>名称</th>
-                            <th>类型</th>
-                            <th>快递</th>
-                            <th>联系人</th>
-                            <th>状态</th>
-                            <th>操作</th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Courier</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="siteTableBody"></tbody>
@@ -424,65 +467,65 @@
         </div>
 
         <div id="destination" class="page">
-            <h2>目的地管理</h2>
-            <p class="page-subtitle">维护目的地/省份编码，支持手工维护或 Excel 批量导入。</p>
+            <h2>Destination Management</h2>
+            <p class="page-subtitle">Maintain destination and province codes. Manual entry or Excel bulk import.</p>
             <div class="card">
-                <h3>添加 / 编辑目的地</h3>
+                <h3>Add / Edit Destination</h3>
                 <input type="hidden" id="destId">
                 <div class="input-row">
-                    <label for="destCode">目的地编码</label>
-                    <input type="text" id="destCode" placeholder="如 11">
+                    <label for="destCode">Destination Code</label>
+                    <input type="text" id="destCode" placeholder="e.g. 11">
                 </div>
                 <div class="input-row">
-                    <label for="province">省份</label>
-                    <input type="text" id="province" placeholder="省份">
+                    <label for="province">Province</label>
+                    <input type="text" id="province" placeholder="Province">
                 </div>
                 <div class="input-row">
-                    <label for="city">城市</label>
-                    <input type="text" id="city" placeholder="城市">
+                    <label for="city">City</label>
+                    <input type="text" id="city" placeholder="City">
                 </div>
                 <div class="input-row">
-                    <label for="area">区域</label>
-                    <input type="text" id="area" placeholder="区/县">
+                    <label for="area">District</label>
+                    <input type="text" id="area" placeholder="District / county">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="saveDestination()">保存</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearDestForm()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDestination()">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearDestForm()">Clear</button>
                 </div>
             </div>
             <div class="card">
-                <h3>Excel 导入</h3>
+                <h3>Excel Import</h3>
                 <p class="import-hint">
-                    第 1 行表头：<strong>目的地编码</strong>、<strong>省份</strong>（必填）；
-                    可选列：城市、区域。已存在编码将更新，新编码将插入。
+                    Row 1 headers: <strong>Destination Code</strong>, <strong>Province</strong> (required);
+                    optional columns: City, District. Existing codes are updated; new codes are inserted.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadDestinationTemplate()">下载导入模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadDestinationTemplate()">Download Import Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="destFile">Excel 文件</label>
+                    <label for="destFile">Excel File</label>
                     <input type="file" id="destFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewDestinationImport()">预览</button>
-                    <button type="button" class="btn btn-primary" onclick="commitDestinationImport()">导入到数据库</button>
+                    <button type="button" class="btn btn-primary" onclick="previewDestinationImport()">Preview</button>
+                    <button type="button" class="btn btn-primary" onclick="commitDestinationImport()">Import to Database</button>
                 </div>
                 <div class="import-summary" id="destImportSummary"></div>
             </div>
             <div class="toolbar">
-                <input type="text" id="destSearch" placeholder="搜索编码或省份…" onkeyup="searchDestination()">
-                <button type="button" class="btn btn-secondary" onclick="loadDestinations()">刷新</button>
+                <input type="text" id="destSearch" placeholder="Search code or province…" onkeyup="searchDestination()">
+                <button type="button" class="btn btn-secondary" onclick="loadDestinations()">Refresh</button>
             </div>
             <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>编码</th>
-                            <th>省份</th>
-                            <th>城市</th>
-                            <th>区域</th>
-                            <th>创建时间</th>
-                            <th>操作</th>
+                            <th>Code</th>
+                            <th>Province</th>
+                            <th>City</th>
+                            <th>District</th>
+                            <th>Created</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="destTableBody"></tbody>
@@ -491,67 +534,67 @@
         </div>
 
         <div id="customer" class="page">
-            <h2>客户管理</h2>
-            <p class="page-subtitle">B2B 客户主数据 — 支持手工维护或 Excel 导入（客户编号 + 客户名称）。</p>
-            <div class="card">
-                <h3>添加 / 编辑客户</h3>
+            <h2>Customer Management</h2>
+            <p class="page-subtitle">B2B customer master data — manual entry or Excel import (Customer Code + Customer Name).</p>
+            <div class="card" id="customerEditCard">
+                <h3>Add / Edit Customer</h3>
                 <input type="hidden" id="customerId">
                 <div class="input-row">
-                    <label for="customerCode">客户编号</label>
-                    <input type="text" id="customerCode" placeholder="如 A0001">
+                    <label for="customerCode">Customer Code</label>
+                    <input type="text" id="customerCode" placeholder="e.g. A0001">
                 </div>
                 <div class="input-row">
-                    <label for="customerName">客户名称</label>
-                    <input type="text" id="customerName" placeholder="店铺/账户名称">
+                    <label for="customerName">Customer Name</label>
+                    <input type="text" id="customerName" placeholder="Shop / account name">
                 </div>
                 <div class="input-row">
-                    <label for="customerStatus">状态</label>
+                    <label for="customerStatus">Status</label>
                     <select id="customerStatus">
-                        <option value="1">启用</option>
-                        <option value="0">禁用</option>
+                        <option value="1">Active</option>
+                        <option value="0">Disabled</option>
                     </select>
                 </div>
                 <div class="input-row">
-                    <label for="customerRemark">备注</label>
-                    <input type="text" id="customerRemark" placeholder="选填">
+                    <label for="customerRemark">Remark</label>
+                    <input type="text" id="customerRemark" placeholder="Optional">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="saveCustomer()">保存</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearCustomerForm()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCustomer()">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearCustomerForm()">Clear</button>
                 </div>
             </div>
             <div class="card">
-                <h3>Excel 导入</h3>
+                <h3>Excel Import</h3>
                 <p class="import-hint">
-                    第 1 行表头：<strong>客户编号</strong>、<strong>客户名称</strong>
-                    （也支持 CustomerCode / CustomerName）。已存在编号将更新名称，新编号将插入。
+                    Row 1 headers: <strong>Customer Code</strong>, <strong>Customer Name</strong>
+                    (CustomerCode / CustomerName also accepted). Existing codes update the name; new codes are inserted.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadCustomerTemplate()">下载导入模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadCustomerTemplate()">Download Import Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="customerFile">Excel 文件</label>
+                    <label for="customerFile">Excel File</label>
                     <input type="file" id="customerFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewCustomerImport()">预览</button>
-                    <button type="button" class="btn btn-primary" onclick="commitCustomerImport()">导入到数据库</button>
+                    <button type="button" class="btn btn-primary" onclick="previewCustomerImport()">Preview</button>
+                    <button type="button" class="btn btn-primary" onclick="commitCustomerImport()">Import to Database</button>
                 </div>
                 <div class="import-summary" id="customerImportSummary"></div>
             </div>
             <div class="toolbar">
-                <input type="text" id="customerSearch" placeholder="搜索编号或名称…" onkeyup="searchCustomer()">
-                <button type="button" class="btn btn-secondary" onclick="loadCustomers()">刷新</button>
+                <input type="text" id="customerSearch" placeholder="Search code or name…" onkeyup="searchCustomer()">
+                <button type="button" class="btn btn-secondary" onclick="loadCustomers()">Refresh</button>
             </div>
             <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>编号</th>
-                            <th>名称</th>
-                            <th>状态</th>
-                            <th>创建时间</th>
-                            <th>操作</th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="customerTableBody"></tbody>
@@ -560,80 +603,80 @@
         </div>
 
         <div id="pricerule" class="page">
-            <h2>价格规则</h2>
-            <p class="page-subtitle">规则仅通过价格表导入维护 — 下方可查看线路并试算运费。</p>
+            <h2>Price Rules</h2>
+            <p class="page-subtitle">Rules are maintained via price table import only — browse lanes and trial-calculate freight below.</p>
             <div class="toolbar">
-                <input type="text" id="ruleSearch" placeholder="筛选规则…" onkeyup="searchRule()">
-                <button type="button" class="btn btn-secondary" onclick="loadPriceRules()">刷新</button>
+                <input type="text" id="ruleSearch" placeholder="Filter rules…" onkeyup="searchRule()">
+                <button type="button" class="btn btn-secondary" onclick="loadPriceRules()">Refresh</button>
             </div>
             <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>站点</th>
-                            <th>目的地</th>
-                            <th>计费类型</th>
-                            <th>重量范围</th>
-                            <th>单价</th>
-                            <th>面单费</th>
-                            <th>生效日期</th>
-                            <th>状态</th>
+                            <th>Site</th>
+                            <th>Destination</th>
+                            <th>Billing Type</th>
+                            <th>Weight Range</th>
+                            <th>Unit Price</th>
+                            <th>Base Fee</th>
+                            <th>Effective Date</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="ruleTableBody"></tbody>
                 </table>
             </div>
             <div class="card" style="margin-top: 1.25rem;">
-                <h3>运费试算（按已导入规则）</h3>
+                <h3>Freight Trial Calculation (imported rules)</h3>
                 <div class="input-row">
-                    <label for="calcSiteId">站点</label>
+                    <label for="calcSiteId">Site</label>
                     <select id="calcSiteId"></select>
                 </div>
                 <div class="input-row">
-                    <label for="calcDestId">目的地</label>
+                    <label for="calcDestId">Destination</label>
                     <select id="calcDestId"></select>
                 </div>
                 <div class="input-row">
-                    <label for="calcWeight">重量 (kg)</label>
-                    <input type="number" step="0.1" id="calcWeight" placeholder="如 3.5">
+                    <label for="calcWeight">Weight (kg)</label>
+                    <input type="number" step="0.1" id="calcWeight" placeholder="e.g. 3.5">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="calculatePrice()">计算运费</button>
+                    <button type="button" class="btn btn-accent" onclick="calculatePrice()">Calculate Freight</button>
                 </div>
                 <div id="calcResult" class="calc-result">
-                    <h4>试算结果</h4>
-                    <p><strong>计费方式：</strong><span id="calcBillingType"></span></p>
-                    <p><strong>面单费：</strong><span id="calcBaseFee"></span> 元</p>
-                    <p><strong>运费：</strong><span id="calcWeightFee"></span> 元</p>
-                    <p><strong>总计：</strong><span class="total"><span id="calcTotal"></span> 元</span></p>
+                    <h4>Trial Result</h4>
+                    <p><strong>Billing method:</strong><span id="calcBillingType"></span></p>
+                    <p><strong>Base fee:</strong><span id="calcBaseFee"></span> CNY</p>
+                    <p><strong>Freight:</strong><span id="calcWeightFee"></span> CNY</p>
+                    <p><strong>Total:</strong><span class="total"><span id="calcTotal"></span> CNY</span></p>
                 </div>
             </div>
         </div>
 
         <div id="import" class="page">
-            <h2>成本价导入</h2>
-            <p class="page-subtitle">上传站点成本价（应付侧）— 先预览解析，再一次性事务入库。</p>
+            <h2>Cost Price Import</h2>
+            <p class="page-subtitle">Upload site cost prices (payable side) — preview parsing first, then commit in a single transaction.</p>
             <div class="card">
-                <h3>上传 Excel</h3>
+                <h3>Upload Excel</h3>
                 <p class="import-hint">
-                    推荐先 <strong>下载标准模板</strong>（第 1 行表头，第 2 行起为数据）。
-                    也兼容师傅 <strong>成本表</strong>（快递类型、地区、Kg-Min/Max、中转费，如 <code>93-成本表-单独.xlsx</code>）、
-                    供应商 <strong>三级表头</strong>，以及「目的地」列 <strong>矩阵价目表</strong>。
-                    运单测试若只用「中通-晋州」，也可上传已转换的 <code>93-中通晋州-成本-标准格式.xlsx</code>。
-                    导入时自动补齐：站点不存在则新建、目的地不存在则新建；同一站点→目的地线路有规则则整批替换，否则新增。任一行校验失败则全部回滚。
+                    Download the <strong>standard template</strong> first (row 1 = headers, data from row 2).
+                    Also supports legacy <strong>cost sheets</strong> (courier type, region, Kg-Min/Max, transit fee, e.g. <code>93-成本表-单独.xlsx</code>),
+                    vendor <strong>three-row headers</strong>, and destination-column <strong>matrix price tables</strong>.
+                    For waybill tests using only 「中通-晋州」, you may upload the converted <code>93-中通晋州-成本-标准格式.xlsx</code>.
+                    Auto-provisioning: creates missing sites and destinations; replaces all rules for an existing site→destination lane, otherwise inserts. Any row validation failure rolls back the entire batch.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadPriceTemplate()">下载标准模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadPriceTemplate()">Download Standard Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="priceFile">Excel 文件</label>
+                    <label for="priceFile">Excel File</label>
                     <input type="file" id="priceFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewPriceTable()">预览解析</button>
-                    <button type="button" class="btn btn-primary" onclick="importPriceTable()">确认导入到数据库</button>
-                    <button type="button" class="btn btn-secondary" onclick="exportImportResult()" id="btnExportResult" disabled>导出结果 Excel</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearImportResult()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="previewPriceTable()">Preview Parse</button>
+                    <button type="button" class="btn btn-primary" onclick="importPriceTable()">Confirm Import to Database</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportImportResult()" id="btnExportResult" disabled>Export Result Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearImportResult()">Clear</button>
                 </div>
             </div>
             <div class="import-summary" id="importSummary"></div>
@@ -641,12 +684,12 @@
                 <table class="table" id="importResultTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th>行号</th>
-                            <th>状态</th>
-                            <th>生效时间</th>
-                            <th>站点</th>
-                            <th>目的地代码</th>
-                            <th>目的地</th>
+                            <th>Row</th>
+                            <th>Status</th>
+                            <th>Effective Time</th>
+                            <th>Site</th>
+                            <th>Dest. Code</th>
+                            <th>Destination</th>
                             <th>0-0.3kg</th>
                             <th>0.3-0.5kg</th>
                             <th>0.5-1kg</th>
@@ -654,11 +697,11 @@
                             <th>2-3kg</th>
                             <th>3-4kg</th>
                             <th>4-5kg</th>
-                            <th>面单费</th>
-                            <th>续重(元/kg)</th>
-                            <th>预期(1kg)</th>
-                            <th>预期(5kg)</th>
-                            <th>预期(10kg)</th>
+                            <th>Base Fee</th>
+                            <th>Overweight (CNY/kg)</th>
+                            <th>Expected (1 kg)</th>
+                            <th>Expected (5 kg)</th>
+                            <th>Expected (10 kg)</th>
                         </tr>
                     </thead>
                     <tbody id="importTableBody"></tbody>
@@ -667,29 +710,29 @@
         </div>
 
         <div id="waybill" class="page">
-            <h2>运单导入</h2>
-            <p class="page-subtitle">上传运单 Excel — 自动取整重量、计算应收/应付/利润；支持师傅双行表头账单明细做<strong>中转费对比验证</strong>，可预览后入库或导出结果。</p>
+            <h2>Waybill Import</h2>
+            <p class="page-subtitle">Upload waybill Excel — auto weight rounding, receivable/payable/profit calculation; supports legacy dual-header billing sheets for <strong>transit fee verification</strong>. Preview before commit or export results.</p>
             <div class="card">
-                <h3>上传 Excel</h3>
+                <h3>Upload Excel</h3>
                 <p class="import-hint">
-                    推荐先 <strong>下载标准模板</strong>（账单日期、运单号、账户名称、目的省、结算重量等）。
-                    也兼容师傅 <strong>账单明细双行表头</strong>（账单明细 + 成本明细）：系统会读取表内人工核算的中转费，与机器计算结果对比验证。
-                    请上传<strong>单个 sheet</strong> 文件（勿整本多 sheet 账单统计）。
-                    取整规则：≤0.3→0.3，≤0.5→0.5，≤5→向上取整公斤（如 2.19→3）。
-                    <strong>应收</strong>按客户编号或账户名称匹配客户报价；<strong>应付</strong>按成本价 + 目的省。
+                    Download the <strong>standard template</strong> first (bill date, waybill no., account name, destination province, settlement weight, etc.).
+                    Also supports legacy <strong>dual-header billing detail</strong> sheets (billing + cost detail): reads manually entered transit fees and compares with system calculation.
+                    Upload a <strong>single-sheet</strong> file (not a multi-sheet billing workbook).
+                    Rounding: ≤0.3→0.3, ≤0.5→0.5, ≤5→round up to whole kg (e.g. 2.19→3).
+                    <strong>Receivable</strong> matches customer quotes by customer code or account name; <strong>payable</strong> uses cost price + destination province.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadWaybillTemplate()">下载标准模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadWaybillTemplate()">Download Standard Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="waybillFile">Excel 文件</label>
+                    <label for="waybillFile">Excel File</label>
                     <input type="file" id="waybillFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewWaybills()">预览解析</button>
-                    <button type="button" class="btn btn-primary" onclick="importWaybills()">确认导入到数据库</button>
-                    <button type="button" class="btn btn-secondary" onclick="exportWaybillResult()" id="btnExportWaybill" disabled>导出结果 Excel</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearWaybillResult()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="previewWaybills()">Preview Parse</button>
+                    <button type="button" class="btn btn-primary" onclick="importWaybills()">Confirm Import to Database</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportWaybillResult()" id="btnExportWaybill" disabled>Export Result Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearWaybillResult()">Clear</button>
                 </div>
             </div>
             <div class="import-summary" id="waybillSummary"></div>
@@ -697,18 +740,18 @@
                 <table class="table" id="waybillResultTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th>行号</th>
-                            <th>状态</th>
-                            <th>验证</th>
-                            <th>运单号</th>
-                            <th>目的省</th>
-                            <th>结算重量</th>
-                            <th>取整重量</th>
-                            <th>应收中转费</th>
-                            <th>应付中转费</th>
-                            <th>合计应收</th>
-                            <th>剩余应收</th>
-                            <th>利润</th>
+                            <th>Row</th>
+                            <th>Status</th>
+                            <th>Verify</th>
+                            <th>Waybill No.</th>
+                            <th>Dest. Province</th>
+                            <th>Settle Weight</th>
+                            <th>Rounded Weight</th>
+                            <th>Recv. Transit Fee</th>
+                            <th>Pay. Transit Fee</th>
+                            <th>Total Receivable</th>
+                            <th>Remaining Recv.</th>
+                            <th>Profit</th>
                         </tr>
                     </thead>
                     <tbody id="waybillTableBody"></tbody>
@@ -717,28 +760,28 @@
         </div>
 
         <div id="customerquote" class="page">
-            <h2>客户报价导入</h2>
-            <p class="page-subtitle">维护客户应收价（按省份）；运单结算时与成本价（价格表）对比得出利润。</p>
+            <h2>Customer Quote Import</h2>
+            <p class="page-subtitle">Maintain customer receivable prices (by province); waybill settlement compares with cost prices to derive profit.</p>
             <div class="card">
-                <h3>上传 Excel</h3>
+                <h3>Upload Excel</h3>
                 <p class="import-hint">
-                    推荐 <strong>下载标准模板</strong>（客户编号、省份、各重量段单价、面单费、续重）。
-                    也兼容师傅 <strong>公斤段 / 地区+重量范围</strong> 报价表（如 <code>93-客户报价-单独.xlsx</code>）。
-                    <strong>勿上传运单账单明细</strong>（含运单号、账单明细、成本明细）— 那种文件请用【运单导入】。
-                    同一客户 + 省份 + 快递类型线路导入时将整批替换。
+                    Download the <strong>standard template</strong> (customer code, province, weight-band unit prices, base fee, overweight rate).
+                    Also supports legacy <strong>kg-band / region+weight-range</strong> quote sheets (e.g. <code>93-客户报价-单独.xlsx</code>).
+                    <strong>Do not upload waybill billing detail</strong> (waybill no., billing/cost detail) — use Waybill Import instead.
+                    Import replaces all rules for the same customer + province + courier type lane.
                 </p>
                 <div class="input-row">
-                    <button type="button" class="btn btn-accent" onclick="downloadCustomerQuoteTemplate()">下载标准模板</button>
+                    <button type="button" class="btn btn-accent" onclick="downloadCustomerQuoteTemplate()">Download Standard Template</button>
                 </div>
                 <div class="input-row">
-                    <label for="customerQuoteFile">Excel 文件</label>
+                    <label for="customerQuoteFile">Excel File</label>
                     <input type="file" id="customerQuoteFile" accept=".xlsx,.xlsm">
                 </div>
                 <div class="input-row">
-                    <button type="button" class="btn btn-primary" onclick="previewCustomerQuote()">预览解析</button>
-                    <button type="button" class="btn btn-primary" onclick="importCustomerQuote()">确认导入到数据库</button>
-                    <button type="button" class="btn btn-secondary" onclick="exportCustomerQuoteResult()" id="btnExportCustomerQuote" disabled>导出结果 Excel</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearCustomerQuoteResult()">清空</button>
+                    <button type="button" class="btn btn-primary" onclick="previewCustomerQuote()">Preview Parse</button>
+                    <button type="button" class="btn btn-primary" onclick="importCustomerQuote()">Confirm Import to Database</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportCustomerQuoteResult()" id="btnExportCustomerQuote" disabled>Export Result Excel</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearCustomerQuoteResult()">Clear</button>
                 </div>
             </div>
             <div class="import-summary" id="customerQuoteSummary"></div>
@@ -746,13 +789,13 @@
                 <table class="table" id="customerQuoteResultTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th>行号</th>
-                            <th>状态</th>
-                            <th>客户编号</th>
-                            <th>省份</th>
+                            <th>Row</th>
+                            <th>Status</th>
+                            <th>Customer Code</th>
+                            <th>Province</th>
                             <th>2-3kg</th>
-                            <th>面单费</th>
-                            <th>预期(3kg)</th>
+                            <th>Base Fee</th>
+                            <th>Expected (3 kg)</th>
                         </tr>
                     </thead>
                     <tbody id="customerQuoteTableBody"></tbody>
@@ -761,37 +804,44 @@
         </div>
 
         <div id="assistant" class="page">
-            <h2>计价规则检索</h2>
+            <h2>Built-in Rule RAG</h2>
             <p class="page-subtitle">
-                内置规则知识库查阅工具：本地关键词 / TF-IDF 检索 + 引用片段；可选配置大模型仅作改写。
-                <strong>不参与计价计算</strong>，正式金额以运单导入 / FeeCalculationEngine 为准。匹配分过低会返回「未找到」。
+                Assistive FAQ only — <strong>Retrieve → Augment → Generate</strong>.
+                Default: local keyword/TF-IDF + knowledge-base excerpts; optional OpenAI ApiKey for rephrasing only.
+                <strong>Not used for billing settlement</strong> — official amounts come from waybill import / FeeCalculationEngine. Low match scores return "Not found"; no fabricated answers.
             </p>
             <div class="card">
-                <h3>查询</h3>
-                <p class="hint" style="margin-top:0">可点示例，或自行输入业务问题：</p>
+                <h3>Query</h3>
+                <ol class="rag-pipeline" id="ragPipelineIdle" aria-label="RAG pipeline overview">
+                    <li><strong>1. Retrieve</strong>Knowledge-base chunk search</li>
+                    <li><strong>2. Augment</strong>Citation snippets with scores</li>
+                    <li><strong>3. Generate</strong>Extractive concat / optional LLM</li>
+                </ol>
+                <p class="hint" style="margin-top:0">Click a sample or enter your own business question:</p>
                 <div class="assistant-chips" id="assistantChips">
-                    <button type="button" onclick="askAssistantPreset('为什么云南0.3kg应付是1.50不是最新的1.30？')">历史报价 / 云南 0.3kg</button>
-                    <button type="button" onclick="askAssistantPreset('应收和应付双轨计价分别怎么取价？')">双轨计价</button>
-                    <button type="button" onclick="askAssistantPreset('重量取整规则是什么？超过5kg怎么算？')">重量取整</button>
-                    <button type="button" onclick="askAssistantPreset('93演示正确的Excel导入顺序是什么？')">导入顺序</button>
-                    <button type="button" onclick="askAssistantPreset('计费策略模式Strategy Pattern怎么设计的？')">Strategy 模式</button>
+                    <button type="button" onclick="askAssistantPreset('为什么云南0.3kg应付是1.50不是最新的1.30？')">Historical Quote / Yunnan 0.3 kg</button>
+                    <button type="button" onclick="askAssistantPreset('应收和应付双轨计价分别怎么取价？')">Dual-track Pricing</button>
+                    <button type="button" onclick="askAssistantPreset('重量取整规则是什么？超过5kg怎么算？')">Weight Rounding</button>
+                    <button type="button" onclick="askAssistantPreset('93演示正确的Excel导入顺序是什么？')">Import Order</button>
+                    <button type="button" onclick="askAssistantPreset('计费策略模式Strategy Pattern怎么设计的？')">Strategy Pattern</button>
                 </div>
-                <label for="assistantQuestion">问题</label>
-                <textarea id="assistantQuestion" placeholder="例如：目的省为空的退件费行为什么对比失败？"></textarea>
+                <label for="assistantQuestion">Question</label>
+                <textarea id="assistantQuestion" placeholder="e.g. Why does a return-fee row with empty destination province fail comparison?"></textarea>
                 <div class="btn-row" style="margin-top:0.75rem">
-                    <button type="button" class="btn btn-primary" onclick="askAssistant()">查询</button>
-                    <button type="button" class="btn btn-secondary" onclick="loadAssistantKnowledge()">查看知识库</button>
+                    <button type="button" class="btn btn-primary" onclick="askAssistant()">Run RAG</button>
+                    <button type="button" class="btn btn-secondary" onclick="loadAssistantKnowledge()">View Knowledge Base</button>
                 </div>
             </div>
             <div class="card" id="assistantResultCard" style="display:none">
-                <h3>回答</h3>
+                <h3>RAG Result</h3>
+                <ol class="rag-pipeline" id="ragPipelineLive"></ol>
                 <div class="assistant-meta" id="assistantMeta"></div>
                 <div class="assistant-answer" id="assistantAnswer"></div>
-                <h4 style="margin:1rem 0 0.35rem;font-size:1rem">引用片段</h4>
+                <h4 style="margin:1rem 0 0.35rem;font-size:1rem">Augment · Citations</h4>
                 <ul class="assistant-citations" id="assistantCitations"></ul>
             </div>
             <div class="card" id="assistantKbCard" style="display:none">
-                <h3>已加载知识源</h3>
+                <h3>Loaded Knowledge Sources (KnowledgeBase)</h3>
                 <ul id="assistantKbList"></ul>
             </div>
         </div>
@@ -799,7 +849,7 @@
 
     <script>
         const API_URL = `${window.location.origin}/api`;
-        const LOCALE = 'zh-CN';
+        const LOCALE = 'en-US';
         let editSiteId = null;
         let editDestId = null;
         let editCustomerId = null;
@@ -811,12 +861,12 @@
         let waybillResultRows = [];
         let customerQuoteResultData = null;
 
-        const SITE_TYPES = { 1: '配送站', 2: '中转站', 3: '仓库' };
+        const SITE_TYPES = { 1: 'Delivery Station', 2: 'Transfer Hub', 3: 'Warehouse' };
         const BILLING_API_LABELS = {
-            'Tiered rate (≤5 kg)': '区间计费(≤5kg)',
-            'Overweight rate (>5 kg)': '续重计费(>5kg)',
-            '区间计费(≤5kg)': '区间计费(≤5kg)',
-            '续重计费(>5kg)': '续重计费(>5kg)'
+            'Tiered rate (≤5 kg)': 'Tiered (≤5 kg)',
+            'Overweight rate (>5 kg)': 'Overweight (>5 kg)',
+            '区间计费(≤5kg)': 'Tiered (≤5 kg)',
+            '续重计费(>5kg)': 'Overweight (>5 kg)'
         };
 
         function showPage(pageId) {
@@ -837,12 +887,13 @@
             else if (pageId === 'assistant') loadAssistantKnowledge();
         }
 
-        function showMessage(msg, success) {
+        function showMessage(msg, success, holdMs) {
             const el = document.getElementById('message');
             el.textContent = msg;
             el.className = 'message ' + (success ? 'success' : 'error');
             el.style.display = 'block';
-            setTimeout(() => { el.style.display = 'none'; }, 3500);
+            const ms = holdMs != null ? holdMs : (success ? 3500 : 6000);
+            setTimeout(() => { el.style.display = 'none'; }, ms);
         }
 
         function formatDateTime(iso) {
@@ -854,7 +905,7 @@
         }
 
         function billingLabel(type) {
-            return type === 1 ? '区间计费(≤5kg)' : '续重计费(>5kg)';
+            return type === 1 ? 'Tiered (≤5 kg)' : 'Overweight (>5 kg)';
         }
 
         function translateBilling(text) {
@@ -870,7 +921,7 @@
                     renderSiteTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载站点失败: ' + e.message, false);
+                showMessage('Failed to load sites: ' + e.message, false);
             }
         }
 
@@ -883,10 +934,10 @@
                     <td>${SITE_TYPES[s.siteType] || s.siteType}</td>
                     <td>${escapeHtml(s.expressCompany || '')}</td>
                     <td>${escapeHtml(s.contactPerson || '')} ${s.contactPhone ? '(' + escapeHtml(s.contactPhone) + ')' : ''}</td>
-                    <td><span class="status ${s.status === 1 ? 'active' : 'inactive'}">${s.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td><span class="status ${s.status === 1 ? 'active' : 'inactive'}">${s.status === 1 ? 'Active' : 'Disabled'}</span></td>
                     <td class="actions">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="editSite(${s.id})">编辑</button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">删除</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editSite(${s.id})">Edit</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -928,7 +979,7 @@
             };
 
             if (!site.SiteCode || !site.SiteName) {
-                showMessage('请填写站点编号和名称', false);
+                showMessage('Please enter site code and name', false);
                 return;
             }
 
@@ -942,14 +993,14 @@
                 });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('站点保存成功', true);
+                    showMessage('Site saved successfully', true);
                     clearSiteForm();
                     loadSites();
                 } else {
-                    showMessage(result.message || '保存失败', false);
+                    showMessage(result.message || 'Save failed', false);
                 }
             } catch (e) {
-                showMessage('保存失败: ' + e.message, false);
+                showMessage('Save failed: ' + e.message, false);
             }
         }
 
@@ -967,18 +1018,18 @@
         }
 
         async function deleteSite(id) {
-            if (!confirm('确定删除该站点？')) return;
+            if (!confirm('Delete this site?')) return;
             try {
                 const res = await fetch(`${API_URL}/Site/${id}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('删除成功', true);
+                    showMessage('Deleted successfully', true);
                     loadSites();
                 } else {
-                    showMessage(result.message || '删除失败', false);
+                    showMessage(result.message || 'Delete failed', false);
                 }
             } catch (e) {
-                showMessage('删除失败: ' + e.message, false);
+                showMessage('Delete failed: ' + e.message, false);
             }
         }
 
@@ -998,7 +1049,7 @@
         async function uploadSiteFile(endpoint, okMsg) {
             const fileInput = document.getElementById('siteFile');
             if (!fileInput.files?.length) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1007,30 +1058,30 @@
                 const res = await fetch(`${API_URL}/Site/${endpoint}`, { method: 'POST', body: formData });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '导入失败', false);
+                    showMessage(result.message || 'Import failed', false);
                     return;
                 }
                 const data = result.data;
                 const summary = document.getElementById('siteImportSummary');
                 summary.style.display = 'block';
                 const errCount = (data.rows || []).filter(r => r.errorMessage).length;
-                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
-                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
-                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — ${data.totalRows} row(s) total.` +
+                    (data.savedToDatabase ? ` Inserted <strong>${data.inserted}</strong>, updated <strong>${data.updated}</strong>.` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} row(s) with errors (preview only, not saved).</span>` : '');
                 showMessage(okMsg, errCount === 0);
                 if (data.savedToDatabase) loadSites();
             } catch (e) {
-                showMessage('导入失败: ' + e.message, false);
+                showMessage('Import failed: ' + e.message, false);
             }
         }
 
         function previewSiteImport() {
-            uploadSiteFile('import/preview', '预览完成');
+            uploadSiteFile('import/preview', 'Preview complete');
         }
 
         function commitSiteImport() {
-            if (!confirm('确认将站点数据写入数据库？')) return;
-            uploadSiteFile('import', '已导入到数据库');
+            if (!confirm('Write site data to the database?')) return;
+            uploadSiteFile('import', 'Imported to database');
         }
 
         async function loadDestinations() {
@@ -1042,7 +1093,7 @@
                     renderDestTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载目的地失败: ' + e.message, false);
+                showMessage('Failed to load destinations: ' + e.message, false);
             }
         }
 
@@ -1056,8 +1107,8 @@
                     <td>${escapeHtml(d.area || '')}</td>
                     <td>${formatDateTime(d.createTime)}</td>
                     <td class="actions">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="editDestination(${d.id})">编辑</button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteDestination(${d.id})">删除</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editDestination(${d.id})">Edit</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteDestination(${d.id})">Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -1086,7 +1137,7 @@
             };
 
             if (!dest.DestCode || !dest.Province) {
-                showMessage('请填写目的地编码和省份', false);
+                showMessage('Please enter destination code and province', false);
                 return;
             }
 
@@ -1100,14 +1151,14 @@
                 });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('目的地保存成功', true);
+                    showMessage('Destination saved successfully', true);
                     clearDestForm();
                     loadDestinations();
                 } else {
-                    showMessage(result.message || '保存失败', false);
+                    showMessage(result.message || 'Save failed', false);
                 }
             } catch (e) {
-                showMessage('保存失败: ' + e.message, false);
+                showMessage('Save failed: ' + e.message, false);
             }
         }
 
@@ -1121,18 +1172,18 @@
         }
 
         async function deleteDestination(id) {
-            if (!confirm('确定删除该目的地？')) return;
+            if (!confirm('Delete this destination?')) return;
             try {
                 const res = await fetch(`${API_URL}/Destination/${id}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('删除成功', true);
+                    showMessage('Deleted successfully', true);
                     loadDestinations();
                 } else {
-                    showMessage(result.message || '删除失败', false);
+                    showMessage(result.message || 'Delete failed', false);
                 }
             } catch (e) {
-                showMessage('删除失败: ' + e.message, false);
+                showMessage('Delete failed: ' + e.message, false);
             }
         }
 
@@ -1152,7 +1203,7 @@
         async function uploadDestinationFile(endpoint, okMsg) {
             const fileInput = document.getElementById('destFile');
             if (!fileInput.files?.length) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1161,30 +1212,30 @@
                 const res = await fetch(`${API_URL}/Destination/${endpoint}`, { method: 'POST', body: formData });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '导入失败', false);
+                    showMessage(result.message || 'Import failed', false);
                     return;
                 }
                 const data = result.data;
                 const summary = document.getElementById('destImportSummary');
                 summary.style.display = 'block';
                 const errCount = (data.rows || []).filter(r => r.errorMessage).length;
-                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
-                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
-                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — ${data.totalRows} row(s) total.` +
+                    (data.savedToDatabase ? ` Inserted <strong>${data.inserted}</strong>, updated <strong>${data.updated}</strong>.` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} row(s) with errors (preview only, not saved).</span>` : '');
                 showMessage(okMsg, errCount === 0);
                 if (data.savedToDatabase) loadDestinations();
             } catch (e) {
-                showMessage('导入失败: ' + e.message, false);
+                showMessage('Import failed: ' + e.message, false);
             }
         }
 
         function previewDestinationImport() {
-            uploadDestinationFile('import/preview', '预览完成');
+            uploadDestinationFile('import/preview', 'Preview complete');
         }
 
         function commitDestinationImport() {
-            if (!confirm('确认将目的地数据写入数据库？')) return;
-            uploadDestinationFile('import', '已导入到数据库');
+            if (!confirm('Write destination data to the database?')) return;
+            uploadDestinationFile('import', 'Imported to database');
         }
 
         async function loadCustomers() {
@@ -1196,7 +1247,7 @@
                     renderCustomerTable(customers);
                 }
             } catch (e) {
-                showMessage('加载客户失败: ' + e.message, false);
+                showMessage('Failed to load customers: ' + e.message, false);
             }
         }
 
@@ -1206,26 +1257,32 @@
                 <tr>
                     <td>${escapeHtml(c.customerCode)}</td>
                     <td>${escapeHtml(c.customerName)}</td>
-                    <td><span class="status ${c.status === 1 ? 'active' : 'inactive'}">${c.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td><span class="status ${c.status === 1 ? 'active' : 'inactive'}">${c.status === 1 ? 'Active' : 'Disabled'}</span></td>
                     <td>${formatDateTime(c.createTime)}</td>
                     <td class="actions">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="editCustomer(${c.id})">编辑</button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteCustomer(${c.id})">删除</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="editCustomer(${c.id})">Edit</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteCustomer(${c.id})">Delete</button>
                     </td>
                 </tr>
             `).join('');
         }
 
         function editCustomer(id) {
-            const c = customers.find(x => x.id === id);
-            if (!c) return;
-            editCustomerId = id;
+            const key = Number(id);
+            const c = customers.find(x => Number(x.id) === key);
+            if (!c) {
+                showMessage('Customer not found in list. Click Refresh and try again.', false);
+                return;
+            }
+            editCustomerId = key;
             document.getElementById('customerId').value = c.id;
             document.getElementById('customerCode').value = c.customerCode;
             document.getElementById('customerName').value = c.customerName;
             document.getElementById('customerStatus').value = c.status;
             document.getElementById('customerRemark').value = c.remark || '';
-            showPage('customer');
+            const card = document.getElementById('customerEditCard');
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showMessage('Loaded into the form above — edit fields, then click Save.', true, 4500);
         }
 
         async function saveCustomer() {
@@ -1237,7 +1294,7 @@
                 Remark: document.getElementById('customerRemark').value.trim() || null
             };
             if (!customer.CustomerCode || !customer.CustomerName) {
-                showMessage('请填写客户编号和名称', false);
+                showMessage('Please enter customer code and name', false);
                 return;
             }
             try {
@@ -1250,14 +1307,14 @@
                 });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('客户保存成功', true);
+                    showMessage('Customer saved successfully', true);
                     clearCustomerForm();
                     loadCustomers();
                 } else {
-                    showMessage(result.message || '保存失败', false);
+                    showMessage(result.message || 'Save failed', false);
                 }
             } catch (e) {
-                showMessage('保存失败: ' + e.message, false);
+                showMessage('Save failed: ' + e.message, false);
             }
         }
 
@@ -1271,18 +1328,18 @@
         }
 
         async function deleteCustomer(id) {
-            if (!confirm('确定删除该客户？')) return;
+            if (!confirm('Delete this customer? If it has linked accounts, it will be Disabled instead.')) return;
             try {
                 const res = await fetch(`${API_URL}/Customer/${id}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
-                    showMessage('删除成功', true);
+                    showMessage(result.data || result.message || 'Deleted successfully', true, 5000);
                     loadCustomers();
                 } else {
-                    showMessage(result.message || '删除失败', false);
+                    showMessage(result.message || 'Delete failed', false, 8000);
                 }
             } catch (e) {
-                showMessage('删除失败: ' + e.message, false);
+                showMessage('Delete failed: ' + e.message, false, 8000);
             }
         }
 
@@ -1302,7 +1359,7 @@
         async function uploadCustomerFile(endpoint, okMsg) {
             const fileInput = document.getElementById('customerFile');
             if (!fileInput.files?.length) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1311,29 +1368,29 @@
                 const res = await fetch(`${API_URL}/Customer/${endpoint}`, { method: 'POST', body: formData });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '导入失败', false);
+                    showMessage(result.message || 'Import failed', false);
                     return;
                 }
                 const data = result.data;
                 const summary = document.getElementById('customerImportSummary');
                 summary.style.display = 'block';
                 const errCount = (data.rows || []).filter(r => r.errorMessage).length;
-                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — 共 ${data.totalRows} 行。` +
-                    (data.savedToDatabase ? ` 新增 <strong>${data.inserted}</strong> 条，更新 <strong>${data.updated}</strong> 条。` : '') +
-                    (errCount ? `<br><span style="color:#991b1b">${errCount} 行有误（仅预览，未入库）。</span>` : '');
+                summary.innerHTML = `<strong>${escapeHtml(okMsg)}</strong> — ${data.totalRows} row(s) total.` +
+                    (data.savedToDatabase ? ` Inserted <strong>${data.inserted}</strong>, updated <strong>${data.updated}</strong>.` : '') +
+                    (errCount ? `<br><span style="color:#991b1b">${errCount} row(s) with errors (preview only, not saved).</span>` : '');
                 showMessage(okMsg, errCount === 0);
                 if (data.savedToDatabase) loadCustomers();
             } catch (e) {
-                showMessage('导入失败: ' + e.message, false);
+                showMessage('Import failed: ' + e.message, false);
             }
         }
 
         function previewCustomerImport() {
-            uploadCustomerFile('import/preview', '预览完成');
+            uploadCustomerFile('import/preview', 'Preview complete');
         }
 
         function commitCustomerImport() {
-            uploadCustomerFile('import', '已导入到数据库');
+            uploadCustomerFile('import', 'Imported to database');
         }
 
         async function loadSitesForSelect() {
@@ -1365,7 +1422,7 @@
                     renderRuleTable(result.data);
                 }
             } catch (e) {
-                showMessage('加载价格规则失败: ' + e.message, false);
+                showMessage('Failed to load price rules: ' + e.message, false);
             }
         }
 
@@ -1380,7 +1437,7 @@
                     <td>${r.unitPrice.toFixed(2)}</td>
                     <td>${r.baseFee.toFixed(2)}</td>
                     <td>${formatDate(r.effectiveDate)}</td>
-                    <td><span class="status ${r.status === 1 ? 'active' : 'inactive'}">${r.status === 1 ? '启用' : '禁用'}</span></td>
+                    <td><span class="status ${r.status === 1 ? 'active' : 'inactive'}">${r.status === 1 ? 'Active' : 'Disabled'}</span></td>
                 </tr>
             `).join('');
         }
@@ -1413,7 +1470,7 @@
             };
 
             if (!req.Weight || req.Weight <= 0) {
-                showMessage('请输入有效重量', false);
+                showMessage('Please enter a valid weight', false);
                 return;
             }
 
@@ -1432,10 +1489,10 @@
                     document.getElementById('calcTotal').textContent = data.totalPrice.toFixed(2);
                     document.getElementById('calcResult').style.display = 'block';
                 } else {
-                    showMessage(result.message || '计算失败', false);
+                    showMessage(result.message || 'Calculation failed', false);
                 }
             } catch (e) {
-                showMessage('计算失败: ' + e.message, false);
+                showMessage('Calculation failed: ' + e.message, false);
             }
         }
 
@@ -1446,7 +1503,7 @@
         async function uploadPriceFile(endpoint, successMsg) {
             const fileInput = document.getElementById('priceFile');
             if (!fileInput.files || fileInput.files.length === 0) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1455,22 +1512,22 @@
                 const res = await fetch(`${API_URL}/Import/${endpoint}`, { method: 'POST', body: formData });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '操作失败', false);
+                    showMessage(result.message || 'Operation failed', false);
                     return;
                 }
                 showImportResult(result.data, successMsg);
             } catch (e) {
-                showMessage('操作失败: ' + e.message, false);
+                showMessage('Operation failed: ' + e.message, false);
             }
         }
 
         function previewPriceTable() {
-            uploadPriceFile('price-table/preview', '预览完成');
+            uploadPriceFile('price-table/preview', 'Preview complete');
         }
 
         function importPriceTable() {
-            if (!confirm('确认将价格表写入数据库？任一行校验失败将整批回滚。')) return;
-            uploadPriceFile('price-table', '已写入数据库');
+            if (!confirm('Write price table to the database? Any row validation failure rolls back the entire batch.')) return;
+            uploadPriceFile('price-table', 'Saved to database');
         }
 
         function showImportResult(data, title) {
@@ -1481,14 +1538,14 @@
             const errCount = importResultRows.filter(r => r.errorMessage).length;
             const formatLabel = data.format || '—';
             summary.innerHTML = `
-                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(formatLabel)}；
-                工作表「${escapeHtml(data.sheetName || '')}」，表头第 ${data.headerRow} 行。
-                共解析 <strong>${data.totalRows}</strong> 条。
-                ${data.savedToDatabase ? ` 已更新 <strong>${data.lanesUpserted ?? 0}</strong> 条线路、写入 <strong>${data.rulesUpserted}</strong> 条价格规则。` : ''}
-                ${data.savedToDatabase && (data.sitesCreated || data.destinationsCreated) ? ` 新建站点 <strong>${data.sitesCreated}</strong> 个、目的地 <strong>${data.destinationsCreated}</strong> 个。` : ''}
-                ${!data.savedToDatabase && data.masterDataToCreate && data.masterDataToCreate.length ? `<br>将自动新建：${escapeHtml(data.masterDataToCreate.join('、'))}` : ''}
-                ${errCount ? `<br><span style="color:#991b1b">校验失败 ${errCount} 行（未入库）。</span>` : ''}
-                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
+                <strong>${escapeHtml(title)}</strong> — Format: ${escapeHtml(formatLabel)};
+                sheet "${escapeHtml(data.sheetName || '')}", header row ${data.headerRow}.
+                Parsed <strong>${data.totalRows}</strong> record(s).
+                ${data.savedToDatabase ? ` Updated <strong>${data.lanesUpserted ?? 0}</strong> lane(s), wrote <strong>${data.rulesUpserted}</strong> price rule(s).` : ''}
+                ${data.savedToDatabase && (data.sitesCreated || data.destinationsCreated) ? ` Created <strong>${data.sitesCreated}</strong> site(s), <strong>${data.destinationsCreated}</strong> destination(s).` : ''}
+                ${!data.savedToDatabase && data.masterDataToCreate && data.masterDataToCreate.length ? `<br>Will auto-create: ${escapeHtml(data.masterDataToCreate.join(', '))}` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">Validation failed on ${errCount} row(s) (not saved).</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>Note: ' + escapeHtml(data.warnings.join('; ')) : ''}
             `;
             document.getElementById('btnExportResult').disabled = importResultRows.length === 0;
             showMessage(title, errCount === 0);
@@ -1510,7 +1567,7 @@
             tbody.innerHTML = rows.map(r => `
                 <tr class="${r.errorMessage ? 'row-error' : ''}">
                     <td>${r.rowNumber}</td>
-                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) + '成功' : '成功')}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) + ' OK' : 'OK')}</td>
                     <td>${r.effectiveDate ? formatDate(r.effectiveDate) : '—'}</td>
                     <td>${escapeHtml(r.siteCode)}</td>
                     <td>${escapeHtml(r.destCode)}</td>
@@ -1533,7 +1590,7 @@
 
         async function exportImportResult() {
             if (!importResultRows.length) {
-                showMessage('没有可导出的数据', false);
+                showMessage('No data to export', false);
                 return;
             }
             try {
@@ -1543,19 +1600,19 @@
                     body: JSON.stringify(importResultRows)
                 });
                 if (!res.ok) {
-                    showMessage('导出失败', false);
+                    showMessage('Export failed', false);
                     return;
                 }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `价格表导入结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.download = `price-table-import-result_${new Date().toISOString().slice(0, 10)}.xlsx`;
                 a.click();
                 URL.revokeObjectURL(url);
-                showMessage('导出成功', true);
+                showMessage('Export successful', true);
             } catch (e) {
-                showMessage('导出失败: ' + e.message, false);
+                showMessage('Export failed: ' + e.message, false);
             }
         }
 
@@ -1575,7 +1632,7 @@
         function uploadWaybillFile(endpoint, successMsg) {
             const fileInput = document.getElementById('waybillFile');
             if (!fileInput.files.length) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1584,21 +1641,21 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res.success) {
-                        showMessage(res.message || '处理失败', false);
+                        showMessage(res.message || 'Processing failed', false);
                         return;
                     }
                     showWaybillResult(res.data, successMsg);
                 })
-                .catch(e => showMessage('请求失败: ' + e.message, false));
+                .catch(e => showMessage('Request failed: ' + e.message, false));
         }
 
         function previewWaybills() {
-            uploadWaybillFile('waybill/preview', '预览完成');
+            uploadWaybillFile('waybill/preview', 'Preview complete');
         }
 
         function importWaybills() {
-            if (!confirm('确认将运单结算结果写入数据库？任一行校验失败将整批回滚。')) return;
-            uploadWaybillFile('waybill', '已写入数据库');
+            if (!confirm('Write waybill settlement results to the database? Any row validation failure rolls back the entire batch.')) return;
+            uploadWaybillFile('waybill', 'Saved to database');
         }
 
         function showWaybillResult(data, title) {
@@ -1611,13 +1668,13 @@
             const mismatch = data.mismatchTransitRows ?? waybillResultRows.filter(r => r.transitFeeMatched === false).length;
             const hasCompare = matched + mismatch > 0;
             summary.innerHTML = `
-                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(data.format || '—')}；
-                工作表「${escapeHtml(data.sheetName || '')}」，表头第 ${data.headerRow} 行。
-                共解析 <strong>${data.totalRows}</strong> 条。
-                ${hasCompare ? `<br>中转费对比：<strong style="color:#166534">${matched} 一致</strong>，<strong style="color:#991b1b">${mismatch} 不一致</strong>。` : ''}
-                ${data.savedToDatabase ? ` 已写入 <strong>${data.linesSaved ?? 0}</strong> 条（批次 ${escapeHtml(data.importBatchId || '')}）。` : ''}
-                ${errCount ? `<br><span style="color:#991b1b">校验/计价失败 ${errCount} 行。</span>` : ''}
-                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
+                <strong>${escapeHtml(title)}</strong> — Format: ${escapeHtml(data.format || '—')};
+                sheet "${escapeHtml(data.sheetName || '')}", header row ${data.headerRow}.
+                Parsed <strong>${data.totalRows}</strong> record(s).
+                ${hasCompare ? `<br>Transit fee check: <strong style="color:#166534">${matched} match</strong>, <strong style="color:#991b1b">${mismatch} mismatch</strong>.` : ''}
+                ${data.savedToDatabase ? ` Saved <strong>${data.linesSaved ?? 0}</strong> line(s) (batch ${escapeHtml(data.importBatchId || '')}).` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">Validation/pricing failed on ${errCount} row(s).</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>Note: ' + escapeHtml(data.warnings.join('; ')) : ''}
             `;
             document.getElementById('btnExportWaybill').disabled = waybillResultRows.length === 0;
             showMessage(title, errCount === 0);
@@ -1635,8 +1692,8 @@
             tbody.innerHTML = rows.map(r => `
                 <tr class="${r.errorMessage ? 'row-error' : (r.transitFeeMatched === false ? 'row-warn' : '')}">
                     <td>${r.rowNumber}</td>
-                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : '成功'}</td>
-                    <td>${r.transitFeeMatched === true ? '一致' : r.transitFeeMatched === false ? '不一致' : '—'}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : 'OK'}</td>
+                    <td>${r.transitFeeMatched === true ? 'Match' : r.transitFeeMatched === false ? 'Mismatch' : '—'}</td>
                     <td>${escapeHtml(r.waybillNo)}</td>
                     <td>${escapeHtml(r.province)}</td>
                     <td>${fmt(r.actualWeight)}</td>
@@ -1652,7 +1709,7 @@
 
         async function exportWaybillResult() {
             if (!waybillResultRows.length) {
-                showMessage('没有可导出的数据', false);
+                showMessage('No data to export', false);
                 return;
             }
             try {
@@ -1662,19 +1719,19 @@
                     body: JSON.stringify(waybillResultRows)
                 });
                 if (!res.ok) {
-                    showMessage('导出失败', false);
+                    showMessage('Export failed', false);
                     return;
                 }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `运单结算结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.download = `waybill-settlement-result_${new Date().toISOString().slice(0, 10)}.xlsx`;
                 a.click();
                 URL.revokeObjectURL(url);
-                showMessage('导出成功', true);
+                showMessage('Export successful', true);
             } catch (e) {
-                showMessage('导出失败: ' + e.message, false);
+                showMessage('Export failed: ' + e.message, false);
             }
         }
 
@@ -1694,7 +1751,7 @@
         function uploadCustomerQuoteFile(endpoint, successMsg) {
             const fileInput = document.getElementById('customerQuoteFile');
             if (!fileInput.files.length) {
-                showMessage('请选择 Excel 文件', false);
+                showMessage('Please select an Excel file', false);
                 return;
             }
             const formData = new FormData();
@@ -1703,21 +1760,21 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res.success) {
-                        showMessage(res.message || '处理失败', false);
+                        showMessage(res.message || 'Processing failed', false);
                         return;
                     }
                     showCustomerQuoteResult(res.data, successMsg);
                 })
-                .catch(e => showMessage('请求失败: ' + e.message, false));
+                .catch(e => showMessage('Request failed: ' + e.message, false));
         }
 
         function previewCustomerQuote() {
-            uploadCustomerQuoteFile('preview', '预览完成');
+            uploadCustomerQuoteFile('preview', 'Preview complete');
         }
 
         function importCustomerQuote() {
-            if (!confirm('确认将客户报价写入数据库？任一行校验失败将整批回滚。')) return;
-            uploadCustomerQuoteFile('', '已写入数据库');
+            if (!confirm('Write customer quotes to the database? Any row validation failure rolls back the entire batch.')) return;
+            uploadCustomerQuoteFile('', 'Saved to database');
         }
 
         function showCustomerQuoteResult(data, title) {
@@ -1731,12 +1788,12 @@
                 + (data.longRows || []).filter(r => r.errorMessage).length;
             const longCount = (data.longRows || []).length;
             summary.innerHTML = `
-                <strong>${escapeHtml(title)}</strong> — 格式：${escapeHtml(data.format || '—')}；
-                工作表「${escapeHtml(data.sheetName || '')}」。
-                宽表 ${rows.length} 条${longCount ? `，公斤段 ${longCount} 条` : ''}。
-                ${data.savedToDatabase ? ` 已更新 <strong>${data.lanesUpserted ?? 0}</strong> 条线路、写入 <strong>${data.rulesUpserted}</strong> 条报价规则。` : ''}
-                ${errCount ? `<br><span style="color:#991b1b">校验失败 ${errCount} 行。</span>` : ''}
-                ${(data.warnings && data.warnings.length) ? '<br>提示：' + escapeHtml(data.warnings.join('；')) : ''}
+                <strong>${escapeHtml(title)}</strong> — Format: ${escapeHtml(data.format || '—')};
+                sheet "${escapeHtml(data.sheetName || '')}".
+                Wide table: ${rows.length} row(s)${longCount ? `, kg-band: ${longCount} row(s)` : ''}.
+                ${data.savedToDatabase ? ` Updated <strong>${data.lanesUpserted ?? 0}</strong> lane(s), wrote <strong>${data.rulesUpserted}</strong> quote rule(s).` : ''}
+                ${errCount ? `<br><span style="color:#991b1b">Validation failed on ${errCount} row(s).</span>` : ''}
+                ${(data.warnings && data.warnings.length) ? '<br>Note: ' + escapeHtml(data.warnings.join('; ')) : ''}
             `;
             document.getElementById('btnExportCustomerQuote').disabled = rows.length === 0;
             showMessage(title, errCount === 0);
@@ -1755,7 +1812,7 @@
             const wideHtml = rows.map(r => `
                 <tr class="${r.errorMessage ? 'row-error' : ''}">
                     <td>${r.rowNumber}</td>
-                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) : '成功')}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : (r.importNote ? escapeHtml(r.importNote) : 'OK')}</td>
                     <td>${escapeHtml(r.customerCode)}</td>
                     <td>${escapeHtml(r.province)}</td>
                     <td>${fmt(r.price_2_3)}</td>
@@ -1766,7 +1823,7 @@
             const longHtml = longRows.slice(0, 200).map(r => `
                 <tr class="${r.errorMessage ? 'row-error' : ''}">
                     <td>${r.rowNumber}</td>
-                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : '成功'}</td>
+                    <td>${r.errorMessage ? escapeHtml(r.errorMessage) : 'OK'}</td>
                     <td>${escapeHtml(r.customerCode)}</td>
                     <td>${escapeHtml(r.province)}</td>
                     <td>${escapeHtml(r.weightBracket)}=${fmt(r.unitPrice)}</td>
@@ -1779,7 +1836,7 @@
 
         async function exportCustomerQuoteResult() {
             if (!customerQuoteResultData?.wideRows?.length) {
-                showMessage('没有可导出的宽表数据', false);
+                showMessage('No wide-table data to export', false);
                 return;
             }
             try {
@@ -1789,19 +1846,19 @@
                     body: JSON.stringify(customerQuoteResultData)
                 });
                 if (!res.ok) {
-                    showMessage('导出失败', false);
+                    showMessage('Export failed', false);
                     return;
                 }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `客户报价导入结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.download = `customer-quote-import-result_${new Date().toISOString().slice(0, 10)}.xlsx`;
                 a.click();
                 URL.revokeObjectURL(url);
-                showMessage('导出成功', true);
+                showMessage('Export successful', true);
             } catch (e) {
-                showMessage('导出失败: ' + e.message, false);
+                showMessage('Export failed: ' + e.message, false);
             }
         }
 
@@ -1822,24 +1879,32 @@
         async function askAssistant() {
             const question = document.getElementById('assistantQuestion').value.trim();
             if (!question) {
-                showMessage('请先输入问题', false);
+                showMessage('Please enter a question first', false);
                 return;
             }
             try {
                 const res = await fetch(`${API_URL}/Assistant/ask`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, topK: 3 })
+                    body: JSON.stringify({ question, topK: 4 })
                 });
                 const result = await res.json();
                 if (!result.success) {
-                    showMessage(result.message || '助手调用失败', false);
+                    showMessage(result.message || 'RAG request failed', false);
                     return;
                 }
                 const data = result.data;
                 document.getElementById('assistantResultCard').style.display = 'block';
-                document.getElementById('assistantMeta').textContent =
-                    `模式：${data.mode} · 有依据：${data.grounded ? '是' : '否'}`;
+                renderRagPipeline(data.pipelineSteps || [], data.mode);
+                const modeLabel = {
+                    'kb-extractive': 'Extractive',
+                    'optional-llm': 'LLM rewrite',
+                    'retrieval-miss': 'Retrieval miss',
+                    'validation': 'Validation'
+                }[data.mode] || data.mode;
+                document.getElementById('assistantMeta').innerHTML =
+                    `<span class="assistant-mode-badge">${escapeHtml(modeLabel)}</span>` +
+                    `mode=${escapeHtml(data.mode)} · grounded=${data.grounded ? 'yes' : 'no'} · citations=${(data.citations || []).length}`;
                 document.getElementById('assistantAnswer').textContent = data.answer || '';
                 const ul = document.getElementById('assistantCitations');
                 ul.innerHTML = '';
@@ -1852,11 +1917,25 @@
                     ul.appendChild(li);
                 });
                 if (!(data.citations || []).length) {
-                    ul.innerHTML = '<li>无引用片段</li>';
+                    ul.innerHTML = '<li>No citations (normal on retrieval-miss)</li>';
                 }
             } catch (e) {
-                showMessage('助手调用失败: ' + e.message, false);
+                showMessage('RAG request failed: ' + e.message, false);
             }
+        }
+
+        function renderRagPipeline(steps, mode) {
+            const el = document.getElementById('ragPipelineLive');
+            const miss = mode === 'retrieval-miss';
+            const hasGen = steps.includes('generate-extractive') || steps.includes('generate-llm');
+            const items = [
+                { key: 'retrieve', title: '1. Retrieve', desc: 'Knowledge-base search', on: steps.includes('retrieve') || hasGen || miss },
+                { key: 'augment', title: '2. Augment', desc: 'Citation augmentation', on: steps.includes('augment') || hasGen, miss: false },
+                { key: 'generate', title: '3. Generate', desc: hasGen ? (steps.includes('generate-llm') ? 'LLM rewrite' : 'Extractive concat') : (miss ? 'Not generated (miss)' : 'Pending'), on: hasGen, miss }
+            ];
+            el.innerHTML = items.map(it =>
+                `<li class="${it.miss ? 'miss' : (it.on ? 'on' : '')}"><strong>${it.title}</strong>${it.desc}</li>`
+            ).join('');
         }
 
         async function loadAssistantKnowledge() {
@@ -1869,7 +1948,7 @@
                 list.innerHTML = '';
                 (result.data || []).forEach(k => {
                     const li = document.createElement('li');
-                    li.textContent = `${k.source} — ${k.title}（${k.sections} 个片段）`;
+                    li.textContent = `${k.source} — ${k.title} (${k.sections} chunk(s))`;
                     list.appendChild(li);
                 });
                 card.style.display = 'block';

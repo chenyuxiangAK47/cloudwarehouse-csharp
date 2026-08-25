@@ -78,7 +78,7 @@ public class QuoteAssistantEvalTests
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Assistant:OpenAI:ApiKey"] = "",
-            ["Assistant:MinScore"] = "0.35"
+            ["Assistant:MinScore"] = "0.28"
         }).Build();
         var svc = new QuoteAssistantService(retriever, loader, new StubHttp(), config);
 

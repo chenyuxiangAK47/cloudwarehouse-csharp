@@ -34,6 +34,8 @@ public class StressLoadTests : IClassFixture<CloudWarehouseWebApplicationFactory
         Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10),
             $"30 次并发下载模板耗时 {sw.Elapsed.TotalSeconds:F1}s，超过 10s 阈值");
+        Console.WriteLine(
+            $"[PERF] TemplateDownload 30 concurrent: {sw.ElapsedMilliseconds} ms, all HTTP 200");
     }
 
     [Fact]
@@ -56,6 +58,8 @@ public class StressLoadTests : IClassFixture<CloudWarehouseWebApplicationFactory
         Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(30),
             $"15 次并发预览耗时 {sw.Elapsed.TotalSeconds:F1}s，超过 30s 阈值");
+        Console.WriteLine(
+            $"[PERF] PriceTablePreview 15 concurrent: {sw.ElapsedMilliseconds} ms, all HTTP 200");
     }
 
     private static MultipartFormDataContent BuildMultipart(Stream stream)

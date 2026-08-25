@@ -1,0 +1,168 @@
+
+First Submission
+• For team project, each individual team member will also need to submit a peer
+assessment.
+The reason for you to submit your Phase 0+1 report is to ensure that you
+document and update your report as you progress along the way to ensure that
+your final report submitted at the end of the project is more substantiate and of
+quality.
+32
+Assessment Rubrics I
+33
+Area Maximum
+Duration
+Assessment
+Management
+Assessment
+5 minutes 1. Project justification
+a. Project goals defined
+b. Pain-points and reason for building and
+enhancement highlighted (What is it trying to
+solve? What benefits it brings?)
+2. Project scoping
+a. Project journey map
+b. Scope: Features or use cases
+c. Product backlog (user stories or use cases)
+3. Project conduct
+a. Agile practices using SCRUM
+b. Tracking tool (e.g., JIRA)
+c. Product backlog (all user stories)
+d. SPRINT backlogs
+• All user stories completed
+• SPRINT goals achieved
+• Burndown charts
+4. Project effort
+a. Overall efforts (man-days) for each member
+b. Planned Hours versus Actual Hours expended
+5. Management issues and mitigation
+a. Client/Sponsor management
+Assessment Rubrics II
+34
+Area Maximum
+Duration
+Assessment
+Architecture
+Assessment
+10 minutes 1. Logical architecture
+a. Logical architectural decisions
+b. Logical architecture overview
+c. Domain Driven Design diagrams
+d. Logical deployment diagram
+2. Physical architecture
+a. Physical architectural decisions
+b. Technology stack
+c. Physical architecture overview (with
+infrastructural and networking details)
+d. Physical deployment diagram
+3. Security assessment (threats and mitigation)
+Area Maximum
+Duration
+Assessment
+Other Technical
+Assessment
+5 minutes 1. Software design
+a. Use case diagram
+b. Class & sequence diagrams for analysis and design
+of a critical use case, highlighting on:
+i. Transition from analysis to design
+ii. Use of design patterns
+c. Data schemas and models
+Assessment Rubrics III
+35
+Area Maximum
+Duration
+Assessment
+Other Technical
+Assessment
+10 minutes 2. DevSecOps
+a. CI/CD
+i. Pipelines and tools used
+ii. Unit testing (result artifacts)
+iii. Integration testing (result artifacts)
+iv. Load and stress testing (result artifacts)
+v. SAST (tool and result artifacts)
+vi. DAST (tool and result artifacts)
+b. Container Management
+i. Building and saving images
+ii. Image security (e.g., Trivy)
+iii. Interact and inspect containers
+iv. Container logs
+c. Vulnerability Assessment
+i. Resolution and rescan results of SAST
+ii. Resolution and rescan results of DAST
+d. Compliance as Code
+i. Infrastructure-as-Code (tools and artifacts)
+ii. Version control audit trails (e.g., Git history)
+e. Specific regulatory framework (e.g., SOC 2, HIPPA,
+GDPR)
+Assessment Rubrics III
+36
+Assessment Rubrics IV
+37
+Area Maximum
+Duration
+Assessment
+Presentation
+Assessment
+10 minutes 1. Demonstration of live system (Max. 5 mins video)
+2. Demonstration of DevSecOps (Max. 5 mins video)
+Area Maximum
+Duration
+Assessment
+Added Value 5 minutes 1. Meeting the minimum requirements of MTech SE
+internship/capstone project
+2. Accepted by the sponsor and preferably going live
+3. Explored one or more technically advanced or
+innovative areas like:
+a. Gen AI
+b. Agentic AI
+c. Data analytics
+d. Machine learning
+e. Real-time processing
+f. etc.
+Assessment Rubrics V
+38
+Final Submission Deliverables
+• For team project that have more than 2 persons, each individual team
+member will also need to submit a peer assessment via the Peer
+Assessment System.
+• One or two member team will not require to submit peer assessment.
+• Code Artifacts + Repo URL (Students have to request their supervisor to
+drop an email to the Internship manager if they are not able to submit
+their source code as proof of work and artifacts.)
+39
+Final Submission Deliverables
+• Students are to create the following presentation videos:
+1. TeamXX- Management Assessment.mp4
+2. TeamXX- Architectural Assessment.mp4
+3. TeamXX- Technical Assessment - Software Design.mp4
+4. TeamXX- Technical Assessment - DevSecOps.mp4
+5. TeamXX- Value Added Assessment.mp4
+6. TeamXX- Presentation Assessment App Demo.mp4
+7. TeamXX- Presentation Assessment CICD Demo.mp4
+• Refers to the Assessment Rubrics Slides 33 - 38 on the Duration of the
+video.
+• Video should be in HD (1920x1080) resolution.
+• Student are to turn on their camera and recording should record with
+speaker view showing the face clearly visible.
+• For team project with more than 1 member, every member must
+contribute to the creation of presentation videos.
+• Students are to put all videos created into one Zip file named <TeamXX-
+Project Title>.zip and make submission to Canvas.
+40
+What’s next after the Capstone briefing?
+Registration for the Master of Technology (MTech) programme via NUS Graduate Admission System (GDA3)
+• Please proceed to register for the MTech programme in NUS GDA3 by 20 January 2026
+https://gradapp.nus.edu.sg/portal/app_manage
+• Please note the respective deadlines:-
+• Apply in GDA3 by 20 January (2359 hours) 2026
+• Accept offer in GDA3 by 1 February 2026 (2359 hours)
+• Complete NUS Onboarding Process between 5 – 10 February 2026
+• Complete RC1000A & SE1000A on Canvas before 20 February 2026 (using the NUS student ID)
+• This process is mandatory, as the POCS team will need to enrol the Capstone course in your student record to input your grade.
+Please ensure all required steps are completed by the stated deadline.
+• Please adhere strictly to the respective deadlines as requests received after the deadline will not be considered.
+• You will be added to Canvas from 12 February 2026 onwards.
+• Please refer to the invitation email as well as the subsequent offer email for details on the above deadlines.
+• Subsequent communications related to student matters will be sent only to your NUS email address.
+• Please confirm your application for the Capstone course by submitting the GDA3 portal.  

@@ -1,0 +1,94 @@
+@startuml PDA_NoOrder_ERD
+title PDA Storage — Conceptual ERD (SQL Server DB: PDA_NoOrder)
+
+entity "pda_user\n(User)" as user {
+  * **id** : BIGINT <<PK>>
+  --
+  username : NVARCHAR(50) <<UK>>
+  display_name : NVARCHAR(100)
+  enabled : BIT
+  created_at : DATETIME2
+}
+
+entity "Line\n(conceptual)" as line {
+  line_name : NVARCHAR(100)
+  --
+  note: not a standalone table;
+  values appear on device / start / report
+}
+
+entity "MachineGroup\n(conceptual)" as group {
+  cluster_code : NVARCHAR(50)
+  --
+  note: machine group / procedure cluster;
+  stored on device and denormalised on records
+}
+
+entity "pda_device\n(Machine)" as device {
+  * **id** : BIGINT <<PK>>
+  --
+  device_code : NVARCHAR(50) <<UK>>
+  device_name : NVARCHAR(200)
+  line_name : NVARCHAR(100)
+  cluster_code : NVARCHAR(50)
+  procedure_code : NVARCHAR(50)
+  procedure_name : NVARCHAR(200)
+  enabled : BIT
+}
+
+entity "pda_work_start\n(StartRecord)" as start {
+  * **id** : BIGINT <<PK>>
+  --
+  batch_no : NVARCHAR(50)
+  drawing_no : NVARCHAR(100)
+  procedure_code : NVARCHAR(50)
+  procedure_name : NVARCHAR(200)
+  device_code : NVARCHAR(50)
+  device_name : NVARCHAR(200)
+  line_name : NVARCHAR(100)
+  cluster_code : NVARCHAR(50)
+  operator_name : NVARCHAR(100)
+  remark : NVARCHAR(500)
+  start_time : DATETIME2
+}
+
+entity "pda_work_report\n(ReportRecord)" as report {
+  * **id** : BIGINT <<PK>>
+  --
+  batch_no : NVARCHAR(50)
+  drawing_no : NVARCHAR(100)
+  procedure_code : NVARCHAR(50)
+  procedure_name : NVARCHAR(200)
+  device_code : NVARCHAR(50)
+  device_name : NVARCHAR(200)
+  line_name : NVARCHAR(100)
+  cluster_code : NVARCHAR(50)
+  operator_name : NVARCHAR(100)
+  remark : NVARCHAR(500)
+  report_time : DATETIME2
+}
+
+line ||..o{ device : "line_name"
+group ||..o{ device : "cluster_code"
+device ||..o{ start : "device_code\n(logical)"
+device ||..o{ report : "device_code\n(logical)"
+user ||..o{ start : "operator_name\n(logical)"
+user ||..o{ report : "operator_name\n(logical)"
+start ||..o{ report : "same batch / device\ncontext (app rules)"
+
+note as N1
+  Independent database **PDA_NoOrder**.
+  No foreign keys to CloudWarehouse.
+  Line / MachineGroup are conceptual facets
+  of pda_device (and denormalised on records).
+  Optional later tables (standard hours,
+  device–line map) support ops analytics only.
+end note
+
+N1 .. device
+
+@enduml
+
+' 1. Core tables from code: pda_user, pda_device, pda_work_start, pda_work_report in PDA_NoOrder.
+' 2. Line and MachineGroup are conceptual; they are attributes on device/records, not CloudWarehouse FKs.
+' 3. Start and report share logical context (batch, device, operator) via application rules, not CW links.

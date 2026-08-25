@@ -1,0 +1,164 @@
+视频 1 · Management Assessment
+时长：约 5–5.5 分钟
+形式：中英对照。英文按你真实口语写：短句、So 连接、好念。
+录前默念一遍易混词：CloudWarehouse / master data / fee trial / dual track / ship date / MoSCoW / Sprint / CI
+
+【展示什么 | 怎么准备】
+顺序 | 展示什么 | 怎么准备
+1 | 封面 | 未来做 1 页 PPT：Management Assessment · CloudWarehouse & PDA
+2 | 双系统目标 | 未来做 1 页 PPT：云仓痛点 vs PDA 痛点（两列）
+3 | 路线图 | 展示图：docs/diagrams/10-roadmap-milestones.puml（Phase1+Phase2）
+4 | Backlog / MoSCoW | 未来做 1 页 PPT：Must / Should / Could
+5 | 工时柱状图 | sprint-hours-chart.html 截屏或录屏
+6 | 风险一页（可选） | 12-risk-management.puml 或 PPT 三列风险
+
+============================================================
+口播稿
+============================================================
+
+--- Part 1 开场 · 约 40 秒 · 展示：封面 ---
+
+ZH:
+各位老师好。这是 Management Assessment，也是实习最终交付的第一段视频。
+我是 Solo Intern，这个项目我一个人做。
+我交付了两套能跑的系统：CloudWarehouse 云仓结算，还有 PDA 无订单报工。
+云仓帮仓库用 Excel 规则核对运费。PDA 帮夜班工人在没有正式工单时开工和报工。
+两套系统服务同一家工厂，但分两个部门场景：仓库部和产线部。它们现在还没有用生产级 API 打通。
+下面我讲目标、Sprint、Backlog、工时、人和风险。
+
+EN:
+Okay, hello everyone. This is part one for the final internship delivery.
+This part is Management Assessment. I am Cheng Xiang.
+I am a solo intern, and I built this project alone.
+I delivered two working systems: CloudWarehouse for freight billing, and a PDA app for no-order shop-floor work.
+CloudWarehouse helps the warehouse check freight with Excel rules.
+The PDA helps night-shift workers start and report work when there is no formal work order.
+Both serve the same factory, but they are separate. One is more for warehouse. One is more for the line.
+They are not linked by a production API yet.
+Next I will talk about goals, sprints, backlog, hours, people, and risk.
+
+--- Part 2 问题与目标 · 约 55 秒 · 展示：双系统目标 PPT ---
+
+ZH:
+工厂里我看到两类主要问题。
+第一，仓库以前长期用 Excel，容易出错，历史价也难查。
+第二，产线工人要报工，但有时没有正式工单，尤其夜班。他们需要一个应用来报工，也要能追查是谁做的。
+所以实习里我要完成两块目标。
+云仓这边：主数据、成本价和客户报价 Excel 导入、运费试算、应收应付双轨、按发货日历史价，还有规则查询。注意：规则查询不算钱，不能替代计费引擎。
+PDA 这边：登录、选产线机床、开工、报工、查记录。
+范围很清楚：两个并列 MVP。
+
+EN:
+So for the first part, I can see two main problems in this factory.
+First, the warehouse. They usually used Excel before. We all know Excel can make mistakes, and it is hard to check historical price.
+Second, the line department. Workers want to report their work, but sometimes there is no official order, especially on night shift. So they need an app to report work, and also to trace who did the work.
+So these are two main goals for this internship.
+For CloudWarehouse: master data, cost and quote Excel import, fee trial, receivable and payable dual track, historical price by ship date, and rule lookup. Rule lookup does not replace the fee engine.
+For PDA: login, pick line and machine, start work, report work, and check records.
+So the scope is pretty clear: two parallel MVPs.
+
+--- Part 3 Sprint 与中期反馈 · 约 55 秒 · 展示：路线图 ---
+
+ZH:
+我们按一周一个 Sprint 做。
+Phase 1 大约四周，我主要做云仓 MVP：主数据、导入、算价、测试和 CI。
+Phase 2 中期以后重点变一点：把 Strategy 做深、双轨、规则查询，同时做 PDA 演示。再往后更偏 PDA，因为夜班工人更急这个。
+中期反馈说：系统还偏简单；计费要有设计模式和详细设计；架构图要多；单体要讲清楚；要有证据。
+我的回应：这些都放进 Must 清单。云仓和 PDA 分两栏跟进度，每周复盘，两边都要真实推进。
+
+EN:
+Next, we work in one-week sprints.
+Phase 1 is about four weeks. I mostly spent time on CloudWarehouse MVP: master data, import, fee calculation, tests, and CI.
+Phase 2 shifts a little after mid-term. We go deeper on Strategy, dual track, rule lookup, and PDA demo at the same time.
+After that, we focus more on the PDA app, because that is what night-shift workers need.
+Mid-term feedback said: the system is still simple; billing needs design pattern and detailed design; show more architecture views; explain the monolith; show evidence.
+So my response: I put these into the Must list. I track CloudWarehouse and PDA in separate columns, and review every week, so both sides stay real.
+
+--- Part 4 MoSCoW · 约 55 秒 · 展示：MoSCoW PPT ---
+
+ZH:
+这是 MoSCoW。有 Must、Should、Could。
+Must 云仓已做：主数据、成本报价导入、试算、Strategy（区间、续重、体积重）、双轨运单、历史价、规则查询。
+Must PDA 已做：选机、开工报工、扫码；PDA 用自己的后端写自己的库。
+Should：更清楚的提示箭头、操作说明。工人有时看不懂界面，这个他们真需要。
+Could：更完整登录鉴权、以后跨系统对接、以后再拆服务。这些不是本期 Must。
+关于登录：现场更多在内网用，部门有时觉得登录可以后做。所以认证我放在 Could / Planned，不是假装已经做完。
+
+EN:
+This is our MoSCoW slide: Must, Should, and Could.
+Must for CloudWarehouse, already done: master data, cost and quote import, fee trial, Strategy for tier, overweight and volume weight, dual-track waybill, historical price, and rule lookup.
+Must for PDA, already done: machine select, start and report, scan, and write records through its own backend.
+Should: clearer tips and a user guide. Workers sometimes do not understand the screen, so they really need this.
+Could: stronger login auth, join the two systems later, and split services later. Not Must this term.
+About login: on the factory internal network, leaders sometimes say login can wait. So auth is Planned, not fake-done.
+
+--- Part 5 工时 · 约 50 秒 · 展示：工时图 ---
+
+ZH:
+我用 Planned 和 Actual 记个人工时。
+Sprint 1：48 到 52。Sprint 2：44 到 61，大约多 39%，因为 Excel 表头太乱。Sprint 3：56 到 51。Sprint 4：50 到 47。
+合计 198 到 211，大约多 7%。
+Sprint 2 以后我给 Excel 任务加了缓冲，后面偏差回到大约正负 10%。
+Phase 2 云仓工时和 PDA 工时分开记。
+
+EN:
+I already track planned and actual hours.
+Sprint 1: 48 to 52. Sprint 2: 44 to 61, about plus 39%, because Excel headers are hard. Sprint 3: 56 to 51. Sprint 4: 50 to 47.
+Total: 198 to 211, about plus 7%.
+After Sprint 2, I add buffer for Excel work, and the gap goes back near plus or minus 10%.
+In Phase 2, I log CloudWarehouse hours and PDA hours in separate columns.
+
+--- Part 6 干系人（短）· 约 35 秒 · 展示：目标页亦可 ---
+
+ZH:
+人和反馈这块：仓库师傅看导入、试算、运单对比。产线工人和线长看 PDA 能不能跑通。
+反馈进同一个任务清单。能进本期的做，不能进的明确延期。
+工厂更关心生产，有时功能要等下周再做，不能打断产线。所以延期是管理选择，不是没管。
+
+EN:
+About people and feedback: warehouse users check import, fee trial, and waybill compare.
+Line workers and supervisors check the PDA flow.
+Feedback goes into one task list. We do what fits this term, and delay the rest on purpose.
+In the factory, they care about production first. Even if a feature is useful, they may say do it next week. That delay is a management choice.
+
+--- Part 7 风险 · 约 45 秒 · 展示：风险图或口述 ---
+
+ZH:
+三个真实风险。
+第一，进度：Excel 解析和 PDA 真机联调可能超时，所以 Sprint 加缓冲，云仓和 PDA 分开排期。
+第二，范围：两套系统容易膨胀，工厂又常说“下周再做”，所以用 Must / Should / Could 锁范围。
+第三，技术栈：两套栈一个人维护成本高，所以并列 MVP，跨系统对接放 Could。
+
+EN:
+Three real risks.
+First, schedule: Excel parsing and PDA device work may take longer. So I add buffer, and plan the two systems on separate tracks.
+Second, scope: two systems can grow too big, and the factory often says “next week.” So Must / Should / Could locks the scope.
+Third, stack: two stacks for one person cost more. So parallel MVPs, and cross-system join stays in Could.
+
+--- 片尾补录 ADD-ON（旧片直接接这段 · 约 45 秒 · 不用新 PPT）---
+
+ZH:
+最后补三条评分点。
+一，跟踪工具不是 JIRA。Solo 我用工时 CSV，加上 Planned vs Actual 柱状图。没有经典团队 burndown，这张图就是我看偏差的方式。
+二，Client / Sponsor：企业侧看过演示，云仓结算预览和 PDA 开工报工接受为本期可用交付。报告 11.4 留了反馈摘要。
+三，后面还有架构、设计、DevSecOps、增值、App Demo 和 CI/CD。谢谢。
+
+EN:
+One short add-on for the rubric.
+One, tracking tool is not JIRA. As a solo intern I use an hours CSV plus the Planned versus Actual chart. No classic team burndown — that chart is how I track the gap.
+Two, Client and Sponsor: the sponsor side reviewed demos. CloudWarehouse settlement preview and PDA start-report are accepted as usable delivery this term. Report section 11.4 keeps that summary.
+Three, later videos cover architecture, design, DevSecOps, value added, app demo, and CI/CD. Thank you.
+
+============================================================
+易混词（你录音里飘过的）
+CloudWarehouse 不是 car warehouse
+master data 不是 mass data
+fee trial 不是 free trial
+dual track 不是 dual check
+ship date 不是 shift date
+MoSCoW 不是 Moscow
+Sprint 不是 springnt
+============================================================
+禁话：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+（未打通只在开场说一次，后面别再重复）
+============================================================

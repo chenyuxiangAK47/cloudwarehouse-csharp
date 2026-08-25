@@ -95,6 +95,37 @@ public static class PriceTableExcelFactory
         return stream;
     }
 
+    /// <summary>生成 N 行标准格式价表（第 1 行为表头），用于 1000 行解析/导入基准测试。</summary>
+    public static MemoryStream CreateStandardFormatWorkbookWithRowCount(int rowCount, string siteCode = "C001")
+    {
+        if (rowCount < 1)
+            throw new ArgumentOutOfRangeException(nameof(rowCount));
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.AddWorksheet("价格表");
+
+        var headers = new[]
+        {
+            "生效时间", "站点编号", "目的地代码", "目的地",
+            "0kg<X<=0.3kg", "0.3kg<X<=0.5kg", "0.5kg<X<=1kg",
+            "1kg<X<=2kg", "2kg<X<=3kg", "3kg<X<=4kg", "4kg<X<=5kg",
+            "面单费", "续重(元/kg)"
+        };
+        for (int i = 0; i < headers.Length; i++)
+            ws.Cell(1, i + 1).Value = headers[i];
+
+        for (var i = 0; i < rowCount; i++)
+        {
+            var destCode = (10 + (i % 80)).ToString();
+            FillSampleRow(ws, i + 2, destCode, $"省份{i % 34}", siteCode);
+        }
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
+
     /// <summary>目的地矩阵价目表（无站点列），导入时默认站点 C001。</summary>
     public static MemoryStream CreateDestinationMatrixWorkbook(
         params Action<IXLWorksheet>[] dataRowConfigurators)

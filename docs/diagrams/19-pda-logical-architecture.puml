@@ -1,0 +1,62 @@
+@startuml PDA_NoOrder_Logical_Architecture
+title PDA No-Order Reporting — Logical Architecture
+
+skinparam component {
+  BackgroundColor #ECF0F1
+  BorderColor #34495e
+  FontSize 10
+}
+skinparam package {
+  BackgroundColor #F8F9FA
+  BorderColor #2980b9
+  FontStyle bold
+}
+
+together {
+  package "Presentation (Honeywell PDA)" {
+    [Android native UI\nLogin / Select / Start /\nReport / Query / Suspend] as UI
+    [Honeywell Scan SDK\n(ScannerManager)] as Scan
+    [HTTP Client\n(JSON over intranet)] as Http
+  }
+
+  package "Application Layer (Spring Boot)" {
+    [NoOrderController\n/api/login, /devices,\n/work/start, /work/report, ...] as Ctrl
+    [AnomalyController\n(ops; optional)] as AnomCtrl
+    [NoOrderService] as Svc
+    [StandardWorkHoursService\n(ops import; optional)] as StdSvc
+  }
+
+  package "Data Access" {
+    [NoOrderRepository\n(+ Mes* read helpers)] as Repo
+    [JDBC / Spring JDBC] as Jdbc
+  }
+
+  package "Data Layer" {
+    database "SQL Server\nPDA_NoOrder" as DB {
+      [pda_user]
+      [pda_device]
+      [pda_work_start]
+      [pda_work_report]
+    }
+  }
+}
+
+cloud "CloudWarehouse\n(separate system)" as CW #EEEEEE {
+  [Freight settlement\nASP.NET Core] as CWApp
+}
+
+UI --> Scan : trigger / wedge
+UI --> Http
+Http --> Ctrl : HTTP/JSON
+Http --> AnomCtrl : optional
+Ctrl --> Svc
+AnomCtrl --> Svc
+Ctrl --> StdSvc
+Svc --> Repo
+StdSvc --> Repo
+Repo --> Jdbc
+Jdbc --> DB
+
+Http -right..> CW : <<Planned>>
+
+@enduml

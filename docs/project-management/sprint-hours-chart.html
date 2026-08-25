@@ -2,33 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sprint Estimated vs Actual Hours</title>
+  <title>Solo Planned vs Actual Hours — CloudWarehouse</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: Segoe UI, system-ui, sans-serif; margin: 2rem; background: #fafafa; }
-    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
-    p { color: #555; font-size: 0.9rem; margin-top: 0; }
-    .wrap { max-width: 720px; background: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    canvas { max-height: 380px; }
+    body { font-family: Segoe UI, system-ui, sans-serif; margin: 2rem; background: #fafafa; color: #222; }
+    h1 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.35rem; }
+    .meta { color: #555; font-size: 0.88rem; margin: 0 0 0.75rem; line-height: 1.45; }
+    .wrap { max-width: 820px; background: #fff; padding: 1.5rem 1.75rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    canvas { max-height: 400px; }
+    .note { margin-top: 0.85rem; font-size: 0.8rem; color: #666; line-height: 1.4; }
+    .totals { font-size: 0.88rem; margin: 0.5rem 0 0; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Sprint Estimated vs Actual Hours</h1>
-    <p>CloudWarehouse · 4-week sprint · team of 3 · screenshot for PPT item 4</p>
+    <h1>Solo Planned vs Actual Hours — Phase 1</h1>
+    <p class="meta">
+      CloudWarehouse final report · Chapter 4 · <strong>Person = Solo Intern</strong> (personal Planned vs Actual; second developer N/A)<br />
+      Phase 1 = four weekly sprints (MVP). Phase 2 CW/PDA rows: fill in <code>sprint-hours-chart-data.csv</code> before final submit.
+    </p>
     <canvas id="chart"></canvas>
+    <p class="totals"><strong>Phase 1 total:</strong> Planned 198h → Actual 211h (+7%). Largest overrun: Sprint 2 (+39%, legacy Excel headers).</p>
+    <p class="note">Data: <code>sprint-hours-chart-data.csv</code>. Do not present as a multi-person team capacity chart.</p>
   </div>
   <script>
-    const labels = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4'];
+    // Phase 1 only (locked). Add Phase 2 bars only after Ch.4.7.3 has real numbers.
+    const labels = [
+      'S1 Foundation',
+      'S2 Excel import',
+      'S3 Rules + calculate',
+      'S4 Tests + CI'
+    ];
     const estimated = [48, 44, 56, 50];
     const actual = [52, 61, 51, 47];
+
     new Chart(document.getElementById('chart'), {
       type: 'bar',
       data: {
         labels,
         datasets: [
-          { label: 'Estimated', data: estimated, backgroundColor: '#90CAF9', borderColor: '#42A5F5', borderWidth: 1 },
-          { label: 'Actual', data: actual, backgroundColor: '#81C784', borderColor: '#43A047', borderWidth: 1 }
+          { label: 'Planned (h)', data: estimated, backgroundColor: '#90CAF9', borderColor: '#42A5F5', borderWidth: 1 },
+          { label: 'Actual (h)', data: actual, backgroundColor: '#81C784', borderColor: '#43A047', borderWidth: 1 }
         ]
       },
       options: {
@@ -38,7 +52,11 @@
           title: { display: false }
         },
         scales: {
-          y: { beginAtZero: true, max: 70, title: { display: true, text: 'Hours' } }
+          y: {
+            beginAtZero: true,
+            max: 70,
+            title: { display: true, text: 'Hours (solo)' }
+          }
         }
       }
     });

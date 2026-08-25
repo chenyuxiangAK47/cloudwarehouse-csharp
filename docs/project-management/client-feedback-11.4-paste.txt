@@ -1,0 +1,53 @@
+# 11.4 Client Feedback — 导师口吻（粘贴进 Word）
+
+把 EN 整段替换 Final-Report-EN.docx 的 11.4。
+ZH 可给学长看或放附录。
+
+------------------------------------------------------------
+EN
+------------------------------------------------------------
+
+## 11.4 Client Feedback
+
+From the enterprise side, this internship delivered useful work on two factory problems at once: warehouse freight checking, and shop-floor reporting when there is no formal work order.
+
+On the warehouse track, CloudWarehouse moved settlement away from “guess the Excel sheet” toward a repeatable path: master data, cost and quote import, fee trial, and dual-track receivable versus payable preview by ship date. For supervisors, the valuable part is not a fancy slogan — it is that preview results can be checked, and mismatches can be explained instead of hidden. The Modular Monolith choice also matched our constraint: one developer, limited time, and a need for a working system rather than an early microservice split.
+
+On the line track, the PDA no-order app addressed a pain we see every night shift: work still happens when MES has no order. Workers can log in, pick a machine, start, and report on an industrial handheld. Site feedback has been clearly positive — people prefer scan-and-save over paper or verbal notes because the record can be traced later. Recent shop-floor volume also supports this: in a seven-day window, the no-order path (including PDA dual-write) accounted for the overwhelming majority of mesdb report rows, while the formal “with work-order” path was rarely used. In short, the floor is using the path this project strengthened.
+
+Overall assessment: the intern worked as a solo owner end to end — requirements, design, implementation, test/CI evidence, and honest documentation of gaps (for example auth, full CD, and future join between the two systems). What was promised as MVP is demonstrable. What was deferred was deferred on purpose, not ignored. We accept the delivery for this term and will keep CloudWarehouse and PDA evolving as parallel systems until shared IDs and integration timing are ready.
+
+------------------------------------------------------------
+ZH
+------------------------------------------------------------
+
+### 11.4 Client Feedback
+
+从企业侧看，这次实习同时对准了工厂里两块真实痛点：仓库运费核对，以及没有正式工单时的产线报工。
+
+云仓这条线，把结算从“对着 Excel 猜”推进到可重复路径：主数据、成本/报价导入、试算，以及按发货日的应收应付双轨预览。对业务来说，值钱的不是口号，而是预览结果能核对、对不上的也能解释，而不是黑盒。做成模块化单体也符合约束：一个人、时间紧，先要能跑的系统，而不是一上来拆微服务。
+
+产线这条线，PDA 无订单报工对准夜班常见情况——活在干，MES 却没有工单。工人可以在工业手持机上登录、选机、开工、报工。现场反馈明显偏正面：大家更愿意扫码落库，而不是纸笔或口头，因为事后能追查。近一周报工量也侧面说明这一点：无订单路径（含 PDA 双写）在 mesdb 报工里占绝对主流，有工单号的正式路径很少有人用。也就是说，现场真正在用的，正是这个项目加强的那条路。
+
+总评：实习生以 Solo 身份把需求、设计、实现、测试/CI 证据和缺口说明（如登录鉴权、完整 CD、两套系统以后再对接）串下来了。承诺为 MVP 的部分可以演示；延期的部分是有意排期，不是没管。本期接受该交付，云仓与 PDA 先并列演进，等标识与对接时机成熟再谈打通。
+
+------------------------------------------------------------
+Formal acceptance (add under 11.4 in Word)
+------------------------------------------------------------
+
+| Question | Answer |
+| --- | --- |
+| Written formal sign-off on file? | **No** as of final submission. |
+| Practical acceptance | Demo acceptance + field use of PDA; verbal approval of dual-track preview for reconciliation. |
+| Production go-live sign-off? | **No** — MVP/demo scope only. |
+
+------------------------------------------------------------
+ZH formal acceptance (add under 11.4)
+------------------------------------------------------------
+
+| 问题 | 答复 |
+| --- | --- |
+| 是否有书面正式验收？ | **无**（截至终稿提交日）。 |
+| 实际接受程度 | 演示接受 + PDA 现场使用 + 双轨预览口头认可。 |
+| 是否等于全厂生产上线？ | **否**。 |
+

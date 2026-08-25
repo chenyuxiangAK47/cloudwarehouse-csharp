@@ -11,8 +11,8 @@ public interface IKeywordRetriever
 }
 
 /// <summary>
-/// Lightweight lexical retrieval (no vector DB / paid embeddings).
-/// Chinese-friendly: unigrams + bigrams + Latin tokens; TF-IDF-ish scoring.
+/// Lexical retrieval for built-in rule RAG (no vector DB / paid embeddings).
+/// Chinese-friendly: unigrams + bigrams + Latin tokens; TF-IDF-ish + phrase/title boosts.
 /// </summary>
 public sealed class KeywordRetriever : IKeywordRetriever
 {
@@ -20,12 +20,27 @@ public sealed class KeywordRetriever : IKeywordRetriever
     private static readonly HashSet<string> Stopwords =
     [
         "的", "了", "吗", "呢", "是", "在", "和", "与", "或", "一个", "什么", "怎么", "如何",
-        "请", "帮", "我", "一下", "这个", "那个", "可以", "能不能", "the", "a", "an", "is", "to", "of"
+        "请", "帮", "我", "一下", "这个", "那个", "可以", "能不能", "分别", "有", "哪些",
+        "the", "a", "an", "is", "to", "of", "for", "and"
+    ];
+
+    /// <summary>Query-side synonym expansion so business phrases hit the right KB docs.</summary>
+    private static readonly (string Needle, string[] Extra)[] Expansions =
+    [
+        ("双轨", ["应收", "应付", "客户报价", "成本价", "L列", "X列"]),
+        ("应收", ["客户报价", "双轨", "报价表"]),
+        ("应付", ["成本", "双轨", "成本价"]),
+        ("历史价", ["发货日期", "生效", "EffectiveDate", "BillDate"]),
+        ("取价", ["应收", "应付", "双轨", "历史"]),
+        ("策略", ["Strategy", "计费", "Tier", "续重", "体积重"]),
+        ("strategy", ["策略", "计费", "IBillingStrategy"]),
+        ("导入", ["Excel", "预览", "顺序", "价表"]),
+        ("取整", ["重量", "公斤", "续重", "区间"]),
     ];
 
     private readonly IKnowledgeBaseLoader _loader;
     private Dictionary<string, double>? _idf;
-    private List<(KnowledgeChunk Chunk, Dictionary<string, double> Tf)>? _indexed;
+    private List<(KnowledgeChunk Chunk, Dictionary<string, double> Tf, string Haystack)>? _indexed;
 
     public KeywordRetriever(IKnowledgeBaseLoader loader)
     {
@@ -35,14 +50,15 @@ public sealed class KeywordRetriever : IKeywordRetriever
     public IReadOnlyList<(KnowledgeChunk Chunk, double Score)> Retrieve(string query, int topK)
     {
         EnsureIndex();
-        var qTokens = Tokenize(query);
+        var expanded = ExpandQuery(query);
+        var qTokens = Tokenize(expanded);
         if (qTokens.Count == 0 || _indexed == null || _idf == null)
             return [];
 
         var qTf = ToTf(qTokens);
         var scored = new List<(KnowledgeChunk Chunk, double Score)>(_indexed.Count);
 
-        foreach (var (chunk, docTf) in _indexed)
+        foreach (var (chunk, docTf, haystack) in _indexed)
         {
             double score = 0;
             foreach (var (term, qWeight) in qTf)
@@ -51,6 +67,21 @@ public sealed class KeywordRetriever : IKeywordRetriever
                     continue;
                 var idf = _idf.GetValueOrDefault(term, 0.5);
                 score += qWeight * tf * idf;
+            }
+
+            // Title overlap boost (helps short FAQ questions)
+            var titleTokens = Tokenize(chunk.Title);
+            foreach (var t in titleTokens)
+            {
+                if (qTf.ContainsKey(t))
+                    score += 0.35 * _idf.GetValueOrDefault(t, 0.5);
+            }
+
+            // Phrase containment boost for domain keywords present in query
+            foreach (var phrase in DomainPhrasesIn(query))
+            {
+                if (haystack.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                    score += 0.85;
             }
 
             if (score > 0)
@@ -63,20 +94,49 @@ public sealed class KeywordRetriever : IKeywordRetriever
             .ToList();
     }
 
+    private static string ExpandQuery(string query)
+    {
+        var sb = new StringBuilder(query);
+        foreach (var (needle, extras) in Expansions)
+        {
+            if (query.Contains(needle, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var e in extras)
+                    sb.Append(' ').Append(e);
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static IEnumerable<string> DomainPhrasesIn(string query)
+    {
+        string[] phrases =
+        [
+            "双轨", "应收", "应付", "历史价", "发货日", "重量取整", "Strategy", "策略模式",
+            "导入顺序", "客户报价", "成本价", "体积重", "续重", "区间计费"
+        ];
+        foreach (var p in phrases)
+        {
+            if (query.Contains(p, StringComparison.OrdinalIgnoreCase))
+                yield return p;
+        }
+    }
+
     private void EnsureIndex()
     {
         if (_indexed != null)
             return;
 
         var chunks = _loader.Load();
-        var docs = new List<(KnowledgeChunk Chunk, Dictionary<string, double> Tf)>(chunks.Count);
+        var docs = new List<(KnowledgeChunk Chunk, Dictionary<string, double> Tf, string Haystack)>(chunks.Count);
         var df = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var chunk in chunks)
         {
-            var tokens = Tokenize($"{chunk.Title}\n{chunk.Content}");
+            var haystack = $"{chunk.Title}\n{chunk.Content}";
+            var tokens = Tokenize(haystack);
             var tf = ToTf(tokens);
-            docs.Add((chunk, tf));
+            docs.Add((chunk, tf, haystack));
             foreach (var term in tf.Keys)
                 df[term] = df.GetValueOrDefault(term) + 1;
         }

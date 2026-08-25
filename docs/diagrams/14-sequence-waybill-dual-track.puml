@@ -1,97 +1,114 @@
 @startuml CloudWarehouse_Sequence_Waybill_Dual_Track
-title Core Use Case — Waybill Preview Dual-Track Pricing (Class-Level)
+title Waybill Preview Dual-Track Pricing\n(Class & Object Level — maps to source code)
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
 actor "Warehouse Admin" as User
-participant "index.html\n(Browser)" as UI
-participant "BillController" as BC
-participant "BillImportService" as BIS
-participant "WaybillExcelHelper" as Excel
-participant "WeightRounding" as WR
-participant "IDualTrackFeeCalculator\n/ DualTrackFeeCalculator" as Dual
-participant "PriceRuleCalculateService\n(Payable / Cost)" as CostSvc
-participant "CustomerQuoteCalculateService\n(Receivable / Quote)" as QuoteSvc
-participant "FeeCalculationEngine" as Fee
-participant "IBillingStrategyResolver" as Factory
-participant "IBillingStrategy\n(Tier / Overweight)" as Strategy
-participant "BillLineTotals" as Totals
-database "SQL Server" as DB
+participant "ui : index.html" as UI
+participant "bc : BillController" as BC
+participant "importSvc : BillImportService" as BIS
+participant "WaybillExcelHelper\n{static}" as Excel
+participant "row : WaybillImportRow" as row
+participant "dualCalc : DualTrackFeeCalculator" as Dual
+participant "costSvc : PriceRuleCalculateService" as CostSvc
+participant "quoteSvc : CustomerQuoteCalculateService" as QuoteSvc
+participant "feeEngine : FeeCalculationEngine" as Fee
+participant "resolver : DefaultBillingStrategyResolver" as Resolver
+participant "tier : TierBillingStrategy" as Tier
+participant "BillLineTotals\n{static}" as Totals
+database "db : SqlConnection\n(SQL Server)" as DB
 
 User -> UI : select waybill Excel\nclick Preview
-UI -> BC : POST /api/Bill/waybill/preview\n(multipart/form-data)
+UI -> BC : PreviewWaybills(file)\nPOST /api/Bill/waybill/preview
 activate BC
+
 BC -> BIS : ProcessImportAsync(stream,\nsaveToDatabase=false)
 activate BIS
 
 BIS -> Excel : ReadWaybills(stream)
 activate Excel
 note right of Excel
-  Detect dual-row header
+  Class: WaybillExcelHelper
+  Parses dual-row header
   (账单明细 + 成本明细)
   or standard template
 end note
-Excel --> BIS : WaybillImportResult\n(+ expected L/X fees if present)
+Excel --> BIS : parsed : WaybillImportResult
 deactivate Excel
 
-BIS -> DB : SELECT Sites, Destinations,\nPriceRules counts,\nCustomers, CustomerAccounts
+BIS -> DB : QueryAsync Sites, Destinations,\nCustomers, CustomerAccounts,\nPriceRule counts
 activate DB
-DB --> BIS : master data caches
+DB --> BIS : siteByCode, destinations,\naccounts, customersByCode
 deactivate DB
 
-loop each WaybillImportRow
-  BIS -> BIS : ValidateRow\n(waybillNo, province, weight)
-  alt validation fails
-    BIS -> BIS : set ErrorMessage\n(e.g. empty province)
-  else valid row
-    BIS -> WR : RoundForForwardBilling /\nRoundWeight
-    WR --> BIS : RoundedWeight
-    BIS -> BIS : resolve CustomerId\n(CustomerCode or AccountName)
-    BIS -> BIS : ResolveSite\n(ExpressType as SiteCode)
-    BIS -> BIS : ResolveDestination\n(prefer dest with price rules)
+loop foreach row in parsed.Rows
+  note over row : current object:\nrow : WaybillImportRow
+
+  BIS -> row : ValidateRow()
+  alt row.ErrorMessage set
+    note over row : e.g. empty province
+  else row valid
+    BIS -> row : ApplyWeightRounding()\nvia WeightRounding.RoundForForwardBilling
+    BIS -> row : resolve CustomerId\nResolveSite / ResolveDestination
 
     BIS -> Dual : CalculateAsync(row)
     activate Dual
 
-    == Payable track (成本 / X column) ==
-    Dual -> CostSvc : CalculateAsync(\nSiteId, DestId, RoundedWeight, BillDate)
+    == Payable track (应付 / PriceRules) ==
+    Dual -> CostSvc : CalculateAsync(\nPriceCalculateRequest)
     activate CostSvc
-    CostSvc -> DB : SELECT PriceRules\nWHERE SiteId/DestId\nAND EffectiveDate <= BillDate\nAND (ExpiryDate IS NULL OR >= BillDate)
+    CostSvc -> DB : SELECT FROM PriceRules\nWHERE SiteId, DestId,\nEffectiveDate <= BillDate
     activate DB
-    DB --> CostSvc : active cost rules
+    DB --> CostSvc : List PriceRule
     deactivate DB
-    CostSvc -> Fee : Calculate(rules, weight, BillDate)
+
+    CostSvc -> Fee : Calculate(rules, weight, orderDate)
     activate Fee
-    Fee -> Factory : Resolve(BillingContext)
-    Factory --> Fee : TierBillingStrategy\nor OverweightBillingStrategy
-    Fee -> Strategy : Calculate(context)
-    Strategy --> Fee : PriceCalculateResult
+    Fee -> Fee : filter active rules\nby EffectiveDate / ExpiryDate
+    Fee -> Resolver : Resolve(BillingContext)
+    activate Resolver
+    Resolver --> Fee : tier : IBillingStrategy\n(first CanHandle)
+    deactivate Resolver
+    Fee -> Tier : Calculate(context)
+    activate Tier
+    Tier --> Fee : PriceCalculateResult
+    deactivate Tier
     Fee --> CostSvc : payable result
     deactivate Fee
-    CostSvc --> Dual : WeightFee + BaseFee
+    CostSvc --> Dual : row.PayableTransitFee,\nrow.PayableTotal
     deactivate CostSvc
 
-    == Receivable track (客户报价 / L column) ==
-    Dual -> QuoteSvc : CalculateAsync(\nCustomerId, Province,\nExpressType, weight, BillDate)
+    == Receivable track (应收 / CustomerQuoteRules) ==
+    Dual -> QuoteSvc : CalculateAsync(\nCustomerQuoteCalculateRequest)
     activate QuoteSvc
-    QuoteSvc -> DB : SELECT CustomerQuoteRules\nWHERE CustomerId\nAND EffectiveDate <= BillDate\nAND expiry filter
+    QuoteSvc -> DB : SELECT FROM CustomerQuoteRules\nWHERE CustomerId,\nEffectiveDate <= BillDate
     activate DB
-    DB --> QuoteSvc : active quote rules
+    DB --> QuoteSvc : List CustomerQuoteRule
     deactivate DB
-    QuoteSvc -> Fee : Calculate(...)\nvia mapped PriceRules
+
+    QuoteSvc -> QuoteSvc : CalculateFromRules(...)\nmap via CustomerQuoteRuleMapper
+    QuoteSvc -> Fee : Calculate(priceRules,\nweight, orderDate)
     activate Fee
-    Fee -> Factory : Resolve(BillingContext)
-    Fee -> Strategy : Calculate(context)
+    Fee -> Resolver : Resolve(BillingContext)
+    Resolver --> Fee : tier : IBillingStrategy
+    Fee -> Tier : Calculate(context)
+    Tier --> Fee : PriceCalculateResult
     Fee --> QuoteSvc : receivable result
     deactivate Fee
-    QuoteSvc --> Dual : WeightFee + BaseFee
+    QuoteSvc --> Dual : row.ReceivableTransitFee,\nrow.ReceivableTotal
     deactivate QuoteSvc
 
-    Dual -> Totals : CalcReceivableGrandTotal /\nCalcRemaining /\nApplyComparison(row)
+    Dual -> Totals : CalcReceivableGrandTotal(row)\nCalcPayableGrandTotal(row)\nCalcRemainingReceivable/Payable(row)
+    activate Totals
+    Dual -> Totals : ApplyComparison(row)
     note right of Totals
-      Compare machine fees vs
-      Excel L/X expected fees
-      (tolerance 0.01)
-      → TransitFeeMatched
+      Static helpers on BillLineTotals
+      Compare machine vs Excel L/X
+      tolerance 0.01 -> TransitFeeMatched
     end note
+    deactivate Totals
+
     Dual --> BIS : row filled\n(profit + match flags)
     deactivate Dual
   end
@@ -99,13 +116,13 @@ end
 
 BIS --> BC : WaybillImportResult\n(matched / mismatch counts)
 deactivate BIS
-BC --> UI : { success: true, data }
+BC --> UI : ApiResponse WaybillImportResult
 deactivate BC
-UI --> User : table: 应收/应付\n机器值 / 表内值\n+ 验证一致/不一致
+UI --> User : preview table:\n应收/应付 机器值 vs 表内值
 
 @enduml
 
-' Presentation (EN, ~3 sentences):
-' 1. Preview posts the waybill Excel to BillController → BillImportService; WaybillExcelHelper parses dual-header or standard sheets.
-' 2. For each row we round weight, resolve site/customer/destination, then run two fee tracks: PriceRules (payable) and CustomerQuoteRules (receivable), both dated by BillDate and calculated via Strategy Pattern.
-' 3. BillLineTotals compares machine results to spreadsheet L/X columns so the UI can show match/mismatch evidence (e.g. 339 consistent).
+' Presentation (EN):
+' 1. Class-and-object sequence: lifelines are instances (bc: BillController, row: WaybillImportRow), not generic layers.
+' 2. BillImportService enriches each row; DualTrackFeeCalculator runs payable and receivable via FeeCalculationEngine + DefaultBillingStrategyResolver + TierBillingStrategy.
+' 3. BillLineTotals.ApplyComparison flags match/mismatch against spreadsheet L/X columns.

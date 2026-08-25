@@ -1,0 +1,122 @@
+视频 5 · Value Added Assessment
+时长：约 5 分钟（官方上限；超时先砍规则查询，不要砍 PDA）
+形式：中英一段一段对照。英语短句、So 连接、好念。
+
+【展示什么 | 怎么准备】（录前看）
+顺序 | 展示什么 | 怎么准备
+1 | 封面 | 未来做 PPT：Value Added · 结算 + 现场
+2 | 痛点对比 | 未来做 PPT：左 Excel 对账 / 右无工单纸笔口头
+3 | Context Map | 展示图：docs/diagrams/16-enterprise-context-map.puml
+4 | 双轨预览 | 浏览器：运单 Preview 汇总
+5 | 规则查询 | 浏览器：Rule RAG，点 1 个示例（可砍短）
+6 | RAG 时序（可选） | 展示图：15-sequence-quote-assistant-rag.puml
+7 | PDA 真机（必录） | 录屏至少 40–50 秒：登录→选机→扫批号开工→报工成功
+8 | PDA 时序 | 展示图：20-sequence-pda-start-report.puml
+9 | 异常巡检（有则加） | 截图：扫错栏 / 工时异常 / 超时未报工
+10 | 收束页 | 未来做 PPT：云仓两点 + PDA 三句
+
+============================================================
+口播稿
+============================================================
+
+--- Part 0 封面 · 约 25 秒 · 展示：封面 ---
+
+ZH:
+各位老师好。这是 Value Added Assessment。
+这个实习的增值，是把工厂两条老链路做成能跑的系统。
+仓库侧：可核对的运费结算。产线侧：没有正式工单时，也能扫码采集并落库。
+
+EN:
+Okay, hello everyone. This is part five, Value Added Assessment.
+The value here is turning two factory paths into working systems.
+Warehouse side: freight billing you can check. Shop-floor side: when there is no formal order, workers can still scan, capture, and save.
+
+--- Part 1 痛点 · 约 35 秒 · 展示：痛点 PPT ---
+
+ZH:
+仓库：运费靠 Excel，历史价说不清，对账难。
+产线：没有正式工单时靠纸笔或口头，产量和工序难追查。
+所以一边要做规则加引擎加对比；一边要做扫码加规则加可查记录。
+
+EN:
+Warehouse: freight on Excel, history price unclear, hard to match bills.
+Shop floor: no formal order means paper or talk, hard to trace output and process.
+So one side needs rules, engine, and compare. The other side needs scan, rules, and database records.
+
+--- Part 2 Context Map · 约 30 秒 · 展示：16 ---
+
+ZH:
+CloudWarehouse 做计价和结算。PDA 做现场执行。
+绿色实线框是这次交付的。虚线是以后可能对接。
+
+EN:
+CloudWarehouse does pricing and billing. PDA does shop-floor execution.
+Green solid boxes are what I delivered. Dashed lines are for later joins.
+
+--- Part 3 云仓硬增值 · 约 55 秒 · 展示：运单预览 ---
+
+ZH:
+云仓这边：按发货日取历史成本价和客户报价，再做应收应付双轨，并和表内中转费对比。
+用的是账单期间的价，不是永远拿今天最新价。
+对得上能看出来；对不上也能顺着原因查，比如退件、拦截。
+
+EN:
+For CloudWarehouse: history cost and quote by ship date, then receivable versus payable dual track, then compare with the freight on the sheet.
+We use the price for that bill period, not always today’s newest price.
+You can see matches. For mismatches, you can check reasons, like return or hold cases.
+
+--- Part 4 规则查询 · 约 25 秒 · 展示：Rule RAG ---
+
+ZH:
+还有内置规则 FAQ 查询，方便查说明。
+它只辅助查阅，不算正式结算。正式算钱还是 FeeCalculationEngine。
+
+EN:
+There is also a built-in rule FAQ lookup.
+It only helps people read the rules. It does not do formal billing. FeeCalculationEngine still calculates the money.
+
+--- Part 5 PDA 增值 · 约 95 秒 · 展示：真机 + 20 ---
+
+ZH:
+产线这边是霍尼韦尔工业 PDA，做无订单报工。
+夜班或临时加工没有正式工单时，以前靠纸笔口头。
+现在闭环是：登录，选产线机群机床，扫批号开工，再报工。数据经 API 写入 PDA_NoOrder。
+三点：
+一，车间终端扫码。批号去 XK 前缀，整框替换，避免连扫叠字。
+二，挂起续开可以换机，但报工必须对齐最近开工机台。
+三，组合码减少手输；异常巡检看错栏、工时异常、超时未报工。有图就闪一下。
+
+EN:
+On the line side, we use Honeywell industrial PDA for no-order reporting.
+When night or rush work has no formal order, people used paper or talk before.
+Now the loop is: login, pick line and machine, scan batch to start, then report. Data goes through API into PDA_NoOrder.
+Three points:
+One, shop-floor scan on the device. Batch removes the XK prefix, and whole-field replace stops sticky text.
+Two, pause and resume can change machine, but report must match the latest start machine.
+Three, combo codes cut typing. Anomaly checks watch wrong field, bad hours, and late report. Flash a screenshot if you have one.
+
+--- Part 6 收束 · 约 55 秒 · 展示：收束页或镜头 ---
+
+ZH:
+小结一下。
+云仓这边，对账从猜 Excel，变成规则、引擎，再跟表内中转费对比。
+PDA 这边，没有正式工单也能扫码开工报工，数据落库可查。
+规则 FAQ 只是查说明用的词法检索，不算钱；真正结算还是 FeeCalculationEngine。
+技术上我把力气花在 Strategy 加深和应收应付双轨上，不是去吹生成式 AI 计费。
+工厂侧也认了这两块本期交付：尤其 PDA 已经在夜班现场用。
+我不是说全厂所有系统都替换完了，而是这期能跑的东西他们接受了。
+报告、演示视频、可跑系统和 CI，这些实习要求的交付也都齐了。谢谢。
+
+EN:
+Okay, short wrap-up.
+On CloudWarehouse, bill matching moved from guessing Excel to rules, the fee engine, and compare with freight on the sheet.
+On the PDA, workers can start and report with no formal order, and the data is saved and searchable.
+The rule FAQ is only lexical lookup for reading rules. It does not calculate money. FeeCalculationEngine still does billing.
+Technically I spent the effort on deeper Strategy and receivable-payable dual track — not on generative AI billing claims.
+The factory side also accepted both deliveries for this term. Especially the PDA is already used on night shift.
+I am not saying every factory system is replaced. I mean they accepted what works this term.
+And the internship deliverables are complete: the report, the assessment videos, a runnable system, and CI. Thank you.
+
+============================================================
+禁话：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+============================================================

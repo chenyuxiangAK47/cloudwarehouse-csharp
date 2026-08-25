@@ -1,0 +1,100 @@
+# PDA Agent 任务单（NUS 终期提交用）
+给在 `d:\PDA-dev` 工作的 agent 直接执行。两个任务分开做也可以，建议先 Task A 再 Task B。
+
+相关仓库：
+- 空仓库待推送：https://github.com/chenyuxiangAK47/GUANDAPDAAPP
+- 本地源码根目录：`d:\PDA-dev`
+  - `mes-noorder-api` = Spring Boot API
+  - `mes-noorder-pda` = Honeywell / Android 客户端
+  - `standard-hours-import` = 可选工具
+- 云仓是另一仓库，不要假装已与 CloudWarehouse 生产级 API 打通
+
+硬约束：
+- 不要提交密钥、真实 JDBC 密码、`local.properties`、`application-local.yml`、工厂内网 IP 写死进公开默认配置
+- 不要声称生产级 HA / 微服务已上线 / AI 智能报工
+- 可以用英文 README；口播禁话同样遵守
+
+============================================================
+TASK A — 把 PDA 源码推到 GitHub（优先加 SAST；DAST 没有也行）
+============================================================
+
+目标：
+把可评审的 PDA 源码完整推到 https://github.com/chenyuxiangAK47/GUANDAPDAAPP
+让老师打开 repo 就能看到 Android + Spring Boot 代码，而不是 Empty repository。
+
+必做：
+1. 在 `d:\PDA-dev` 初始化 git（若还没有），写好根目录 `.gitignore`：
+   - 忽略：`.gradle/`、`build/`、`.idea/`、`local.properties`、`application-local.yml`、`*.iml`、密钥、大体积二进制无必要产物
+   - 保留：源码、`sql/`、示例配置、README、docs
+2. 根目录写清晰 `README.md`：
+   - 这是什么（PDA no-order reporting：Honeywell Android + Spring Boot + SQL Server `PDA_NoOrder`）
+   - 怎么本地跑 API / 怎么装 App（简要）
+   - 说明与 CloudWarehouse 是并列系统；对接 Planned
+   - 放云仓仓库链接（若知道：https://github.com/chenyuxiangAK47/cloudwarehouse-csharp）
+3. remote 设为 `https://github.com/chenyuxiangAK47/GUANDAPDAAPP.git`，push 到 `main`
+4. push 后确认 GitHub 网页不再是 empty；目录结构可读
+
+加分（有就做，没有也别阻塞提交）：
+5. 加 GitHub Actions，尽量包含：
+   - **SAST**：CodeQL（languages: java）针对 `mes-noorder-api`；Android 若难编过，至少 API 侧 CodeQL / 编译检查
+   - **CI**：`mes-noorder-api` 的 Gradle build / test（无 DB 时允许跳过或用说明）
+   - **DAST**：本期可不做；若做也只限本地/演示环境轻量扫描，不要吹成生产门禁
+6. 若 Actions 绿了，在 README 贴徽章或写一句 “see Actions”
+
+交付物（完成后回复用户）：
+- 仓库 URL
+- 推了哪些顶层目录
+- 有没有 CI/SAST；Actions 是否绿
+- 确认没有把密钥推上去（列检查过的忽略项）
+
+============================================================
+TASK B — 非内网环境把 Demo 跑通（给 App Demo / Value Added 录屏用）
+============================================================
+
+背景：
+工厂演示原来走内网（PDA → 内网 Spring Boot → SQL Server）。
+现在要在**家里/宿舍/非工厂内网**录 NUS App Demo：登录 → 选机 → 开工 → 报工成功。
+请想办法给出一条可重复的非内网演示路径。
+
+目标（验收标准）：
+在非内网机器上，用真机或模拟器完成一次闭环，并留下可录屏证据：
+登录成功 → 选产线/机台 → 开工成功 → 报工成功（界面有成功反馈）。
+
+允许方案（按可行性选，优先简单可录）：
+方案 1（推荐）：本机同时跑 SQL Server（或 Docker SQL）+ Spring Boot，手机/模拟器走可路由地址
+  - Android 模拟器访问宿主机常用 `10.0.2.2:端口`
+  - 真机与电脑同一 Wi‑Fi，用电脑局域网 IP（注意防火墙放行端口）
+方案 2：本机 API + Cloudflare Tunnel / ngrok 暴露 HTTPS/HTTP，App 指到公网临时 URL（演示完可关）
+方案 3：若已有 mock flavor（仓库里似乎有 mockDebug），用 mock 打通 UI 演示；但报告/视频需诚实说是 demo/mock，并尽量仍展示真实 API 路径之一
+方案 4：无法装 SQL 时，用 H2/Testcontainers 仅作演示库（若改动小）；不要大重构
+
+必做：
+1. 摸清当前 App 的 API Base URL 配在哪（build flavor / strings / constants），做成**可切换**的 demo 配置，不要把工厂内网 IP 写死成唯一默认
+2. 准备一份 `docs/DEMO-OFFLINE.md`（或根 README 一节）写清：
+   - 前置：JDK、SQL、端口、示例账号/员工码（可用演示账号，勿写生产密码）
+   - 启动 API 命令
+   - App 如何指向该 API
+   - 录屏点击路径：登录 → 选机 → 扫/输批号开工 → 报工
+3. 实际在非内网跑通一次；失败就修到能通，或给出明确阻塞原因 + 次优录屏方案（例如稳定历史录屏 + 当前 API 健康检查页）
+4. 扫码：无 Honeywell 真机时，允许手工输入批号/图号；文档写明
+
+不要做：
+- 不要为了 demo 宣称已和 CloudWarehouse 打通
+- 不要把生产/工厂数据库暴露到公网长期不关
+- 不要提交隧道 token、DB 密码进 git
+
+交付物（完成后回复用户）：
+- 最终采用的方案编号
+- 一步步怎么在非内网启动（命令级）
+- App 改了哪个配置文件/字段
+- 是否已真的跑通闭环（是/否 + 截图或录屏文件路径）
+- 若只能部分跑通：卡在哪、录视频时怎么说才诚实
+
+============================================================
+给 Agent 的执行口令（可直接粘贴）
+============================================================
+
+请依次执行 `d:\PDA-dev`（或本工作区 PDA 项目）中的 TASK A 与 TASK B。
+TASK A：把源码安全地推到 https://github.com/chenyuxiangAK47/GUANDAPDAAPP ，尽量加 CodeQL/CI；DAST 没有也行。
+TASK B：在非内网环境打通 PDA 登录→选机→开工→报工 的可录屏 demo，并写 DEMO 文档。
+每完成一个任务按上面的「交付物」清单回复我。先做 A，push 成功后再做 B。

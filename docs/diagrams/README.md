@@ -16,8 +16,17 @@ Render online: https://www.plantuml.com/plantuml/uml/
 | `08-sequence-import.puml` | Import sequence |
 | `09-cicd-pipeline.puml` | CI/CD activity |
 | `13-billing-strategy-class.puml` | **Billing Strategy Pattern class diagram** (Phase 2) |
-| `14-sequence-waybill-dual-track.puml` | **Waybill preview dual-track pricing sequence** (FE → API → DualTrack → Strategy → DB) |
+| `14-sequence-waybill-dual-track.puml` | **Waybill preview dual-track pricing sequence (class & object level)** |
 | `15-sequence-quote-assistant-rag.puml` | **Value Added:** Built-in rule knowledge lookup (TF-IDF → MinScore gate → optional LLM → citations) |
+| `16-enterprise-context-map.puml` | **Enterprise landscape:** CloudWarehouse + PDA + Mendix + Dashboard (honest dashed integrations) |
+| `17-pda-use-case.puml` | **PDA:** use cases (Line Operator; Login → select → start/report/query + scan) — Final Report §3.6 |
+| `18-pda-erd.puml` | **PDA:** conceptual ERD for dedicated DB `PDA_NoOrder` — Final Report §5.6 |
+| `19-pda-logical-architecture.puml` | **PDA:** Android UI → HTTP/JSON → Spring Boot → SQL Server (CW dashed Planned only) |
+| `20-sequence-pda-start-report.puml` | **PDA:** Start then Report happy-path sequence |
+| `21-pda-deployment.puml` | **PDA:** Honeywell PDA → intranet API → `PDA_NoOrder` (demo/intranet; no HA) |
+| `22-pda-class-overview.puml` | **PDA:** key Activities / Controllers / Services from `d:\PDA-dev` source |
+
+Canonical copies for internship pre also live at: `d:\PDA-dev\docs\diagrams\`.
 
 DevSecOps evidence (repo root / CI):
 - `.github/workflows/ci.yml` — tests, coverage, NuGet vulnerable scan artifact

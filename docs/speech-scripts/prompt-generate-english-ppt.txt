@@ -1,0 +1,116 @@
+PROMPT · Generate one English internship assessment PPT (all 7 videos)
+
+Copy everything below the line to another AI (Gamma / Copilot / ChatGPT / 豆包 etc.)
+that can make PowerPoint / slide decks.
+
+--------------------------------------------------------------------------------
+ROLE
+You create ONE English PowerPoint for an NUS MTech internship final assessment.
+The student will RECORD SEVEN short videos and flip slides while reading scripts.
+Keep slides sparse. Do NOT write long paragraphs on slides.
+
+INPUTS (student already has these locally)
+- Speech scripts: docs/speech-scripts/01…07-*.txt (ZH/EN oral scripts)
+- Diagram source list: docs/speech-scripts/diagram-sources.txt
+- PlantUML files under docs/diagrams/*.puml (export PNG yourself later)
+- Hours chart: docs/project-management/sprint-hours-chart.html
+- Live demos: CloudWarehouse http://localhost:5001 ; GitHub Actions ; PDA device
+
+OUTPUT
+- One PPTX (or slide-by-slide outline ready to paste into PowerPoint)
+- Language on slides: ENGLISH only (short bullets)
+- Where a figure/screenshot is needed: leave a LARGE blank content area
+  and put a Chinese placeholder note exactly like:
+  此处放xxx
+  (example: 此处放路线图 10-roadmap-milestones.png)
+- Do NOT invent fake screenshots. Prefer blank + 此处放…
+
+STYLE
+- Clean, academic, not salesy
+- Dark text on light background OR simple white slides
+- Max ~5 short bullets per text slide; prefer 1 title + 1 figure slot
+- Section divider slides before each of the 7 videos
+- Slide numbers + footer: CloudWarehouse & PDA · Internship Assessment
+
+STRUCTURE (must follow)
+
+=== Section divider: 1 Management Assessment ===
+M1 Title: Management Assessment · CloudWarehouse & PDA
+M2 Two problems (warehouse Excel / line no-order) — short bullets
+M3 Goals MVP — two columns CW | PDA
+M4 此处放路线图 10-roadmap-milestones.png
+M5 MoSCoW Must / Should / Could — short table or bullets
+M6 此处放个人工时柱状图 sprint-hours-chart.png
+M7 Risks (schedule / scope / integration) — 3 bullets
+M8 Next videos list (one line)
+
+=== Section divider: 2 Architectural Assessment ===
+A1 Title
+A2 此处放用例图 06-use-case-diagram.png
+A3 此处放逻辑架构图 02-logical-architecture.png
+A4 此处放DDD限界上下文 05-ddd-bounded-contexts.png
+A5 此处放企业Context Map 16-enterprise-context-map.png
+A6 此处放PDA逻辑栈 19-pda-logical-architecture.png
+A7 Why Modular Monolith — 3 short bullets (solo, same-DB txn, extract later)
+A8 此处放物理架构图 03-physical-architecture.png
+A9 此处放部署图 04-deployment-diagram.png
+A10 Security honesty — no fake HA; auth planned — short bullets
+
+=== Section divider: 3 Software Design ===
+S1 Title · CloudWarehouse + PDA
+S2 Design scope — two bullets (dual-track billing / PDA start-report)
+S3 此处放Strategy类图 13-billing-strategy-class.png
+S4 此处放双轨时序图 14-sequence-waybill-dual-track.png
+S5 此处放云仓ERD 07-erd.png
+S6 此处放PDA开工报工时序 20-sequence-pda-start-report.png
+S7 此处放PDA类图 22-pda-class-overview.png
+S8 Boundaries — not production-linked — short bullets
+
+=== Section divider: 4 DevSecOps ===
+D1 Title
+D2 此处放CI活动图 09-cicd-pipeline.png
+D3 此处放GitHub Actions CI绿勾截图
+D4 此处放coverage-report Summary截图
+D5 此处放CodeQL成功截图
+D6 Done vs Planned (whitelist upload / example config vs DAST JWT full CD)
+
+=== Section divider: 5 Value Added ===
+V1 Title
+V2 Pain points — two bullets
+V3 此处放Context Map 16-enterprise-context-map.png
+V4 此处放运单双轨Preview截图
+V5 此处放Rule RAG界面截图
+V6 此处放PDA真机录屏封面或关键帧（登录选机开工报工）
+V7 此处放PDA时序 20-sequence-pda-start-report.png（可选若V6已够可删）
+V8 Three PDA value lines + honest limits — short bullets
+
+=== Section divider: 6 App Demo ===
+P1 Title · App Demo (mostly live screen — few slides)
+P2 此处放云仓管理端首页截图 localhost5001
+P3 Reminder slide: “Live demo: Waybill Preview” + 此处放运单Preview截图（backup if live fails）
+P4 Reminder slide: “Live demo: PDA” + 此处放PDA报工成功截图
+P5 Closing one-liner
+
+=== Section divider: 7 CI/CD Demo ===
+C1 Title
+C2 此处放Actions总览绿勾
+C3 此处放单次CI run steps截图
+C4 此处放Artifacts coverage-report
+C5 此处放ci.yml代码片段截图
+C6 此处放CodeQL绿勾
+C7 Closing: CI + tests + SAST evidenced; full CD/DAST planned
+
+GLOBAL SLIDE RULES
+1) Every figure slide layout:
+   - English title (top)
+   - Big empty rectangle in the middle
+   - Chinese line under/inside box: 此处放…
+   - Optional one English caption ≤12 words
+2) Do not claim: microservices live, CW–PDA production API linked, AI billing, production HA, coverage >80% slogan
+3) Prefer “Modular Monolith”, “Planned”, “assistive rule lookup”
+4) Total slides target: about 45–55 (OK if a bit less)
+5) After generating, give a one-page checklist mapping each 此处放… to file path from diagram-sources.txt
+
+Also output a short “How student uses deck while recording” note:
+- Open section divider → read Part from 01…07 txt → advance slide when script says 【展示：…】
+--------------------------------------------------------------------------------

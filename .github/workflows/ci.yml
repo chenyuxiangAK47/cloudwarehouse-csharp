@@ -24,6 +24,11 @@ jobs:
       - name: Restore
         run: dotnet restore CloudWarehouse.sln
 
+      - name: Install Playwright Chromium (UI E2E)
+        run: |
+          dotnet build CloudWarehouse.E2ETests/CloudWarehouse.E2ETests.csproj -c Release
+          ./CloudWarehouse.E2ETests/bin/Release/net9.0/playwright.sh install --with-deps chromium
+
       - name: Test with coverage
         run: |
           dotnet test CloudWarehouse.sln -c Release \

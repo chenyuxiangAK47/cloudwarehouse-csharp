@@ -1,5 +1,10 @@
-Sprint,Estimated,Actual
-Sprint 1,48,52
-Sprint 2,44,61
-Sprint 3,56,51
-Sprint 4,50,47
+Person,Sprint,Phase,Planned_h,Actual_h,Note
+Solo Intern,Sprint 1 - Foundation,Phase 1,48,52,+8% personal hours (not team-of-3)
+Solo Intern,Sprint 2 - Excel import,Phase 1,44,61,+39% legacy 3-row Excel headers
+Solo Intern,Sprint 3 - Rules + calculate,Phase 1,56,51,-9%
+Solo Intern,Sprint 4 - Tests + CI,Phase 1,50,47,-6%
+Solo Intern,Phase 1 total,Phase 1,198,211,+7% solo personal total
+Solo Intern,Phase 2 CW - Strategy dual-track RAG E2E docs,Phase 2,58,63,Git Jun-Aug 2026
+Solo Intern,Phase 2 PDA - API Android hardware,Phase 2,72,76,Parallel with CW
+Solo Intern,Phase 2 total,Phase 2,130,139,
+Solo Intern,Grand total,All,328,350,Solo personal all phases

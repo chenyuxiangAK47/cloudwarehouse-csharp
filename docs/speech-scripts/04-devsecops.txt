@@ -1,0 +1,198 @@
+视频 4 · DevSecOps Assessment
+时长：约 9–10 分钟
+形式：中英对照。主体对着 GitHub Actions 点；PPT 只可选封面/缺口。
+录前：Actions 里 CI、CodeQL 都绿；浏览器先开好仓库。
+
+============================================================
+练习清单（每一段先看「屏幕上点什么」，再念口播）
+============================================================
+
+顺序 | 时长 | 屏幕上展示什么 | 你怎么操作
+-----|------|----------------|------------
+1 | ~50s | 可选：封面 PPT；或直接 Actions 首页 | 说开场三句话，马上切 GitHub
+2 | ~70s | Actions → 点开 workflow「CI」→ 最新绿色 run | 指绿勾；说 push/PR 触发；扫一眼步骤名
+3 | ~90s | 同一 run 里点开「Test with coverage」日志 | 滚到 Passed；说清单测/集成测覆盖什么
+4 | ~70s | 同一 run → Artifacts → coverage-report（或 Summary 底部） | 打开 Summary / HTML；说覆盖率看产物，不喊死百分比
+5 | ~40s | 同一 run 里「NuGet vulnerability scan」步骤，或 Artifact nuget-vulnerable-scan | 指一下有依赖扫描输出
+6 | ~50s | IDE 打开 .github/workflows/ci.yml | 滚到 on: push/PR、dotnet test、upload-artifact
+7 | ~70s | Actions → 左边换 workflow「CodeQL」→ 最新绿色 run | 指绿勾；说扫 C#、找常见问题
+8 | ~60s | 仓库里闪 appsettings.example.json；或安全控制 PPT 一页 | 说上传白名单/大小限制/example 配置
+9 | ~15s | Actions 总览 | 一句收束（旧片可先停在这里）
+10 | ~70s | 镜头/口述 | 片尾 ADD-ON：缺口六条（不用新 PPT）
+
+仓库示例：https://github.com/chenyuxiangAK47/cloudwarehouse-csharp → Actions
+
+============================================================
+口播稿
+============================================================
+
+--- 1 开场 · 约 50 秒 · 屏幕：封面或直接 Actions ---
+
+ZH:
+各位老师好。这是 DevSecOps Assessment。
+我讲质量和安全怎么进交付：持续集成、自动测试、覆盖率产物、CodeQL、依赖检查，还有上传控制。
+已做的对着 GitHub Actions 讲。缺口放片尾一次说清。
+
+EN:
+Okay, hello everyone. This is part four, DevSecOps Assessment.
+I will talk about quality and security in delivery: CI, auto tests, coverage output, CodeQL, dependency check, and upload control.
+I show what is done in GitHub Actions. Gaps come in a short closing note.
+
+--- 2 CI 绿勾 · 约 70 秒 · 屏幕：Actions → CI → 绿色 run ---
+
+操作：打开 Actions → 点 CI → 点最新绿色成功。
+
+ZH:
+对 main 的 push 和 pull request 会触发 CI。
+请看这一次绿色成功运行。
+步骤包括：还原依赖、跑测试、生成覆盖率、上传 Artifact。
+云端 runner 没有 SQL Server 时，依赖数据库的测试会跳过。本机有库时，完整路径会跑。
+
+EN:
+Push and pull request to main start CI.
+Please look at this green successful run.
+Steps include restore, test, build coverage, and upload Artifact.
+If the cloud runner has no SQL Server, DB tests are skipped. On my local machine with a database, the full path still runs.
+
+--- 3 测试日志 · 约 90 秒 · 屏幕：点开 Test with coverage ---
+
+操作：在绿色 run 里点「Test with coverage」，滚到 Passed / 失败为 0。
+
+ZH:
+测试分几层。
+单元测试：Strategy、Excel 解析、双轨。
+集成测试：用 WebApplicationFactory 打 API。
+还有一点并发或冒烟测试。没有完整压测平台；本期只有 light smoke。
+请看这里测试通过。
+
+EN:
+Tests have a few layers.
+Unit tests: Strategy, Excel parse, dual track.
+Integration tests hit the API with WebApplicationFactory.
+We also have some light concurrent or smoke tests. No full load-test platform this term.
+Please see the tests pass here.
+
+--- 4 覆盖率 Artifact · 约 70 秒 · 屏幕：Artifacts → coverage-report ---
+
+操作：run 页面点 Artifacts，下载或打开 coverage-report；或看 Print coverage summary 那一步的 Summary.txt。
+
+ZH:
+覆盖率产物在 Artifact 里，名字是 coverage-report。
+请看摘要。数字以这一次构建为准。
+重点是计费和导入路径有自动回归。
+
+EN:
+Coverage output is in Artifacts. The name is coverage-report.
+Please look at the summary. The number follows this build.
+The point is fee and import paths have auto regression.
+
+--- 5 依赖扫描 · 约 40 秒 · 屏幕：NuGet vulnerability 步骤或 Artifact ---
+
+操作：点「NuGet vulnerability scan」日志，或 Artifacts 里的 nuget-vulnerable-scan。
+
+ZH:
+流水线里还有 NuGet 依赖脆弱性检查。
+请看这一步的输出。这是供应链可见性；本期没有做成强制门禁加修复后自动 rescan 闭环。
+
+EN:
+CI also has a NuGet vulnerability check.
+Please look at this step output. That is supply-chain visibility.
+I do not claim a forced gate plus auto rescan loop after every fix this term.
+
+--- 6 ci.yml · 约 50 秒 · 屏幕：打开 ci.yml ---
+
+操作（二选一）：
+- 本机：Cursor/资源管理器打开
+  `d:\tools\cloudwarehouse-csharp\.github\workflows\ci.yml`
+- 或浏览器：仓库 Code 页 → 点进文件夹 `.github` → `workflows` → 文件 `ci.yml`
+  （地址类似：…/cloudwarehouse-csharp/blob/main/.github/workflows/ci.yml）
+指这三处：上面的 `on:`（push/PR）、中间的 `Test with coverage`（dotnet test）、下面的 `Upload coverage HTML report`（upload-artifact）。
+
+ZH:
+CI 写在仓库的 ci.yml 里。
+这里定义了什么时候触发，跑哪些命令，以及上传哪些 Artifact。
+改计费或导入逻辑，合并前会跑同一套检查。
+
+EN:
+CI is defined in ci.yml in the repo.
+Here you see when it triggers, which commands run, and which Artifacts upload.
+If fee or import logic changes, the same checks run before merge.
+
+--- 7 CodeQL · 约 70 秒 · 屏幕：Actions → CodeQL 绿勾 ---
+
+操作：
+1. 浏览器打开仓库 Actions
+2. 左边 Workflows 点 **CodeQL SAST**（不要点 CI）
+3. 点最新绿色 run（例如 CodeQL SAST #5）
+4. 指绿勾即可
+
+ZH:
+静态扫描用 GitHub CodeQL，扫 C#。
+请看最近一次 CodeQL 成功。
+它找常见代码问题。
+
+EN:
+For static scan, we use GitHub CodeQL on C#.
+Please look at a recent green CodeQL run.
+It finds common code issues.
+
+--- 8 应用层控制 · 约 60 秒 · 屏幕：example 配置 +（可选）上传白名单代码 ---
+
+操作（推荐本机 Cursor，别打开真实连接串）：
+1. 打开示例配置（给老师看的安全模板）：
+   `d:\tools\cloudwarehouse-csharp\CloudWarehouse.Backend\appsettings.example.json`
+   网页：Code → `CloudWarehouse.Backend` → `appsettings.example.json`
+2. **不要打开**（或打开后立刻切走）：
+   `CloudWarehouse.Backend\appsettings.json`  ← 这里可能有真实连接串
+3. 上传白名单 + 大小限制证据（可选再闪一眼）：
+   `d:\tools\cloudwarehouse-csharp\CloudWarehouse.Backend\Modules\Import\Controllers\ImportController.cs`
+   指：`AllowedExtensions = [".xlsx", ".xlsm"]`
+   以及上面的 `[RequestSizeLimit(10 * 1024 * 1024)]`（约 10MB）
+   （`BillController` / `CustomerController` 里也有同类限制）
+
+ZH:
+应用层还有上传控制：只允许规定类型，比如 xlsx；有大小限制。
+仓库用 appsettings.example.json，不当模板塞真实密钥。
+录视频时也不出示连接串。
+
+EN:
+At app level we also have upload control: only safe types like xlsx, and a size limit.
+The repo uses appsettings.example.json, not real secrets as a template.
+I also do not show connection strings on camera.
+
+--- 9 短收束 · 约 15 秒 · 屏幕：Actions 总览 ---
+
+操作：回到 Actions，指 CI + CodeQL 绿勾。
+
+ZH:
+小结：CloudWarehouse 有可重复的 CI、测试、覆盖率 Artifact、依赖扫描和 CodeQL。缺口片尾补一句。
+
+EN:
+Summary: CloudWarehouse has repeatable CI, tests, coverage Artifact, dependency scan, and CodeQL.
+Gaps in one short add-on next.
+
+--- 片尾补录 ADD-ON（旧片直接接这段 · 约 70 秒 · 不用新 PPT）---
+
+ZH:
+Rubric 缺口，没做就是没做。
+一，DAST 没有日常门禁。
+二，完整 CD 到生产没有。
+三，JWT 和权限还没上线。
+四，容器和 Trivy：本期没容器化，N/A，Planned。
+五，IaC / Compliance as Code：没有 Terraform。版本审计靠 Git 历史和 PR。
+六，SOC2、HIPAA、GDPR：本项目不宣称这些认证。
+另外：压测只有 light smoke；NuGet 扫描是可见性，不是强制门禁加自动 rescan 闭环。谢谢。
+
+EN:
+Rubric gaps. Not done means not done.
+One, no daily DAST gate.
+Two, no full CD to production.
+Three, JWT and roles not live.
+Four, containers and Trivy: no container deploy this term. N/A, Planned.
+Five, IaC / Compliance as Code: no Terraform. Version audit is Git history and PRs.
+Six, SOC2, HIPAA, GDPR: this project does not claim those certifications.
+Also: load testing is only light smoke. NuGet scan is visibility, not a forced gate plus auto rescan loop. Thank you.
+
+============================================================
+禁话（别念出来）：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+============================================================

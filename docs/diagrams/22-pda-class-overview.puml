@@ -1,0 +1,65 @@
+@startuml PDA_NoOrder_Class_Overview
+title PDA No-Order Reporting — Key Classes (from source)
+
+skinparam classAttributeIconSize 0
+
+package "Android client (mes-noorder-pda)" {
+  class LoginActivity
+  class DeviceSelectActivity
+  class StartWorkActivity
+  class ReportWorkActivity
+  class QueryActivity
+  class SuspendWorkActivity
+  class ScannerManager
+  class ScanInputHelper
+}
+
+package "Spring Boot API (mes-noorder-api)" {
+  class NoOrderController {
+    + login()
+    + listLines()
+    + listDevices()
+    + startWork()
+    + reportWork()
+    + suspendWork()
+    + listRecords()
+  }
+  class NoOrderService
+  class NoOrderRepository
+  class AnomalyController
+  class AnomalyService
+  class StandardWorkHoursService
+  class ApiResponse
+  class WorkStartRequest
+  class WorkReportRequest
+  class DeviceDto
+  class UserDto
+}
+
+LoginActivity --> ScannerManager
+StartWorkActivity --> ScannerManager
+StartWorkActivity --> ScanInputHelper
+ReportWorkActivity --> ScannerManager
+DeviceSelectActivity --> ScannerManager
+
+NoOrderController --> NoOrderService
+NoOrderController --> StandardWorkHoursService
+NoOrderService --> NoOrderRepository
+AnomalyController --> AnomalyService
+NoOrderController ..> WorkStartRequest
+NoOrderController ..> WorkReportRequest
+NoOrderController ..> ApiResponse
+NoOrderService ..> DeviceDto
+NoOrderService ..> UserDto
+
+note bottom of NoOrderRepository
+  Maps to PDA_NoOrder tables:
+  pda_user, pda_device,
+  pda_work_start, pda_work_report
+end note
+
+@enduml
+
+' 1. Client activities mirror the shop-floor flow; ScannerManager wraps Honeywell scan usage.
+' 2. API surface centres on NoOrderController → NoOrderService → NoOrderRepository.
+' 3. Class names are taken from mes-noorder-pda / mes-noorder-api source under d:\\PDA-dev.

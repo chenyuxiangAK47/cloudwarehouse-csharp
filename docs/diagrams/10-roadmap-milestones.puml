@@ -1,5 +1,5 @@
-@startuml CloudWarehouse_Roadmap_4_Weeks
-title Project Roadmap — 4-Week Internship (Milestones)
+@startuml CloudWarehouse_Roadmap_Phases
+title Project Roadmap - Phase 1 (4-week MVP) + Phase 2 (ongoing)
 
 skinparam activity {
   BackgroundColor #F8F9FA
@@ -7,30 +7,45 @@ skinparam activity {
   FontSize 11
 }
 
-' Color syntax: #Color:Activity text;   (NOT a separate line #Color;done)
+legend left
+  |= Color |= Meaning |
+  | <#90EE90> | Done |
+  | <#ADD8E6> | In progress |
+  | <#FFF2CC> | Planned |
+endlegend
 
-|Week 1 - Sprint 1|
+|Phase 1 - Sprint 1 (Week 1)|
 start
-#90EE90:M1 Requirements + ERD;
+#90EE90:M1 Foundation - ERD + schema.sql;
 #90EE90:Sites / Destinations CRUD;
-#90EE90:DB schema.sql;
 
-|Week 2 - Sprint 2|
-#90EE90:M2 Excel standard template;
-#90EE90:Dual-header parser;
-#90EE90:Import preview + expected price;
+|Phase 1 - Sprint 2 (Week 2)|
+#90EE90:M2 Excel import preview;
+#90EE90:Standard + legacy 3-row headers;
 
-|Week 3 - Sprint 3|
-#90EE90:M3 Import to PriceRules (txn);
-#90EE90:PriceRule list + calculate API;
+|Phase 1 - Sprint 3 (Week 3)|
+#90EE90:M3 PriceRules txn import;
+#90EE90:Freight calculate API / UI;
 
-|Week 4 - Sprint 4|
-#90EE90:M4 Tests (37) + GitHub Actions;
-#90EE90:Coverage report artifact;
-#ADD8E6:M5 PPT + demo videos;
+|Phase 1 - Sprint 4 (Week 4)|
+#90EE90:M4 Unit/integration tests + CI;
+#90EE90:Coverage artefact + CodeQL;
+
+|Phase 2 - Sprint 5+ (post mid-term to Aug)|
+#90EE90:M6 Strategy billing (Tier / Overweight / Volumetric);
+#90EE90:Dual-track waybill + historical price;
+#90EE90:M6b Built-in rule RAG (lexical FAQ);
+#90EE90:M6c PDA no-order reporting MVP;
+#ADD8E6:M5 Final report + 7 assessment videos;
 note right
-  M5: in progress
+  Phase 1 = 4-week MVP only.
+  Phase 2 continues after mid-term
+  (design depth + PDA); not "4 weeks total".
 end note
+
+|Later (Planned)|
+#FFF2CC:M7 JWT / RBAC (ADR deferred);
+#FFF2CC:M8 Microservice extraction (only if triggers met);
 
 stop
 

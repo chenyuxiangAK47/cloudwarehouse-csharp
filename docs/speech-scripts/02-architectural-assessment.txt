@@ -1,0 +1,187 @@
+视频 2 · Architectural Assessment
+时长：约 10 分钟
+形式：中英一段一段对照。英语短句、简单词。
+
+【展示什么 | 怎么准备】（录前看）
+顺序 | 展示什么 | 怎么准备
+1 | 封面 | 未来做 PPT：Architectural Assessment
+2 | 用例图 | 展示图：docs/diagrams/06-use-case-diagram.puml（可闪 17-pda-use-case）
+3 | 逻辑架构（云仓） | 展示图：docs/diagrams/02-logical-architecture.puml
+4 | 逻辑架构（PDA） | 展示图：docs/diagrams/19-pda-logical-architecture.puml（紧接云仓逻辑图后面）
+5 | DDD 上下文 | 展示图：docs/diagrams/05-ddd-bounded-contexts.puml
+6 | 企业关系图 | 展示图：docs/diagrams/16-enterprise-context-map.puml
+7 | 物理图 | 展示图：docs/diagrams/03-physical-architecture.puml
+8 | 部署图 | 展示图：docs/diagrams/04-deployment-diagram.puml；然后 21-pda-deployment
+9 | 安全一页 | 未来做 PPT，或闪 01a / 01b
+
+============================================================
+口播稿
+============================================================
+
+--- Part 0 封面 · 约 30 秒 · 展示：封面 ---
+
+ZH:
+各位老师好。这是 Architectural Assessment，讲架构。
+我讲三件事。
+第一，云仓为什么做成一个程序、里面分模块，也就是 Modular Monolith。
+第二，PDA 为什么单独一套，怎么部署。
+第三，机器上真实怎么跑，安全做到哪。
+
+EN:
+Okay, hello everyone. This is part two, Architectural Assessment.
+I will talk about three things.
+First, why CloudWarehouse is one app with modules inside. We call this a Modular Monolith.
+Second, why the PDA is a separate system, and how we deploy it.
+Third, how it really runs on a machine, and how far security goes.
+
+--- Part 1 谁在用 · 约 60 秒 · 展示：06 ---
+
+ZH:
+先看用例图。
+云仓这边主要是仓库管理员：管站点、目的地、客户；导入价表；算运费；做运单应收应付对比；查规则说明。
+PDA 这边主要是产线工人：登录、选机床、开工、报工、查询。两拨人、两套界面。
+
+EN:
+So look at the use case diagram.
+For CloudWarehouse, the main user is the warehouse admin:
+sites, destinations, customers, price import, fee trial, receivable and payable compare, and rule FAQ.
+For the PDA, the main user is the line worker: login, pick a machine, start work, report work, and query.
+Two user groups, two UIs.
+
+--- Part 2 逻辑架构 · 云仓 · 约 80 秒 · 展示：02 ---
+
+ZH:
+先看云仓逻辑架构图。
+CloudWarehouse 是 Modular Monolith：外面一个 ASP.NET Core 应用，里面模块分开：主数据、导入、计价、结算、规则助手。
+上面是网页 index.html 和接口。中间算钱在 Pricing.Core。下面用 Dapper 连 SQL Server。
+主流程：Excel 进来，导入模块写入规则或账单，计费引擎算钱，页面预览。
+规则查询只在旁边查 FAQ，不算正式结算，也不改金额。
+
+EN:
+First, the CloudWarehouse logical architecture.
+CloudWarehouse is a Modular Monolith:
+one ASP.NET Core app, with modules inside for master data, import, pricing, billing, and a rule helper.
+On top is the web page and APIs. Fee logic is in Pricing.Core. Data access uses Dapper and SQL Server.
+Main flow: Excel in, import writes rules or bills, the fee engine calculates, then the UI shows a preview.
+Rule lookup is only a side FAQ. It is not formal billing, and it does not change money.
+
+--- Part 2b 逻辑架构 · PDA · 约 70 秒 · 展示：19 ---
+
+ZH:
+紧接着看 PDA 逻辑架构图。
+上面是 Honeywell 手持机：Android 界面，加上扫码 SDK。
+中间是 Spring Boot：Controller 收请求，Service 做开工报工。
+下面用 JDBC 连单独库 PDA_NoOrder。
+层很清楚：手持机 → API → 库。
+
+EN:
+Next slide, PDA logical architecture.
+On top is the Honeywell PDA: Android UI plus the scan SDK.
+In the middle is Spring Boot: controllers take requests, services do start and report work.
+Below that, JDBC talks to its own database, PDA_NoOrder.
+So the layers are clear: device, API, then database.
+
+--- Part 3 DDD 边界 · 约 70 秒 · 展示：05 ---
+
+ZH:
+这张图用 DDD 的想法划边界。
+我不是说已经做完整领域框架，只是边界要清楚。
+云仓里大概有：主数据、导入、计价、结算、助手。
+现在还是一个进程、同一个库，模块之间直接调用。
+结算用计价结果，但不要反过来把主数据搞乱。
+
+EN:
+This diagram uses DDD ideas to draw boundaries.
+I do not claim a full domain framework. I only keep clear borders.
+Inside CloudWarehouse we have master data, import, pricing, billing, and helper.
+Today it is still one process and one database. Modules call each other in process.
+Billing uses pricing results. It should not mess up master data.
+
+--- Part 4 企业关系图 · 约 60 秒 · 展示：16 ---
+
+ZH:
+再看企业关系图。
+绿色实线框是我这次交付的：云仓和 PDA。
+虚线只表示系统之间以后可能对接，不是说系统本身没做。
+
+EN:
+Now the enterprise context map.
+Green solid boxes are what I delivered: CloudWarehouse and PDA.
+Dashed arrows mean future join between systems. They do not mean the systems are unfinished.
+
+--- Part 5 为什么不先拆微服务 · 约 80 秒 · 展示：02 或 01a ---
+
+ZH:
+为什么选模块化单体？三点。
+一，我一个人做，时间紧，微服务部署和维护太贵。
+二，结算要整批导入，失败要回滚，同库事务更合适。
+三，模块已经分开，以后真要拆还能拆。
+什么时候再考虑拆？人多了，导入和计价要分开扩，发布老打架，访问量明显变大。
+现在这样是故意选的，不是偷懒。
+
+EN:
+Why a Modular Monolith? Three reasons.
+One, I work alone with little time. Microservices cost too much to run.
+Two, billing needs batch import and rollback. One database transaction fits better.
+Three, modules are already split, so we can extract later if needed.
+When to split later? Bigger team, independent scale needs, release fights, or much higher load.
+This choice is on purpose. It is not laziness.
+
+--- Part 6 机器上怎么跑 · 约 80 秒 · 展示：03 ---
+
+ZH:
+看物理图。
+演示环境很直接：浏览器到云仓服务端口 5001，再到 SQL Server 端口 1433。
+备份主要靠手工备份和脚本重建。
+现在没有负载均衡，也没有数据库高可用。
+图上灰色框是以后可能加强的，现在没有上线。
+
+EN:
+Please look at the physical diagram.
+The demo setup is simple: browser to CloudWarehouse on port 5001, then SQL Server on port 1433.
+Backup is mostly manual backup and script rebuild.
+There is no load balancer, and no database high availability now.
+Grey boxes are future ideas. They are not live today.
+
+--- Part 7 部署 · 约 60 秒 · 展示：04 / 21 ---
+
+ZH:
+云仓可以打成一个可执行包，或放到 IIS 上跑。
+PDA 是另一条线：手持机，内网访问，Spring Boot 比如 8080，再到单独的库。
+两条线分开，一个挂了不容易拖死另一个。
+
+EN:
+CloudWarehouse can run as one package, or on IIS.
+The PDA is another path: handheld device, intranet HTTP, Spring Boot such as port 8080, then its own database.
+
+--- Part 8 收束（短）· 约 25 秒 ---
+
+ZH:
+小结：几张图讲清谁在用、怎么分层、怎么边界、怎么部署。
+下一视频讲软件设计。安全威胁和缓解我片尾补一句。
+
+EN:
+In short, the diagrams show who uses it, how layers work, how borders work, and how we deploy.
+Next video is software design. I will add security threat and mitigation in a short closing note.
+
+--- 片尾补录 ADD-ON（旧片直接接这段 · 约 50 秒 · 不用新 PPT，对着镜头说即可）---
+
+ZH:
+补一条 Architecture 评分点：Security threats and mitigation。
+威胁一：恶意或过大 Excel。缓解：扩展名白名单、大小限制。
+威胁二：连接串泄露。缓解：example 配置，真密钥不进 Git，录像也不出示。
+威胁三：未授权改价或乱调接口。现状内网演示为主，JWT/角色仍是 Planned。
+威胁四：两条系统互相拖垮。缓解：分部署、分库。
+这是威胁加缓解，不是生产级安全全做完。谢谢。
+
+EN:
+Rubric add-on: security threats and mitigation.
+Threat one: bad or oversized Excel. Mitigation: whitelist and size limit.
+Threat two: connection-string leak. Mitigation: example config, secrets out of Git, not shown on camera.
+Threat three: unauthorized change or open APIs. Mostly intranet demo today; JWT and roles stay Planned.
+Threat four: one system taking the other down. Mitigation: separate deploy and separate databases.
+Threat plus mitigation — not full production security done. Thank you.
+
+============================================================
+禁话：微服务已上线；云仓与 PDA 已打通；AI 智能计费；生产级高可用；乱说覆盖率大于 80%
+============================================================

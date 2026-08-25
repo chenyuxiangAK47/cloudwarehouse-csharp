@@ -1,15 +1,16 @@
-@startuml CloudWarehouse_Sequence_Rule_Knowledge_Lookup
-title Value Added — Built-in Rule Knowledge Lookup (keyword / TF-IDF)
+@startuml CloudWarehouse_Sequence_Rule_RAG
+title Value Added — Built-in Rule RAG (Retrieve → Augment → Generate)
 
 actor "Warehouse Admin" as User
-participant "index.html\n计价规则检索" as UI
+participant "index.html\n规则 RAG" as UI
 participant "AssistantController" as AC
 participant "QuoteAssistantService" as QA
-participant "KeywordRetriever\n(TF-IDF lexical)" as Ret
+participant "KeywordRetriever\n(TF-IDF + boosts)" as Ret
 participant "KnowledgeBaseLoader" as KB
 participant "Optional LLM\n(OpenAI if ApiKey)" as LLM
 note right of QA
-  Assistive lookup only.
+  Built-in **Rule RAG** (lexical).
+  Assistive FAQ only.
   Score below MinScore => retrieval-miss.
   Does NOT call FeeCalculationEngine
   or mutate PriceRules / BillLines.
@@ -21,6 +22,7 @@ activate AC
 AC -> QA : AskAsync(request)
 activate QA
 
+== 1. Retrieve ==
 QA -> Ret : Retrieve(query, topK)
 activate Ret
 Ret -> KB : Load() markdown chunks
@@ -31,20 +33,30 @@ Ret --> QA : ranked hits + scores
 deactivate Ret
 
 alt no hits or score < MinScore
-  QA --> AC : mode=retrieval-miss\ngrounded=false
-else OpenAI ApiKey configured
-  QA -> LLM : chat.completions\n(context = top chunks)
-  activate LLM
-  LLM --> QA : grounded answer
-  deactivate LLM
-  QA --> AC : mode=optional-llm\n+ citations
-else default (no paid API)
-  QA --> AC : mode=kb-extractive\nanswer from snippets\n+ citations
+  QA --> AC : mode=retrieval-miss\npipeline=[retrieve,miss]\ngrounded=false
+else
+
+== 2. Augment ==
+QA -> QA : build citations\n(source, title, score, snippet)
+
+== 3. Generate ==
+  alt OpenAI ApiKey configured
+    QA -> LLM : chat.completions\n(context = top chunks)
+    activate LLM
+    LLM --> QA : grounded answer
+    deactivate LLM
+    QA --> AC : mode=optional-llm\npipeline=[retrieve,augment,generate-llm]\n+ citations
+  else default (no paid API)
+    QA --> AC : mode=kb-extractive\npipeline=[retrieve,augment,generate-extractive]\n+ citations
+  end
 end
 
 AC --> UI : ApiResponse\nAssistantAskResponse
 deactivate QA
 deactivate AC
-UI -> User : show answer + citation cards\n(mode badge)
+UI -> User : show RAG pipeline steps\n+ answer + citation cards
 
 @enduml
+
+' Viva one-liner:
+' "This is a built-in rule RAG for FAQ — not AI billing; FeeCalculationEngine remains system of record."

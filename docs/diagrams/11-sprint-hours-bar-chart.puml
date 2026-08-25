@@ -1,17 +1,19 @@
 @startsalt CloudWarehouse_Sprint_Hours
 {
 {T+
-+ Sprint | Estimated (h) | Actual (h) | Delta | Note
-| Sprint 1 - Foundation | 48 | 52 | +4 | On plan
-| Sprint 2 - Excel Import | 44 | 61 | +17 | **+39%** overrun (3-tier headers)
-| Sprint 3 - Calculate + Tests | 56 | 51 | -5 | Re-baseline; within 10%
-| Sprint 4 - CI + Docs | 50 | 47 | -3 | Within 10%
++ Sprint | Planned (h) | Actual (h) | Delta | Note
+| S1 Foundation | 48 | 52 | +4 | On plan
+| S2 Excel import | 44 | 61 | +17 | **+39%** (legacy 3-row headers)
+| S3 Rules + calculate | 56 | 51 | -5 | Within 10%
+| S4 Tests + CI | 50 | 47 | -3 | Within 10%
+| **Phase 1 total** | **198** | **211** | **+13** | **+7%**
 }
 }
 @endsalt
 
 note bottom
-  **Slide chart:** export ``11-sprint-hours-bar-chart.mmd`` at mermaid.live
-  or open ``docs/project-management/sprint-hours-chart.html`` and screenshot.
-  Data: ``sprint-hours-chart-data.csv``
+  **Solo** personal hours for final report Ch.4 — not a team-of-3 chart.
+  Bar graphic: open ``docs/project-management/sprint-hours-chart.html`` and screenshot,
+  or export ``11-sprint-hours-bar-chart.mmd`` at mermaid.live.
+  Phase 2 CW/PDA hours: fill Ch.4.7.3 + ``sprint-hours-chart-data.csv``, then extend the HTML chart.
 end note

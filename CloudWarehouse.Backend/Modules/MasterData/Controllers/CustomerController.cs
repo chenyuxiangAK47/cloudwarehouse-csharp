@@ -101,11 +101,29 @@ public class CustomerController : ControllerBase
         {
             using var db = new SqlConnection(_conn);
             await db.ExecuteAsync("DELETE FROM Customers WHERE Id = @Id", new { Id = id });
-            return Ok(ApiResponse.Ok("删除成功"));
+            return Ok(ApiResponse.Ok("Deleted"));
         }
         catch (Exception ex)
         {
-            return Ok(ApiResponse.Fail($"删除失败: {ex.Message}"));
+            // Linked CustomerAccounts / quote rules block hard delete — disable instead.
+            if (ex.Message.Contains("REFERENCE", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("FK_", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    using var db = new SqlConnection(_conn);
+                    await db.ExecuteAsync(
+                        "UPDATE Customers SET Status = 0 WHERE Id = @Id", new { Id = id });
+                    return Ok(ApiResponse.Ok(
+                        "Customer has linked accounts/quotes. Set to Disabled instead of delete."));
+                }
+                catch (Exception softEx)
+                {
+                    return Ok(ApiResponse.Fail($"Delete failed: {softEx.Message}"));
+                }
+            }
+
+            return Ok(ApiResponse.Fail($"Delete failed: {ex.Message}"));
         }
     }
 
