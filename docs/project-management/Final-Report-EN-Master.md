@@ -1,1714 +1,925 @@
-# CloudWarehouse Freight Settlement & PDA No-Order Reporting — Final Internship Report (English)
+# CloudWarehouse Freight Settlement & PDA No-Order Reporting
 
-## Final Internship Report (English Master)
+## Final Internship Report (English)
 
-This document is the English counterpart of `Final-Report-ZH-Master.md`, prepared for NUS MTech Software Engineering internship assessment. **Facts follow the Chinese master and corrected chapter drafts; figure placeholder blocks remain in Chinese** so that PNG paste instructions stay authoritative when converting to Word.
-
----
-
-# Chapter 1 Project Overview
-
-## 1.1 Background and One-Sentence Summary
-
-This internship project addresses operational pain points in manufacturing and cloud-warehouse settings through digital systems. The dual deliverables are: (1) **CloudWarehouse**, an ASP.NET Core 9 freight settlement system supporting rate-rule import, fee trial calculation, and dual-track receivable/payable reconciliation on waybills; and (2) a **MES no-order shop-floor reporting** application built with a Spring Boot API and Honeywell PDA terminals, enabling start/report capture when no formal work order exists (e.g., night shifts). As a **solo intern**, the author owned the full lifecycle from requirements and design through implementation, testing, and documentation. Although both systems serve the same factory goal, they evolve as separate **bounded contexts** and are **not** production-integrated at the API level in this delivery.
-
-## 1.2 Business Pain Points
-
-**Warehouse / settlement side (addressed by CloudWarehouse):**
-
-- **Data silos and inconsistent formats:** Supplier and carrier quotes and bills remain Excel-centric, with highly inconsistent layouts (including multi-level / three-row headers), hindering standardisation.
-- **High reconciliation risk:** Manual reconciliation is error-prone and lacks version control. Computing historical bills with “latest prices” introduces systematic amount drift and weak auditability.
-- **No repeatable trial-calculation path:** Without preview-and-submit freight trials, cost–revenue gaps cannot be estimated before formal settlement.
-
-**Shop-floor side (addressed by the PDA application):**
-
-- **Blind spots without formal orders:** Night shifts or rush inserts often lack MES work orders; paper or verbal reporting is hard to trace and easy to lose.
-- **Hardware fit:** The shop floor needs industrial handheld PDAs with barcode scanning and an ultra-simple workflow for reliable persistence.
-
-## 1.3 Project Objectives
-
-**CloudWarehouse:**
-
-- Maintainable master data (sites, destinations, customers).
-- Structured Excel import with automatic header detection, following a full **preview → validate → transactional commit** path for cost rates and customer quotes.
-- **Dual-track trial calculation:** waybill preview comparing **receivable quotes** vs **payable costs**, strictly using **historical rates as of ship / bill date**.
-- Extensibility via the **Strategy Pattern** for billing variants (tier, overweight, volumetric).
-- Engineering practice: automated tests, GitHub Actions CI, and CodeQL SAST.
-
-**PDA no-order reporting:**
-
-- Minimal closed loop: login → select line / machine group / machine → start / report / query.
-- Hardware scanning with API persistence so work events remain traceable without formal orders.
-
-## 1.4 Scope Boundaries
-
-**In scope for this delivery:**
-
-- CloudWarehouse MVP as a **Modular Monolith**, including Phase 2 billing engine, dual-track reconciliation, and rule retrieval.
-- PDA no-order reporting MVP.
-- Architecture / design diagrams, CI/CD configuration, and test evidence.
-
-**Explicitly out of scope:**
-
-- Production-grade integration bus between CloudWarehouse and PDA.
-- Microservice production deployment (Modular Monolith retained).
-- Full production JWT/RBAC authentication (deferred in ADR).
-- Production high-availability (HA) clusters.
-- Experimental “AI billing” or “RAG replacing the settlement engine”.
-
-## 1.5 Stakeholders
-
-- **Warehouse / settlement staff:** primary CloudWarehouse users; care about reconciliation speed and accuracy.
-- **Line operators:** primary PDA users; care about ease of use and scan responsiveness.
-- **Industry mentor / business owner:** clarifies requirements and demo feedback; scoring affects internship evaluation.
-- **Academic supervisor:** focuses on design depth, patterns, multi-view architecture completeness, and substantive effort evidence.
-
-## 1.6 Response Strategy to Mid-term Feedback
-
-Mid-term feedback noted that the system seemed “too simple”, that the monolith needed justification, that billing variants needed design patterns, and that multi-view architecture diagrams were insufficient. Later chapters respond as follows (index only here):
-
-- **Design depth:** Strategy Pattern class and sequence diagrams in Software Design.
-- **Architecture rationale:** logical, physical, deployment, and DDD enterprise context-map views arguing for Modular Monolith.
-- **Engineering evidence:** CI screenshots, coverage artefacts, and CodeQL results in DevSecOps / QA.
-- **Effort evidence:** Planned vs Actual hours in Project Management.
-- **Value increment:** dual-track historical pricing and PDA hardware closed-loop on the shop floor.
-
-## 1.7 Deliverables Snapshot
-
-
-> **【插图占位 1-1】** 系统首页 / 管理端总览（可选）
-> - 来源：`本机运行截图 wwwroot/index.html`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 1-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：CloudWarehouse 管理端入口，证明可运行系统。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-| Deliverable | Status | Notes |
-| --- | --- | --- |
-| CloudWarehouse system | ✅ Completed | Import, trial calculation, dual-track waybill reconciliation |
-| Billing Strategy Pattern | ✅ Completed | Class diagram, sequence diagram, detailed design |
-| CI/CD and quality scanning | ✅ Completed | Automated test suite and CodeQL integration |
-| Built-in rule RAG | ✅ Completed | FAQ lookup only; does **not** participate in settlement |
-| PDA no-order reporting MVP | ✅ Completed | Honeywell PDA client |
-| Final demo videos / report | 🔄 In progress | Includes seven assessment demo videos |
+Formal English translation of the Chinese master draft. **Figure placeholders remain in Chinese** as requested. Blank Phase-2 hour cells and Client Feedback placeholders are left for the author. No production HA / live CW–PDA API / AI settlement claims are intended.
 
 ---
 
-# Chapter 2 Technology Stack and Key Technical Decisions
+## 6.1 架构风格与决策动机
 
-Chapter 1 defined dual-system goals and boundaries. This chapter explains technology choices that support those goals and provides context for architecture, software design, and DevSecOps chapters that follow.
+CloudWarehouse 采用 **模块化单体（Modular Monolith）**：
 
-## 2.1 Technology Stack Overview
+- **物理上** 一个可部署单元（`CloudWarehouse.Backend`，ASP.NET Core + 同库 SQL Server）；
+- **逻辑上** 按限界上下文拆成模块文件夹（`Modules/MasterData`、`Import`、`Pricing`、`Billing`、`Assistant` 等），边界清晰，便于后续按触发条件提取服务。
 
-**CloudWarehouse**
+选型对照（摘要）：
 
-| Layer | Technology |
-| --- | --- |
-| Language / runtime | C# / .NET 9, ASP.NET Core |
-| API | REST Controllers (modules: MasterData / Import / Pricing / Billing / Assistant) |
-| Front end | Static HTML/JS (`wwwroot/index.html`), not a React/Angular SPA |
-| Data access | Dapper + parameterised SQL |
-| Database | Microsoft SQL Server |
-| Excel | ClosedXML |
-| Billing core | `CloudWarehouse.Pricing.Core` (Strategy: Tier / Overweight / Volumetric) |
-| Testing | xUnit, `WebApplicationFactory` integration tests, light concurrency / load smoke tests |
-| CI / security | GitHub Actions, Coverlet / ReportGenerator, CodeQL SAST |
-
-**PDA no-order reporting**
-
-| Layer | Technology |
-| --- | --- |
-| Client | Android (Honeywell industrial PDA) + scan SDK |
-| API | Spring Boot 3.x / Java 21 |
-| Database | SQL Server (dedicated DB such as `PDA_NoOrder`) |
-| Communication | Intranet HTTP (cleartext, matching shop-floor demo constraints) |
-
-The dual stack is intentional (.NET settlement domain vs Java/Android shop-floor domain), not technology sprawl.
-
-## 2.2 Layer Mapping (CloudWarehouse)
-
-Request path:
-
-1. **Presentation:** browser static pages  
-2. **API:** Controllers for validation and orchestration  
-3. **Application / Services:** Import / Calculate / BillImport / QuoteAssistant  
-4. **Domain / Helpers + Pricing.Core:** Excel parsing, rule mapping, `FeeCalculationEngine` + Strategies  
-5. **Infrastructure:** Dapper, `SqlConnection`, upload size / type limits  
-
-Logical architecture reference: `docs/diagrams/02-logical-architecture.puml`.
-
-## 2.3 Key Selection Comparisons
-
-| Decision | Alternatives | Choice | Rationale |
-| --- | --- | --- | --- |
-| Data access | EF Core vs Dapper | Dapper | Import-heavy; fine-grained SQL/transactions; more controllable under solo timeline |
-| Architecture style | Microservices vs Modular Monolith | Modular Monolith | Solo delivery, same-DB transactions; modules/DDD leave extraction seams |
-| UI | SPA vs static pages | Static HTML/JS | Effort on backend architecture and billing design for MVP |
-| Excel | EPPlus vs ClosedXML | ClosedXML | Complex header read + template/export in one library |
-| Rule maintenance | Manual CRUD price tables vs Excel-first | Excel import primary | Fits supplier/carrier workflows (ADR) |
-| Billing extension | Giant if/else vs Strategy | Strategy Pattern | Mid-term feedback; open–closed (volumetric verified) |
-| CI | Local-only tests vs GitHub Actions | Actions | Verifiable evidence, coverage artefacts |
-| SAST | None vs CodeQL | CodeQL | DevSecOps evidence; no claim of full DAST |
-
-| PDA client | Mobile H5 vs native Android | Native Android | Shop-floor durability and scan-gun integration |
-
-## 2.4 Development and Documentation Tools
-
-- Git + GitHub  
-- PlantUML (architecture / class / sequence; version-controllable)  
-- SSMS / sqlcmd  
-- .NET CLI; Android Studio / Gradle (PDA)  
-- Planning artefacts: sprint plans, hours CSV, speech scripts, report outlines  
-
-## 2.5 Runtime and Configuration Notes
-
-- CloudWarehouse demo defaults to HTTP on port **5001**; SQL Server typically **1433**.  
-- Configuration: `appsettings.json` + `appsettings.example.json` (sanitised sample).  
-- Uploads: extension whitelist + size limits.  
-- Authentication: deferred for MVP (ADR)—not claimed as implemented in this chapter.  
-- PDA: intranet API address must match site IP; firewall allow-lists are operational details.
-
-## 2.6 Link to Quality / Security Tooling
-
-- Test projects: `CloudWarehouse.Tests` / `IntegrationTests` / `TestCommon`  
-- CI: `ci.yml`; SAST: `codeql.yml`  
-- Details appear in later QA / DevSecOps chapters; this chapter only states that the stack includes these gates.
-
-## 2.7 Evidence Checklist
-
-- Tables: stack overview, selection comparisons  
-- Figures: logical layers / solution structure (multi-project `.sln`)  
-- Figures: PDA project structure or device photo (optional)  
-- Appendix: `Program.cs` DI Strategy registration order; CI badge / screenshot links  
-
----
-
-# Chapter 3 System Use Cases and Business Modules
-
-Building on the technical context of Chapter 2, this chapter turns outward to human–system interaction: roles, module decomposition, use cases, MoSCoW prioritisation, and diagrams. Descriptions are limited to delivered, runnable capabilities and establish the requirements baseline for context mapping and detailed design (including dual-track billing).
-
-## 3.0 Requirements and System Analysis
-
-> **Supervisor feedback:** the final report must present *Analysis*, not design-only narrative. This section precedes use cases and explains how analysis conclusions feed design (rubric: *analysis → design*).
-
-### 3.0.1 AS-IS Problem Domain
-
-| Domain | AS-IS | Pain | Evidence |
-| --- | --- | --- | --- |
-| Warehouse settlement | Cost/quote/waybill data in disparate Excel files | Inconsistent headers (incl. three-row), manual reconciliation, weak historical traceability | Sprint 2 overrun **+39%** on Excel parsing |
-| Freight trial | No unified preview-before-commit path | Cannot compare receivable vs payable before settlement | Sponsor demo feedback: need explainable preview |
-| Shop-floor reporting | Night/ad-hoc work without MES orders | Paper/verbal records lost | Recent mesdb volume skewed to no-order path (§11.4) |
-
-### 3.0.2 Stakeholders and Constraints
-
-| Stakeholder | Goal | Constraint |
-| --- | --- | --- |
-| Warehouse admin / billing clerk | Repeatable import, trial, dual-track preview | Solo delivery; demo env without JWT |
-| Line operator | Scan start/report on PDA | Honeywell device; intranet HTTP |
-| Enterprise mentor | Demonstrable MVP; field usability | No mandatory microservices / full go-live this term |
-| Academic supervisor | Design depth; verifiable evidence | Class-level sequence; test/security artefacts |
-
-**Analysis-time architecture constraint:** solo intern, ~20 weeks; **Modular Monolith** plus two bounded contexts (CW vs PDA); integration **Planned**.
-
-### 3.0.3 Analysis Conclusions → Design Inputs
-
-| Analysis conclusion | Design response | Evidence |
-| --- | --- | --- |
-| Variable billing rules (tier / overweight / volumetric) | **Strategy Pattern** + `FeeCalculationEngine` | §7.3 |
-| Receivable vs payable semantics; historical rates by ship date | **Dual-track** `DualTrackFeeCalculator`; class-level sequence | §7.5; `14-sequence-waybill-dual-track.puml` |
-| Uncontrolled external Excel | Preview → transactional commit; template + three-row detection | §7.7; `08-sequence-import.puml` |
-| Rule explanation separate from settlement | Lexical rule RAG (read-only FAQ) | §3.2 Assistant |
-| No-order shop-floor data must persist | Independent PDA context + Spring Boot API | §3.6 |
-
-## 3.1 Actors
-
-The ecosystem comprises two independently operated domains: the web CloudWarehouse management platform and the PDA terminal system for shop-floor capture. There is **no production-grade API integration**; any exchange relies on manual operations or batch jobs.
-
-**Within CloudWarehouse:**
-
-- **Primary actor:** warehouse administrator / billing specialist—maintains master data, pricing rules, and bill processing via the web UI.  
-- **Indirect actors:** suppliers / shop technicians—supply cost Excel files but do not log in; administrators upload their files.
-
-**Within PDA:**
-
-- **Primary actor:** line operator—records start/report events on Honeywell PDAs when no formal MES order exists.  
-- **Indirect actors:** supervisors / MES data consumers—review logs; optional dual-write to legacy MES is a downstream store without real-time bidirectional sync.
-
-System components (pricing engine, API endpoints) are **not** actors. The two systems remain API-decoupled for independent deployment and evolution.
-
-## 3.2 CloudWarehouse Module Decomposition
-
-| Module | Responsibility | Main APIs | UI |
-| --- | --- | --- | --- |
-| MasterData | CRUD and import for sites, destinations, customers | `/api/Site`, `/Destination`, `/Customer` | Dedicated tabs |
-| Import | Cost Excel preview, parse, templates, export | `/api/Import/...` | Cost import page |
-| Pricing | View rate rules, simulate freight, import customer quotes | `/api/PriceRule`, `/CustomerQuote` | Rate rules / customer quote pages |
-| Billing | Waybill import preview/ingest; receivable (customer quotes) vs payable (cost); both tracks use ship-date historical rates | `/api/Bill/waybill...` | Waybill import page |
-| Assistant | Built-in rule RAG: retrieve knowledge base and generate cited answers (read-only) | `/api/Assistant/ask` | Rule RAG UI |
-| Pricing.Core | Strategy-based fee engine (library used by Pricing and Billing) | Internal library | — |
-
-Assistant / rule RAG supports lookup only and does **not** affect settlement amounts. Billing uses `FeeCalculationEngine` (via Pricing.Core) as the calculation path.
-
-## 3.3 CloudWarehouse Use-Case Catalogue
-
-| ID | Use case | Actor | Description |
-| --- | --- | --- | --- |
-| UC-01 | Manage sites | Admin | Pre: system reachable (MVP auth deferred). Main: create/read/update/delete site records. |
-| UC-02 | Import site list | Admin | Pre: valid Excel. Main: upload/parse site list with format validation. |
-| UC-03 | Manage destinations | Admin | Pre: system reachable. Main: destination CRUD. |
-| UC-04 | Manage customers | Admin | Pre: system reachable. Main: customer profile CRUD. |
-| UC-05 | Download price template | Admin | Pre: none. Main: generate standard Excel template (single-row headers typical; three-row headers supported for supplier compatibility). |
-| UC-06 | Preview cost import | Admin | Pre: Excel ready. Main: parse/validate headers and data types. |
-| UC-07 | Commit cost rates to DB | Admin | Pre: preview succeeded. Main: transactionally insert/replace `PriceRules`. |
-| UC-08 | Simulate freight fee | Admin | Pre: valid inputs. Main: estimate fee via strategy-driven engine using site, destination, weight, date, etc. |
-| UC-09 | Preview/import customer quotes | Admin | Pre: quote file ready. Main: validate and ingest customer-specific pricing rules. |
-| UC-10 | Preview dual-track billing | Admin | Pre: waybill uploaded. Main: side-by-side receivable/payable amounts using historical rates for comparison. |
-| UC-11 | Submit billing results | Admin | Pre: review done. Main: optionally persist final billing output. |
-| UC-12 | Obtain rate-rule explanation | Admin | Pre: rule selected. Main: query human-readable rule logic from knowledge store; does **not** change calculation. |
-
-All listed use cases map to real features; no microservice-granularity use cases are invented.
-
-## 3.4 MoSCoW Prioritisation (Final)
-
-**Must (delivered):**
-
-- UC-06 / UC-07: cost import with preview and DB persistence  
-- UC-09: customer quote rule import  
-- UC-10: dual-track waybill billing preview with historical rates  
-- UC-08: freight simulation  
-- Core master-data CRUD (sites, destinations, customers)  
-- Multiple strategy-driven fee variants via Pricing.Core  
-
-**Should (partial / to improve):**
-
-- UC-12: rule explanation retrieval (basic search available)  
-- Richer Excel import error feedback  
-- Broader test coverage and CI evidence packaging  
-
-**Could (not implemented):**
-
-- JWT authentication and RBAC  
-- Integration with PDA  
-- Streaming for very large Excel files  
-
-**Won’t (excluded this phase):**
-
-- Full WMS fulfilment (receive, put-away, inventory counts)  
-- Microservice deployment to production  
-- AI-driven automatic pricing replacing the engine  
-
-## 3.5 Use-Case Diagram
-
-
-> **【插图占位 3-1】** 用例图 Use Case Diagram
-> - 来源：`docs/diagrams/06-use-case-diagram.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 3-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：CloudWarehouse 与外部参与者关系；PDA 用例见正文表。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-Primary use cases and actors are shown in Figure 3-1 (`docs/diagrams/06-use-case-diagram.puml`). The administrator sits inside the system boundary; suppliers are external. The diagram emphasises Phase 1 core cases; extended cases UC-09–UC-12 are detailed in the text tables. An optional enterprise context diagram (`docs/diagrams/16-enterprise-context-map.puml`) clarifies cross-system roles.
-
-## 3.6 PDA Use Cases and Modules
-
-Independent PDA system for “no production order” shop-floor reporting.
-
-**Modules:**
-
-- Terminal UI: login, line / group / machine selection, start / report, query  
-- API endpoints: `/api/login`, `/devices`, `/work/start`, `/work/report`, `/records`, etc.  
-- Data entities: start/end work records, machine–line master data, standard cycle times (if present)  
-
-| ID | Use case | Key points |
-| --- | --- | --- |
-| P-UC-01 | Login | Employee ID or QR scan |
-| P-UC-02 | Select line / group / machine | Device QR scan supported |
-| P-UC-03 | Start operation | Batch number and context required |
-| P-UC-04 | Pause / resume | Machine switch under defined constraints |
-| P-UC-05 | Report completion | Auto-associates to last started machine |
-| P-UC-06 | Query records | Historical activity trace |
-| P-UC-07 | Exception checks (if implemented) | Flag mismatched totes or abnormal cycle times |
-
-MoSCoW: P-UC-01–P-UC-06 are **Must** (delivered). P-UC-07 is **Should** or delivered depending on implementation completeness.
-
-## 3.7 Evidence Overview
-
-- Tables: module map, use-case catalogue, MoSCoW  
-- Diagrams: use-case diagram; optional context map  
-- Screenshots: dual-track waybill preview; PDA successful report  
-
-
-> **【插图占位 3-2】** 运单双轨预览 UI
-> - 来源：`管理端运单预览截图`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 3-2】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：应收/应付机器值与表内值对比。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-
-> **【插图占位 3-3】** PDA 报工成功
-> - 来源：`PDA 设备或模拟器截图`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 3-3】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：无订单报工闭环证据。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
----
-
-# Chapter 4 Project Roadmap and Iterative Execution
-
-Chapter 3 prioritised delivered use cases with MoSCoW. This chapter explains how capabilities were landed under **solo** development in **one-week sprints**, with auditable **Planned vs Actual** personal hours. Sources include `docs/project-management/sprint-hours-chart-data.csv` and Phase 2 work records. No multi-person team capacity assumptions are used.
-
-## 4.1 Iteration Method and Cadence
-
-Short agile iterations: one Sprint ≈ one calendar week, organised into Phase 1 and Phase 2.
-
-| Phase | Sprints | Focus |
-| --- | --- | --- |
-| Phase 1 | Sprint 1–4 | CloudWarehouse MVP: master data, Excel import, freight trial, CI |
-| Phase 2 | Sprint 5 onward | Billing strategies, dual-track waybills, historical prices, rule retrieval; **in parallel** PDA no-order reporting |
-
-Solo project-management norms:
-
-1. **Plan:** select Must tasks within weekly capacity; break into demoable, testable increments.  
-2. **Execute:** repository task lists and Git commits as progress evidence—no fictional multi-person Kanban.  
-3. **Retrospect:** compare planned vs actual hours; buffer high-uncertainty work (Excel parsing, hardware bring-up).  
-4. **Governance:** present personal Planned vs Actual hours as required by supervisors.
-
-### 4.1.1 Sprint Tracking Tools and Solo Agile Practice
-
-| Supervisor question | This project | Evidence |
-| --- | --- | --- |
-| Jira or similar? | **No Jira.** Lightweight trail: `sprint-hours-chart-data.csv`, `4-week-sprint-plan.md`, Git history, GitHub Actions | CSV, HTML chart, Actions |
-| Proper Sprints solo? | **Yes** for Phase 1 (four weekly Sprints). Phase 2 (~June onward) shifted to milestone-driven delivery while logging hours | §4.3–4.7 |
-| Burndown? | Story-point burndown **not used**; **cumulative Planned vs Actual hours** instead (§4.8.1) | `sprint-burndown-cumulative.csv` |
-
-**June rhythm change:** after mid-term, iterations were no longer strictly calendar-week boxes, but Phase 2 work packages still record Planned/Actual.
-
-## 4.2 Milestone Overview
-
-
-> **【插图占位 4-1】** 项目路线图里程碑
-> - 来源：`docs/diagrams/10-roadmap-milestones.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 4-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：若图中 M6 仍为 Planned，以正文 Done 为准。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-| ID | Name | Sprint | Status | Primary evidence |
-| --- | --- | --- | --- | --- |
-| M1 | Foundation | S1 | Done | `database/schema.sql`; site / destination CRUD APIs |
-| M2 | Import Preview | S2 | Done | Standard and legacy three-row header parsing; import preview flow |
-| M3 | Rules & Pricing | S3 | Done | Transactional `PriceRules` write; calculate API and UI |
-| M4 | QA & CI | S4 | Done | Unit / integration / light load tests; GitHub Actions; coverage artefacts |
-| M5 | Documentation & Videos | S4–final | In progress | This report; seven assessment videos |
-| M6 | Billing Strategy + Dual-track | S5 | Done | Strategy class/sequence diagrams; dual-track logic; historical pricing |
-| M6b | Built-in Rule RAG | S5 | Done | `/api/Assistant/ask`; rule RAG UI (pipeline visualisation) |
-| M6c | PDA No-order reporting MVP | Phase 2 parallel | Done | Honeywell PDA start/report demos |
-| M7 | Authentication (JWT/RBAC) | Planned | Planned | ADR; deferred |
-| M8 | Microservice extraction (on triggers) | Planned | Planned | See architecture chapter trigger conditions |
-
-If diagram M6 still shows Planned, treat this chapter’s **Done** status as authoritative.
-
-### 4.2.1 Product Backlog (Epic Level, Phase 1)
-
-| Epic | Representative stories | Priority | Sprint | Status |
-| --- | --- | --- | --- | --- |
-| Master data | US-1.1 sites; US-1.2 destinations | Must | S1 | Done |
-| DB & scaffold | US-1.3 ERD; US-1.4 ASP.NET + static UI | Must | S1 | Done |
-| Excel import | US-2.1–2.5 template, dual headers, preview | Must | S2 | Done |
-| Rules & trial | US-3.1–3.5 transactional upsert, calculate API | Must | S3 | Done |
-| Quality & CI | US-4.1–4.3 tests, Actions | Must | S4 | Done |
-| Docs & demos | US-4.5–4.6 diagrams, videos | Should | S4–M5 | In progress |
-| Phase 2 billing | Strategy, dual-track, historical price, rule RAG | Must | S5+ | Done |
-| PDA no-order | P-UC-01–06 login/select/start/report | Must | Phase 2 parallel | Done |
-| JWT/RBAC | — | Could | — | Planned |
-| CW↔PDA integration | — | Won't (this phase) | — | Planned |
-
-Detail: `docs/project-management/4-week-sprint-plan.md`. **Solo:** all stories owned by one developer.
-
-## 4.3 Sprint 1 — Foundation (Planned 48h / Actual 52h, +8%)
-
-**Goal:** runnable foundation—schema, master-data CRUD, admin tabs, Dapper access.
-
-**Outputs:** SQL Server schema/init for sites, destinations, price rules; Sites/Destinations CRUD + UI; Dapper and connection configuration.
-
-**Variance:** +4h (+8%), mainly one-off local SQL Server / .NET 9 environment setup—controllable infrastructure overhead.
-
-## 4.4 Sprint 2 — Excel Import (Planned 44h / Actual 61h, +39%)
-
-**Goal:** supplier price-table import with template download, parse, and preview to avoid unvalidated writes.
-
-**Outputs:** standard single-row template; ClosedXML auto-detection of legacy three-row headers; preview–confirm flow with optional trial-calculation linkage.
-
-**Overrun driver:** real supplier header chaos, column misalignment, and multi-format compatibility far exceeded early estimates. Actual **61h (+39%)**—largest Phase 1 variance.
-
-**Improvements applied in Sprints 3–4:** finer decomposition of external-file tasks; ~15% buffer for high-uncertainty work; strict preview-before-commit to cut rework.
-
-## 4.5 Sprint 3 — Rules & Pricing (Planned 56h / Actual 51h, −9%)
-
-**Goal:** transactionally write validated price tables to `PriceRules`; stable freight trial API.
-
-**Outputs:** fail-all rollback on validation errors; lane + effective-date versioning; one Excel row → many `PriceRules` (tiers + overweight); `/api/PriceRule/calculate` and UI.
-
-**Note:** no JSON dynamic rule engine—DB rule rows + calculation service. Underspend reflects better estimation after Sprint 2 and import-pipeline reuse.
-
-## 4.6 Sprint 4 — QA & CI (Planned 50h / Actual 47h, −6%)
-
-**Goal:** engineering quality gates with reproducible evidence.
-
-**Outputs:** xUnit + `WebApplicationFactory` integration tests; light concurrency smoke tests; GitHub Actions: restore → `dotnet test` → reports → coverage artefacts; explainable skip of DB-dependent tests when cloud runners lack SQL Server.
-
-Final report and seven videos belong to M5 and are deferred to avoid Sprint 4 scope creep. Actual **47h**, slightly under plan.
-
-### 4.6.1 Sprint Backlog Extract (Phase 1)
-
-See Chinese master §4.6.1 for full US tables (S1–S4 planned/actual hours). Source: `4-week-sprint-plan.md`.
-
-## 4.7 Phase 2 (from Sprint 5) — Design Deepening and Parallel PDA
-
-Mid-term feedback: early system felt light; billing needed patterns and detailed design; architecture narrative and physical evidence were insufficient. Phase 2 did **not** jump to microservices; it deepened CloudWarehouse capabilities and delivered PDA in parallel.
-
-### 4.7.1 CloudWarehouse deepening (completed)
-
-1. Strategy Pattern: `TierBillingStrategy`, `OverweightBillingStrategy`, `VolumetricBillingStrategy` orchestrated by `FeeCalculationEngine`.  
-2. Dual-track waybills: receivable customer quotes vs payable cost, historical rules by ship date; preview vs in-sheet transfer-fee comparison.  
-3. Built-in rule RAG (Retrieve→Augment→Generate) for FAQ lookup—**not** a settlement engine.  
-4. Class diagrams, dual-track sequence diagrams, and tests (see Software Design / QA).
-
-### 4.7.2 PDA no-order reporting (parallel, completed)
-
-Honeywell PDA app for night/no-order scenarios: login, select line/group/machine, start/report/query; Spring Boot API persistence. **No production API integration** with CloudWarehouse—two independent contexts under one factory narrative.
-
-### 4.7.3 Phase 2 personal hours
-
-| Work package | Planned (h) | Actual (h) | Notes |
-| --- | ---: | ---: | --- |
-| CW: Strategy + dual-track + rule RAG + diagrams/report + Playwright E2E | 58 | 63 | Git Jun–Aug 2026 |
-| PDA: API + Android + hardware + ops guide | 72 | 76 | Separate from CW hours |
-| **Phase 2 total** | **130** | **139** | |
-| **Grand total (Ph1+Ph2)** | **328** | **350** | Solo personal effort |
-
-## 4.8 Phase 1 Planned vs Actual Summary
-
-| Sprint | Goal summary | Planned (h) | Actual (h) | Variance |
-| --- | --- | --- | --- | --- |
-| S1 | Foundation | 48 | 52 | +8% |
-| S2 | Excel import | 44 | 61 | +39% |
-| S3 | Rules & trial calculation | 56 | 51 | −9% |
-| S4 | QA & CI | 50 | 47 | −6% |
-| **Phase 1 total** | | **198** | **211** | **+7%** |
-
-
-> **【插图占位 4-2】** Phase 1 个人工时 Planned vs Actual
-> - 来源：`docs/project-management/sprint-hours-chart.html`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 4-2】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：Solo 个人工时柱状图；数据见 sprint-hours-chart-data.csv。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-**Analysis:** Phase 1 overall +7%—plan controlled. Only Sprint 2 had a large overrun (external Excel unpredictability); Sprints 3–4 returned to ±10%, showing retrospective improvements worked. All hours are **solo** personal effort, meeting mid-term Planned vs Actual requirements.
-
-### 4.8.1 Burndown Tracking — Solo Alternative
-
-Classic burndown tracks **remaining story points**. This project uses **cumulative Planned vs Actual hours** (`sprint-burndown-cumulative.csv`):
-
-| Milestone | Cumulative planned (h) | Cumulative actual (h) |
-| --- | ---: | ---: |
-| End Sprint 1 | 48 | 52 |
-| End Sprint 2 | 92 | 113 |
-| End Sprint 3 | 148 | 164 |
-| End Phase 1 (S4) | 198 | 211 |
-| End Phase 2 (project) | 328 | 350 |
-
-**Figure 4-3 (suggested):** line chart of planned vs actual cumulative hours (Appendix A-07b).
-
-## 4.9 Evidence Checklist
-
-| Evidence | Location |
-| --- | --- |
-| Hours source data | `docs/project-management/sprint-hours-chart-data.csv` |
-| Hours bar chart | `sprint-hours-chart.html` screenshot |
-| Roadmap | `docs/diagrams/10-roadmap-milestones.puml` |
-| Sprint 2 import | Import success/fail screenshots; `ExcelHelper` unit tests |
-| Sprint 4 CI | GitHub Actions green runs; coverage artefacts |
-| Sprint 5 Strategy & dual-track | Class diagram 13, sequence 14, waybill preview screenshots |
-| PDA reporting | Start/report success screenshots or short recording |
-
-## 4.10 Chapter Summary
-
-Phase 1 delivered the CloudWarehouse MVP in four weekly sprints with controllable solo-hour variance. Phase 2 deepened design via Strategy and dual-track historical pricing and delivered PDA no-order reporting in parallel. Subsequent chapters cover persistence, multi-view architecture, and billing detailed design, always anchored by verifiable engineering evidence.
-
----
-
-# Chapter 5 Database Design and Entity-Relationship Model
-
-Chapter 4 described sprint delivery. This chapter focuses on the persistence model that enables dual-track price rules, one-to-many rule expansion, whole-lane version replacement, historical-price lookup, and receivable/payable settlement.
-
-## 5.1 Design Goals
-
-1. **Business coverage:** master data; dual-track versioned price rules (receivable vs payable); repeatable/idempotent import; traceable waybill settlement lines.  
-2. **Technical fit:** relational model with explicit SQL via Dapper for performance and control.  
-3. **Architectural consistency:** all CloudWarehouse business tables in one database (Modular Monolith); PDA uses a separate database for physical context isolation.
-
-## 5.2 Conceptual Model and Bounded Table Groups
-
-| Group | Tables (conceptual / script names) | Description |
-|------|--------------------------------------|-------------|
-| Master Data | Sites, Destinations, Customers, CustomerAccounts | Baseline entities with unique codes for referential integrity |
-| Pricing (payable cost) | PriceRules | Lane (site–destination) + effective-date versioning; `BillingType` distinguishes tier vs overweight |
-| Pricing (receivable quotes) | CustomerQuoteRules | **Separate from** PriceRules: customer + province (+ optional express type) + effective date |
-| Billing | BillLines | **No separate Bill header table**; line-level amounts, batch, tiers, dual-track comparison fields |
-| Import metadata | No dedicated job table | File-level import; state follows preview–confirm; repeatability via business replace strategy |
-
-## 5.3 Key Design Decisions
-
-1. **One-to-many rule mapping:** one Excel price row expands to many rule rows (weight bands such as 0–0.3 kg, 0.3–0.5 kg, plus overweight). Applies to both `PriceRules` and `CustomerQuoteRules`.
-
-2. **Historical price versioning:** both rule tables use `EffectiveDate` and nullable `ExpiryDate`. Settlement filters by waybill **ship / bill date** so historical amounts are reproducible.
-
-3. **Idempotent import (whole-lane replace):** cost import deletes **all** rules for a lane (`SiteId + DestId`) then inserts the new set—not a fine-grained upsert on lane + same EffectiveDate. Repeated file submission does not leave stale band rows.
-
-4. **Billing type discriminator:** rule-table `BillingType` INT (1 = tier, 2 = overweight) routes the Strategy engine. Note: `BillLines.BillingType` may be a business string (e.g. “forward billing”) and is **not** the same semantic as the rule INT enum.
-
-5. **Index correction:** `database/fix-price-rules-index.sql` **drops** the incorrect unique index `(SiteId, DestId, EffectiveDate)` because one lane and one effective date **must** allow multiple tier/overweight rows. Queries rely on non-unique lane indexes.
-
-6. **Settlement line persistence:** `BillLines` stores computed amounts, batch, tier outcomes, etc.; matched rule-row IDs are generally **not** stored, avoiding brittle traceability when rule versions change.
-
-## 5.4 Entity-Relationship Diagram (ERD)
-
-
-> **【插图占位 5-1】** 实体关系图 ERD
-> - 来源：`docs/diagrams/07-erd.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 5-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：以 schema.sql 为准；图若滞后于 BillLines/CustomerQuoteRules 请在 caption 说明。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-Source: `docs/diagrams/07-erd.puml`. Core associations:
-
-- Site / Destination ↔ PriceRules / CustomerQuoteRules: one-to-many across effective periods and weight bands.  
-- Customer ↔ CustomerQuoteRules: one-to-many for differentiated quotes.  
-- BillLines link site, destination, and customer dimensions at line granularity; **no Bill header table**.
-
-If the ERD figure lags (missing dual rule tables, `ExpiryDate`, or BillLines-only design), treat `database/schema.sql`, `billing-schema.sql`, and `customer-quote-schema.sql` as authoritative and note planned diagram sync.
-
-## 5.5 Integrity and Transactions
-
-- **Constraints:** FKs, non-null, unique codes (e.g. `SiteCode`); after removing the bad unique index, version uniqueness at lane+date is enforced by business logic rather than a wrong unique key.  
-- **Import transaction:** whole-lane delete + bulk insert inside one `SqlTransaction`; any validation failure rolls back the entire batch.  
-- **Workflow alignment:** preview validates in memory only; confirm opens the transaction—minimising dirty partial writes.
-
-## 5.6 PDA Storage (Independent Deployment)
-
-PDA uses dedicated database `PDA_NoOrder`, physically isolated from CloudWarehouse.
-
-- Conceptual tables: users, machines/lines, start records, report records.  
-- No shared-DB integration or real-time sync with CloudWarehouse in this delivery.
-
-## 5.7 Evidence Checklist
-
-| Evidence | Location |
-|------|----------|
-| ERD | `docs/diagrams/07-erd.puml` |
-| Core schema | `database/schema.sql` |
-| Billing schema | `database/billing-schema.sql` |
-| Customer quote schema | `database/customer-quote-schema.sql` |
-| Index fix | `database/fix-price-rules-index.sql` |
-| Optional | SSMS table-list screenshot |
-
-## 5.8 Chapter Summary
-
-Dual-track rule tables, one-to-many expansion, and whole-lane replace underpin historical pricing and dual-track settlement; PDA’s separate database preserves context decoupling. The next chapter places these tables into multi-view system architecture.
-
----
-
-# Chapter 6 System Architecture and Multi-View Design
-
-Chapter 5 defined the persistence model. This chapter organises those capabilities into a deployable system via multi-view architecture: logical layers and bounded contexts, enterprise relationship to PDA, physical topology, and honest HA / future-split boundaries. Mid-term feedback required defending the monolith, documenting infrastructure on physical views, and explaining DDD—this chapter responds directly.
-
-## 6.1 Architecture Style and Motivation
-
-CloudWarehouse adopts a **Modular Monolith**:
-
-- **Physically:** one deployable unit (`CloudWarehouse.Backend`, ASP.NET Core + same SQL Server database).  
-- **Logically:** module folders by bounded context (`Modules/MasterData`, `Import`, `Pricing`, `Billing`, `Assistant`, …) with clear seams for conditional extraction later.
-
-| Option | Pros | Poor fit for this project |
+| 选项 | 优点 | 对本项目的不适配 |
 |------|------|------------------|
-| Microservices | Independent deploy, parallel teams | Solo + four-week MVP; distributed TX / ops cost too high |
-| Big-ball-of-mud monolith | Fast delivery | Fuzzy boundaries; hard to evolve or defend as “designed” |
-| **Modular Monolith** | Fast single-process delivery + module boundaries | Optimal for this phase; extraction kept as conditional plan |
+| 微服务 | 独立部署、团队并行 | Solo + 四周 MVP；分布式事务/运维开销过高 |
+| 传统大泥球单体 | 交付快 | 边界模糊，难演进、难答辩“有设计” |
+| **Modular Monolith** | 单进程交付快 + 模块边界 | 本期最优；拆分保留为有条件规划 |
 
-The monolith is an intentional decision under time, headcount, and consistency constraints (ADR / `docs/diagrams/01a-architecture-decisions-adr.puml`), not a lack of microservice skill.
+结论：单体不是能力不足，而是在 **时间、人力、一致性需求** 约束下的有意决策（见 ADR 与 `docs/diagrams/01a-architecture-decisions-adr.puml`）。
 
-PDA no-order reporting is a **separate deployable system** (Android + Spring Boot + independent DB)—not stuffed into the CloudWarehouse process and not pretended to be one service mesh.
+并列交付的 PDA 无订单报工是 **另一套可部署系统**（Android + Spring Boot + 独立库），不塞进云仓进程，也不假装已是同一微服务网格。
 
-## 6.2 Logical Architecture and Typical Request Flow
+---
 
+## 6.2 逻辑架构与典型请求流
 
-> **【插图占位 6-1】** 逻辑架构图
-> - 来源：`docs/diagrams/02-logical-architecture.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 6-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：分层与模块依赖。*
+**图 6-1** 分层与模块依赖。
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+See `docs/diagrams/02-logical-architecture.puml` for the logical view. Hierarchical responsibilities:
 
-| Layer | Representative components | Responsibility |
+| 层 | 代表组件 | 职责 |
 |----|----------|------|
-| Presentation | `wwwroot/index.html` | Admin tabs: master data, import, trial calc, waybills, rule retrieval |
-| API | Module `*Controller`s | HTTP adaptation; validate; delegate to application services |
-| Application | Import / Calculate / BillImport / Assistant services | Use-case orchestration, TX boundaries, helper coordination |
-| Domain / Helpers | Excel parse, `PriceRuleMapper`, `FeeCalculationEngine` + Strategy | Pure rules/calculation; unit-testable |
-| Data | Dapper + SQL Server | Explicit SQL; same-DB transactions |
+| Presentation | `wwwroot/index.html` | 管理端 Tab：主数据、导入、试算、运单、规则检索等 |
+| API | 各模块 `*Controller` | HTTP 适配；校验入参；委托应用服务 |
+| Application | Import / Calculate / BillImport / Assistant 等 Service | 编排用例、事务边界、跨 helper 协调 |
+| Domain / Helpers | Excel 解析、`PriceRuleMapper`、`FeeCalculationEngine` + Strategy | 纯规则与计算；可单测 |
+| Data | Dapper + SQL Server | 显式 SQL；同库事务 |
 
-**Cost import (preview → confirm) data flow (summary):**
+**Price list import (preview→confirm) data flow (summary):**
 
-1. Browser uploads `.xlsx` → `ImportController`.  
-2. `PriceRuleImportService` uses `ExcelHelper` to detect standard / three-row headers.  
-3. `PriceRuleMapper` expands one Excel row into many `PriceRule`s.  
-4. Preview: `save=false`, optional trial calc, **no DB write**.  
-5. Confirm: within `SqlTransaction`, delete lane old rules and insert new; commit or full rollback.
+1. 浏览器上传 `.xlsx` → `ImportController`；
+2. `PriceRuleImportService` 调用 `ExcelHelper` 探测标准/三级表头等格式；
+3. `PriceRuleMapper` 将一行 Excel 展开为多条 `PriceRule`；
+4. 预览：`save=false`，可挂钩试算，**不写库**；
+5. 确认：在 `SqlTransaction` 内按 lane 删除旧规则并插入新规则，提交或整批回滚。
 
-Dual-track and Strategy sequencing details belong in Software Design (class diagram 13, sequence 14). This chapter only fixes logical placement: settlement orchestration in Pricing/Billing application layer; persistence as in Chapter 5.
+运单双轨、Strategy 编排的详细时序放在 **软件设计章**（类图 13、时序 14）；本章只固定“逻辑落点”：结算编排在 Pricing/Billing 应用层，持久化落在第五章所述表。
 
-## 6.3 Bounded Contexts and Code Mapping
+---
 
+## 6.3 限界上下文与代码映射
 
-> **【插图占位 6-2】** DDD 限界上下文
-> - 来源：`docs/diagrams/05-ddd-bounded-contexts.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 6-2】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：Master Data / Import / Pricing 等边界。*
+**图 6-2** Master Data / Import / Pricing 等边界。
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+DDD 在本项目中的用法是 **务实的限界划分**，不是完整事件溯源或聚合魔法。上下文见 `docs/diagrams/05-ddd-bounded-contexts.puml`，并与代码目录对齐：
 
-DDD here is **pragmatic context partitioning**, not full event sourcing or aggregate “magic”.
-
-| Bounded context | Responsibility | Code locus | Key persistence |
+| 限界上下文 | 职责 | 代码落点（示意） | 关键持久化 |
 |------------|------|------------------|----------|
-| Master Data | Sites / destinations / customers | `Modules/MasterData` | Sites, Destinations, Customers, CustomerAccounts |
-| Import | Cost table parse, validate, transactional commit | `Modules/Import` | Writes **PriceRules** (no job table; customer-quote import lives under Pricing) |
-| Pricing | Cost trial calc, customer quotes, Strategy engine | `Modules/Pricing` + Pricing.Core | PriceRules, CustomerQuoteRules |
-| Billing | Waybill import, receivable/payable compare persist | `Modules/Billing` | BillLines |
-| Assistant | Built-in rule RAG (FAQ assist; not settlement SoR) | `Modules/Assistant` + KnowledgeBase | File knowledge base primarily |
+| Master Data | 站点/目的地/客户等基准数据 | `Modules/MasterData` | Sites, Destinations, Customers, CustomerAccounts |
+| Import | 成本价表解析、校验、事务提交 | `Modules/Import` | 写入 PriceRules（无独立 job 表；客户报价导入在 Pricing） |
+| Pricing | 成本规则试算、客户报价、Strategy 引擎 | `Modules/Pricing` + Pricing.Core | PriceRules, CustomerQuoteRules |
+| Billing | 运单导入、应收应付对比落库 | `Modules/Billing` | BillLines |
+| Assistant | 内置规则 RAG（辅助 FAQ，非结算真相源） | `Modules/Assistant` + KnowledgeBase | 文件知识库为主 |
 
-**Language isolation example:** Import’s `PriceTableRow` (Excel view) maps to Pricing’s persistent `PriceRule` collection—do not mix field semantics at the UI layer.
+**语言隔离示例：** Import 上下文中的 `PriceTableRow`（Excel 行视图）经映射变为 Pricing 上下文中的持久 `PriceRule` 集合；二者不应在 UI 层混用同一套字段语义。
 
-Early Phase 1 controllers lived at the solution root; narrative uses the **current `Modules/*` structure**.
+Phase 1 早期代码曾集中在根目录 Controllers；重构后以 `Modules/*` 表达边界——报告叙述以 **当前模块结构** 为准。
 
-## 6.4 Enterprise Context Relationships (Including PDA)
+---
 
+## 6.4 企业级上下文关系（含 PDA）
 
-> **【插图占位 6-3】** 企业 Context Map
-> - 来源：`docs/diagrams/16-enterprise-context-map.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 6-3】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：云仓与 PDA 独立；集成为 Planned。*
+**图 6-3** 云仓与 PDA 独立；集成为 Planned。
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+工厂视角下存在两个产品系统，关系见 `docs/diagrams/16-enterprise-context-map.puml`：
 
-| Relationship | Honest meaning |
+| 关系 | 含义（诚实表述） |
 |------|------------------|
-| CloudWarehouse internal modules | Same-DB Modular Monolith; in-process calls |
-| PDA ↔ line / MES-related capabilities | PDA start/report and backend persist delivered; MES linkage described only as actually implemented—**no exaggeration** |
-| CloudWarehouse ↔ PDA | **Customer–Supplier / Integration Planned:** shared factory goals; **no production API co-DB or real-time sync this phase** |
+| CloudWarehouse 内部模块 | 同库 Modular Monolith；模块间进程内调用 |
+| PDA ↔ 产线/MES 相关能力 | PDA 侧已实现开工/报工与后端落库；与既有 MES 的衔接按 PDA 项目实际描述，**不夸大** |
+| CloudWarehouse ↔ PDA | **Customer–Supplier / 集成 Planned**：共享的是工厂业务目标，**本期无生产级 API 共库或实时同步** |
 
-Defence ban words: do not claim “microservices are live” or “CloudWarehouse and PDA settlement APIs are connected”.
+答辩禁话：不要说“微服务已上线”或“云仓与 PDA 已打通结算链路”。
 
-## 6.5 Physical Deployment and Runtime Topology
+---
 
+## 6.5 Physical deployment and operating topology
 
-> **【插图占位 6-4】** 物理 / 部署视图
-> - 来源：`docs/diagrams/03-physical-architecture.puml 或 04-deployment-diagram.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 6-4】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：单实例拓扑；无 HA。*
+**图 6-4** 单实例拓扑；无 HA。
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+物理/部署图：`docs/diagrams/03-physical-architecture.puml`、`04-deployment-diagram.puml`。
 
-| Node | Role | Notes |
+**演示 / 开发期典型拓扑：**
+
+| 节点 | 角色 | 说明 |
 |------|------|------|
-| Developer / demo machine | Backend (Kestrel) + browser | Admin UI and API co-hosted or same publish package |
-| SQL Server | CloudWarehouse DB | Local or LAN; typically port 1433 |
-| GitHub Actions Runner | Ephemeral CI | `dotnet test`, coverage artefacts; DB-dependent tests may skip with explanation when no permanent business DB |
-| PDA device + PDA API/DB | Parallel system | Honeywell ↔ Spring Boot ↔ `PDA_NoOrder` (independent) |
+| 开发者/演示机 | 运行 Backend（Kestrel）+ 浏览器 | 管理端与 API 同机或同发布包 |
+| SQL Server | CloudWarehouse 库 | 可本机或局域网实例；端口通常 1433 |
+| GitHub Actions Runner | 短暂 CI 节点 | `dotnet test`、覆盖率 Artifact；云端无常驻业务库时对依赖 DB 的用例可跳过并解释 |
+| PDA 设备 + PDA API/DB | 并列系统 | 霍尼韦尔终端 ↔ Spring Boot ↔ `PDA_NoOrder`（独立） |
 
-Optional: self-contained `publish/` package for on-site demos. IIS checklists ≠ production multi-active cluster.
+Optional deliverables: Self-contained release package (`publish/`) to facilitate on-site demonstration; see the project management document for the IIS release checklist, ** does not mean ** that a production-level multi-active cluster has been built.
 
-**Security posture (MVP honesty):** local / controlled demo; auth/RBAC deferred per ADR; CORS/HTTP convenience settings must be tightened before production—details in DevSecOps / Risk chapters.
+**安全姿态（MVP 诚实声明）：** 本地/受控演示场景；认证/RBAC 按 ADR 延期；CORS/HTTP 等按开发便利配置，生产前需收紧——细节在 DevSecOps / 风险章展开，本章只标明架构层未宣称零信任生产加固。
 
-## 6.6 High Availability and Backup (Honest Statement)
+---
 
-| Aspect | Current state | Direction (not required this phase) |
+## 6.6 High availability and backup (honest statement)
+
+| Aspects | Current status | Planning direction (not required to be delivered in this period) |
 |------|----------|--------------------------|
-| App redundancy | Single instance, no load balancer | Container replicas + reverse proxy |
-| DB redundancy | Single SQL Server | Managed HA / Always On, etc. |
-| Backup | Manual `.bak` / script rebuild | Automated backup with explicit RPO |
-| Disaster recovery | Git + `database/*.sql` rebuild | Documented RTO + drills |
+| Application redundancy | Single instance, no load balancing | Multiple copies of containers + reverse proxy |
+| Database Redundancy | Single Instance SQL Server | Managed HA / Always On and more |
+| Backup | Manual `.bak` / script rebuild | Automatic backup with clear RPO |
+| Disaster recovery | Git + `database/*.sql` reconstruction | Documented RTO + walkthrough |
 
-Correct response to “document infrastructure/redundancy”: **state that there is no HA**, do not invent a cluster.
+中期要求“物理图写清基础设施/冗余”——正确做法是 **写清现状为无 HA**，而不是虚构集群。
 
-## 6.7 Microservice Extraction Triggers (Planned)
+---
 
-Module boundaries exist, but extraction requires triggers, e.g.:
+## 6.7 微服务提取的触发条件（Planned）
 
-- Independent teams or release cadences become necessary;  
-- A context (e.g. fee calculation) shows distinct scale/performance needs;  
-- Organisation can afford ops and observability cost.
+模块边界已按上下文切开，但 **提取微服务需满足触发条件**，例如：
 
-Under solo staffing and current volume, early split adds network and distributed-consistency cost without proportional benefit. Milestone M8 remains **Planned**, aligned with Chapter 4.
+- 独立团队或独立发布节奏成为刚需；
+- 某上下文（如计费计算）出现明显不同的扩展/性能特征；
+- 运维与观测成本可被组织承担。
 
-## 6.8 Evidence Checklist
+在 Solo 与当前业务量下，过早拆分会引入网络边界与分布式一致性成本，收益不足。故 M8「按触发条件提取」保持 **Planned**，与第四章里程碑一致。
 
-| Evidence | Location |
+---
+
+## 6.8 本章证据清单
+
+| 证据 | 位置 |
 |------|------|
-| Constraints / ADR | `docs/diagrams/01*.puml` |
-| Logical architecture | `02-logical-architecture.puml` |
-| Physical / deployment | `03-physical-architecture.puml`, `04-deployment-diagram.puml` |
-| DDD bounded contexts | `05-ddd-bounded-contexts.puml` |
-| Enterprise context map | `16-enterprise-context-map.puml` |
-| Module code | `CloudWarehouse.Backend/Modules/*` |
-| Publish / demo package (optional) | `publish/`, start scripts |
-
-## 6.9 Chapter Summary
-
-Modular Monolith is justified under constraints; logical layers, bounded contexts, and the enterprise context map address narrative gaps; physical topology and an honest **no-HA** inventory address infrastructure transparency. PDA remains a parallel context with integration **Planned**. The next chapter refines Strategy billing, dual-track sequencing, and key class structures into verifiable design artefacts.
+| 约束与 ADR 图 | `docs/diagrams/01*.puml` |
+| 逻辑架构 | `02-logical-architecture.puml` |
+| 物理 / 部署 | `03-physical-architecture.puml`、`04-deployment-diagram.puml` |
+| DDD 限界 | `05-ddd-bounded-contexts.puml` |
+| 企业 Context Map | `16-enterprise-context-map.puml` |
+| 模块代码 | `CloudWarehouse.Backend/Modules/*` |
+| 发布/演示包（可选截图） | `publish/`、启动脚本 |
 
 ---
 
-# Chapter 7 Software Design: Strategy Pattern and Dual-Track Billing
+## 6.9 本章小结
 
-Chapter 6 fixed Modular Monolith structure and context placement. This chapter presents verifiable detailed design: Strategy Pattern for billing algorithm variants; class-level sequence for dual-track receivable/payable collaboration on waybill preview; and the placement of historical-price filtering, weight rounding, and amount-comparison checks. It directly answers mid-term demands for design patterns plus class/sequence artefacts.
+This chapter demonstrates Modular Monolith as a reasonable choice within constraints, and responds to "lack of architectural narrative" with logical layering, bounded contexts, and enterprise Context Maps; to infrastructure transparency requirements with an honest list of physical topology and **no HA**. PDAs exist side by side as independent contexts, and the integration remains Planned. The next chapter goes to **Software Design**: Strategy billing, dual-track timing and key class structures, refining the architecture into verifiable design products.
 
-## 7.1 Design Scope and Core Use Case
+# Chapter 7 Software Design
+Software Design: Strategy Pattern and Dual-Track Billing
+Chapter 6 clarifies the structure of the modular monomer and the placement of the bounded context from the multi-perspective architecture level; this chapter focuses on the verifiable detailed design: managing the billing algorithm variants through the Strategy Pattern, using the class-level sequence diagram to illustrate the collaboration logic of the receivable/payable dual-track in the waybill preview scenario, and clarifying the position of historical price filtering, weight rounding, and amount comparison verification in the entire link. This chapter directly responds to the mid-term review's requirements for "design pattern implementation + detailed design output (class diagram/sequence diagram)".
+## 7.1 Design scope and core use cases
+The core design of this chapter revolves around the main use case: Waybill Excel import preview + dual-track pricing comparison - after the administrator uploads the bill details on the management side, the system automatically calculates the amount receivable and payable for each row, and compares it with the pre-filled amount in the Excel table.
 
-**Primary use case:** waybill Excel import preview + dual-track fee comparison—after the administrator uploads bill lines, the system computes receivable and payable per row and compares them to in-sheet expected amounts.
-
-| In scope here | Out of main path |
+| Included in the design scope of this chapter | Not included in the main path (other chapters or boundary descriptions) |
 | --- | --- |
-| Strategy class structure and resolver | Built-in rule RAG / Assistant (lookup only; no settlement amounts) |
-| `FeeCalculationEngine` orchestration | PDA reporting workflows |
-| Dual-track application services and sequencing | Microservice extraction design |
-| Weight rounding; date-filtered historical prices | Authentication / RBAC |
+| Strategy class structure and strategy parser | Built-in rules RAG/Assistant (only for viewing, not involved in amount settlement) |
+| FeeCalculationEngine billing arrangement | PDA reporting business process |
+| Dual-track application service orchestration and timing logic | Design related to microservice splitting |
+| Weight rounding rules, filtering historical prices by date | Identity authentication / RBAC authority system |
 
-Participants align with Chapter 6: Browser → `BillController` → `BillImportService` → dual-track calculator → cost/quote calculate services → fee engine → concrete strategies → SQL Server.
+链路参与者与分层结构与第六章完全对齐：浏览器 → BillController → BillImportService → 双轨计算器 → 成本 / 报价计算服务 → 计费引擎 → 具体策略实现 → SQL Server 数据库。
+## 7.2 计费变体问题与 Strategy 动机
+物流价表的计费逻辑包含多类基础算法，且存在持续扩展的业务可能性。若以条件分支堆砌实现，将违背开闭原则，也无法支撑「可演进设计」的论证。
 
-## 7.2 Billing Variants and Strategy Motivation
-
-| Variant | Business meaning | Status | Strategy class |
+| 计费变体 | 业务含义 | 实现状态 | 对应策略类 |
 | --- | --- | --- | --- |
-| Tier | Weight ≤5 kg: discrete weight bands; unit price + waybill fee | Done | `TierBillingStrategy` |
-| Overweight | Weight >5 kg: overweight unit pricing | Done | `OverweightBillingStrategy` |
-| Volumetric | When L×W×H/6000 exceeds actual weight, bill by volumetric weight via tier/overweight | Done (engine + unit tests) | `VolumetricBillingStrategy` |
-| Step / irregular / surcharges | Contract custom extensions | Planned | Reserved; not implemented |
+| 区间计费（Tier） | 重量 ≤5kg 时匹配离散重量档位，按档内单价 + 面单费计算 | Done | TierBillingStrategy |
+| 续重计费（Overweight） | 重量 >5kg 时按续重单价计算费用 | Done | OverweightBillingStrategy |
 
-Phase 1 could cover the first two variants with conditionals; continual contract algorithms would force core-path edits and hurt maintainability. Phase 2 abstracts algorithms as replaceable strategies; the engine only runs “filter effective rules → resolve strategy → calculate”. Recorded as **ADR-8 (Billing Strategy Pattern, Implemented)**.
+体积重计费（Volumetric）	当长 × 宽 × 高 / 6000 计算值大于实重时，按体积重执行区间或续重计费	Done（引擎 + 单元测试覆盖）	VolumetricBillingStrategy
+阶梯计费 / 异形件计费等	合同定制化扩展场景	Planned	预留类名，暂未实现
+Phase 1 阶段可通过条件分支覆盖前两类计费逻辑；若持续新增合同算法，每次扩展都需修改核心计算路径，代码可读性与可维护性将快速下降。因此 Phase 2 将各类计费算法抽象为可替换的策略，由解析器根据业务上下文自动选择，计费引擎仅负责「过滤生效规则 → 匹配策略 → 执行计算」的标准化流程。
+该设计决策记录于 ADR-8（Billing Strategy Pattern，Implemented）。
+## 7.3 Strategy 类设计
 
-## 7.3 Strategy Class Design
+**图 7-1** Tier / Overweight / Volumetric + FeeCalculationEngine。
 
+策略模式类图对应文件：docs/diagrams/13-billing-strategy-class.puml。核心代码位于 CloudWarehouse.Pricing.Core 项目的 Billing 命名空间下，并通过 Backend 依赖注入容器完成注册。
+### 7.3.1 Key Type Responsibilities
 
-> **【插图占位 7-1】** 计费 Strategy 类图
-> - 来源：`docs/diagrams/13-billing-strategy-class.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 7-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：Tier / Overweight / Volumetric + FeeCalculationEngine。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-Diagram: `docs/diagrams/13-billing-strategy-class.puml`. Core types live under `CloudWarehouse.Pricing.Core` Billing namespace, registered via Backend DI.
-
-### 7.3.1 Key type responsibilities
-
-| Type | Responsibility |
+| 类型名称 | 核心职责 |
 | --- | --- |
-| `BillingContext` | Chargeable weight, effective rules, optional dimensions / volumetric divisor |
-| `IBillingStrategy` | `CanHandle(context)` + `Calculate(context)` → `PriceCalculateResult` |
-| `TierBillingStrategy` | Actual/chargeable weight in ≤5 kg band pricing |
-| `OverweightBillingStrategy` | Weight >5 kg overweight pricing |
-| `VolumetricBillingStrategy` | When dimensions exist and volumetric > actual, take over and delegate final weight to tier/overweight |
-| `IBillingStrategyResolver` / `DefaultBillingStrategyResolver` | Walk registration order; first `CanHandle == true` wins |
-| `FeeCalculationEngine` | Filter rules by order/bill date Effective/Expiry; build context; invoke resolver |
-| `FeeRuleCalculator` | Static façade delegating to default engine (legacy callers) |
-| `DualTrackFeeCalculator` | Application service: payable and receivable for the same waybill line; aggregate comparison |
+| BillingContext | 计费上下文载体，承载计费重量、当前生效规则列表、可选的长宽高参数与体积重除数 |
+| IBillingStrategy | 计费策略统一接口，定义 CanHandle(context) 适配判断与 Calculate(context) 计算方法，输出 PriceCalculateResult |
+| TierBillingStrategy | 实重（或计费重）落在 ≤5kg 区间时执行档位计费 |
+| OverweightBillingStrategy | 重量 >5kg 时执行续重计费 |
+| VolumetricBillingStrategy | 存在尺寸参数且体积重大于实重时接管计算，将最终计费重委托给区间或续重策略 |
+| IBillingStrategyResolver / DefaultBillingStrategyResolver | 策略解析器，按注册顺序遍历，返回第一个 CanHandle == true 的策略 |
+| FeeCalculationEngine | 计费引擎核心，按订单日期 / 账单日期过滤规则的生效 / 失效期，组装计费上下文，调用解析器执行计算 |
+| FeeRuleCalculator | 静态门面类，委托默认引擎执行计算，兼容历史调用方 |
+| DualTrackFeeCalculator | 应用层服务，针对同一运单行分别计算应付与应收金额，汇总对比结果 |
 
-### 7.3.2 Resolver order
+### 7.3.2 策略解析顺序
+CreateDefault() 方法与 DI 容器中的注册顺序为：
+1.	VolumetricBillingStrategy（存在尺寸且体积重更大时优先接管）
+2.	TierBillingStrategy
+3.	OverweightBillingStrategy
+解析顺序本身是设计的一部分：体积重判断必须先于基于实重的区间 / 续重策略，否则新增的体积重策略会被实重策略短路，无法生效。
+### 7.3.3 与数据模型的衔接
+所有策略消费的都是经过过滤的 PriceRule 结构列表：应付轨数据来自 PriceRules 表，应收轨数据从 CustomerQuoteRules 表读取并映射为统一结构后进入计费引擎。BillingType 标识与重量上下界共同决定档位匹配逻辑；规则版本选择发生在引擎过滤阶段，而非硬编码在单个 Strategy 内部，保证策略的纯粹性。
+## 7.4 开闭原则与扩展步骤
+体积重计费的落地是开闭原则的直接验证：仅通过新增策略类 + 在解析器 / DI 中注册，即可完成能力扩展，原有仅支持物理重量的调用方无需修改算法分支；FeeRuleCalculator 对仅传入重量的调用路径保持完全兼容。
+新增计费类型的标准扩展步骤为三步：
+1.	实现 IBillingStrategy 接口，明确定义 CanHandle 适配条件，避免错误抢占上下文；
+2.	在 DefaultBillingStrategyResolver.CreateDefault() 与 Program.cs DI 中注册新策略，严格控制注册顺序；
+3.	若业务需要新增输入参数（如长宽高、异形件标记），再扩展导入列或 API 上下文，无需修改双轨编排的核心骨架。
+当前处于 Planned 状态的阶梯计费、异形件计费等能力，均可重复上述注册路径完成扩展，无需重写 BillImportService 等上层编排逻辑。
+## 7.5 运单双轨时序（详细设计 — 类与对象级）
 
-`CreateDefault()` / DI registration order:
+**Figure 7-2** Waybill preview dual-track settlement - **Class & Object Level Sequence Diagram**
 
-1. `VolumetricBillingStrategy` (prefer when dimensions imply larger volumetric weight)  
-2. `TierBillingStrategy`  
-3. `OverweightBillingStrategy`  
+> **回应导师反馈：** 本图不以「API 层 / 服务层 / 数据层」等组件框表示交互，而以**具体类实例**为生命线（如 `bc : BillController`、`importSvc : BillImportService`、`row : WaybillImportRow`），消息名与仓库源码方法一致，满足 *analysis → design* 中「关键用例的类级时序」要求。
 
-Order is part of the design: volumetric must precede actual-weight strategies or it would be short-circuited.
+源文件：`docs/diagrams/14-sequence-waybill-dual-track.puml`（PlantUML 导出 PNG 后插入 Word **图 7-2**）。
 
-### 7.3.3 Link to the data model
+Dual-track semantics: receivable = customer-facing quotation (`CustomerQuoteRules`); payable = supplier-facing cost price (`PriceRules`); **not** receivable versus payable line distinction.
 
-Strategies consume filtered `PriceRule`-shaped lists: payable track from `PriceRules`; receivable track from `CustomerQuoteRules` mapped into the same structure. `BillingType` and weight bounds drive band matching; version selection happens in the engine filter stage—keeping strategies pure.
+### 7.5.0 参与者与源码映射
 
-## 7.4 Open–Closed Principle and Extension Steps
-
-Volumetric delivery validates OCP: add a strategy class + register it; weight-only callers remain compatible via `FeeRuleCalculator`.
-
-Standard extension steps:
-
-1. Implement `IBillingStrategy` with precise `CanHandle` conditions.  
-2. Register in `DefaultBillingStrategyResolver.CreateDefault()` and `Program.cs` DI with controlled order.  
-3. If new inputs are needed (dimensions, irregular flags), extend import columns or API context—without rewriting dual-track orchestration.
-
-Planned Step / irregular strategies can reuse this path without rewriting `BillImportService`.
-
-## 7.5 Dual-Track Waybill Sequence (Detailed Design)
-
-
-> **【插图占位 7-2】** 运单双轨预览时序图
-> - 来源：`docs/diagrams/14-sequence-waybill-dual-track.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 7-2】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：应收 CustomerQuoteRules vs 应付 PriceRules。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-**Dual-track semantics: receivable = customer-facing quotes; payable = supplier cost. This is NOT domestic vs international lanes.**
-
-### 7.5.1 Preview happy path
-
-1. Administrator selects waybill Excel and clicks Preview.  
-2. `POST /api/Bill/waybill/preview` → `BillController` → `BillImportService.ProcessImportAsync(..., saveToDatabase=false)`.  
-3. `WaybillExcelHelper` parses dual-row headers (bill detail + cost detail) or standard template; extracts in-sheet expected transfer fees if present.  
-4. Preload caches for sites, destinations, customers, accounts, and rules.  
-5. Per row: validate waybill no., province, weight → `WeightRounding` → resolve customer, site (often from express type → `SiteCode`), destination.  
-6. `DualTrackFeeCalculator.CalculateAsync(row)`:  
-   - **Payable:** `PriceRuleCalculateService` queries `PriceRules` by SiteId/DestId + bill date → `FeeCalculationEngine` → resolver → Tier/Overweight/Volumetric.  
-   - **Receivable:** `CustomerQuoteCalculateService` queries `CustomerQuoteRules` by CustomerId / province + bill date → **same** engine and strategies.  
-7. `BillLineTotals` aggregates receivable, payable, margin; tolerance compare vs Excel expected values (default 0.01); mark match/mismatch.  
-8. Return preview set for UI (system values, sheet values, match statistics).
-
-Confirm persist uses the same orchestration with `saveToDatabase=true` writing **`BillLines`**; TX boundary remains in the import service.
-
-### 7.5.2 Design points
-
-- Dual-track is an **application coordination** pattern, not two duplicated if/else kernels; both tracks share one Strategy engine for algorithmic consistency with separated financial semantics.  
-- Historical pricing is centralised in the engine’s date filter—avoiding “always use latest price” reconciliation failures.  
-- Comparison layer (`BillLineTotals`) turns design goals into demoable evidence: system vs manual sheet line-by-line.
-
-## 7.6 Placement of Historical Price and Weight Rounding
-
-| Concern | Design location | Notes |
+| 时序图参与者（实例 : 类） | 源码位置 | 职责 |
 | --- | --- | --- |
-| Historical filter | `FeeCalculationEngine.Calculate` rule filter | `EffectiveDate <= bill date` and not past `ExpiryDate`; import may expand multi-version Excel columns via `MasterPriceHistoryHelper` |
-| Weight rounding | `WeightRounding` before dual-track calc | Same forward-billing rounding on trial and batch preview paths |
-| One-to-many rule rows | Chapter 5 model + Mapper | One Excel row → many rule rows for Tier band matching |
+| `bc : BillController` | `Modules/Billing/Controllers/BillController.cs` | `PreviewWaybills` → `ProcessUpload(..., saveToDatabase=false)` |
+| `importSvc : BillImportService` | `Modules/Billing/Services/BillImportService.cs` | 解析、主数据匹配、逐行编排 |
+| `WaybillExcelHelper` | `Helpers/WaybillExcelHelper.cs` | `ReadWaybills` 解析 Excel |
+| `row : WaybillImportRow` | `Models/WaybillImportRow.cs` | 循环内行对象，承载双轨金额与比对标记 |
+| `dualCalc : DualTrackFeeCalculator` | `Modules/Billing/Services/DualTrackFeeCalculator.cs` | 应收/应付双轨协调（Facade） |
+| `costSvc : PriceRuleCalculateService` | `Modules/Pricing/Services/PriceRuleCalculateService.cs` | 应付轨查 `PriceRules` |
+| `quoteSvc : CustomerQuoteCalculateService` | `Modules/Pricing/Services/CustomerQuoteCalculateService.cs` | 应收轨查 `CustomerQuoteRules` |
+| `feeEngine : FeeCalculationEngine` | `CloudWarehouse.Pricing.Core/Billing/FeeCalculationEngine.cs` | 历史价过滤 + 调用策略 |
+| `resolver : DefaultBillingStrategyResolver` | `Pricing.Core/Billing/DefaultBillingStrategyResolver.cs` | `Resolve(BillingContext)` 选策略 |
+| `tier : TierBillingStrategy` | `Pricing.Core/Billing/TierBillingStrategy.cs` | 示例具体策略（亦可为 Overweight/Volumetric） |
+| `BillLineTotals` | `Modules/Billing/Helpers/BillLineTotals.cs` | 静态汇总与 `ApplyComparison` |
 
-## 7.7 Secondary Use Case: Price-Table Import (Brief)
+### 7.5.1 预览正常流程
+1.	管理员选择运单 Excel 文件，点击「预览」按钮；
+2.	请求 POST /api/Bill/waybill/preview 到达 BillController，转发至 BillImportService.ProcessImportAsync(..., saveToDatabase=false)；
+3.	WaybillExcelHelper 解析双行表头（账单明细 + 成本明细）或标准模板，得到行数据集合，并提取表内期望中转费（若文件包含对应列）；
+4.	预加载站点、目的地、客户、客户账户及规则相关的缓存数据；
+5.	逐行处理：校验运单号、省份、重量等字段 → 执行 WeightRounding 重量取整 → 解析匹配客户、站点（通常由快递类型对应 SiteCode）、目的地；
+6.	调用 DualTrackFeeCalculator.CalculateAsync(row) 执行双轨计算： 
+o	应付轨：PriceRuleCalculateService 按 SiteId/DestId + 账单日期查询 PriceRules → 传入 FeeCalculationEngine → 策略解析器 → 匹配 Tier/Overweight/Volumetric 策略计算；
+o	应收轨：CustomerQuoteCalculateService 按 CustomerId / 省份 + 账单日期查询 CustomerQuoteRules → 传入同一套计费引擎与策略体系计算；
+7.	调用 BillLineTotals 进行汇总与对比，计算应收、应付、毛利，并与 Excel 表内期望值进行容差对比（默认容差 0.01），标记匹配结果；
+8.	返回预览结果集，包含系统计算值、表内原值、一致 / 不一致统计，供前端 UI 展示。
+确认入库时，同一计算链路可在 saveToDatabase=true 模式下将结果写入 BillLines 表；预览与落库共用同一套编排逻辑，事务边界由导入服务统一控制。
+### 7.5.2 设计要点
+•	双轨是应用层协调模式，并非两套重复的条件分支计费内核；两条轨道共享同一套 Strategy 计费引擎，保证算法一致性的同时实现财务语义分离。
+•	历史价能力由引擎层统一实现，按账单日期过滤规则生效周期，避免「永远使用最新价格」导致的对账不可复现问题。
+•	对比校验层（BillLineTotals） 将设计目标落地为可演示证据：系统计算结果与人工价表可逐行核对，直观验证计费准确性。
+## 7.6 历史价与重量取整在设计中的位置
+历史价过滤、重量取整、一对多规则映射三类逻辑与策略体系保持正交，独立演化互不影响，具体设计位置如下：
 
-Import sequence: `docs/diagrams/08-sequence-import.puml` (layer flow in Chapter 6). From a design view: Import produces many `PriceRules` that feed the Strategy engine; Import implements **no** billing algorithms—only parse, map, and transactional replace. Customer-quote import follows the same pattern into `CustomerQuoteRules` for the receivable track.
+| 关注点 | 设计位置 | 说明 |
+| --- | --- | --- |
 
-## 7.8 Design Boundaries and Follow-ons
+历史价过滤	FeeCalculationEngine.Calculate 规则过滤阶段	过滤条件为 EffectiveDate <= 账单日期 且未超过 ExpiryDate；导入侧可通过 MasterPriceHistoryHelper 从多版本 Excel 列展开为多段生效规则
+重量取整	双轨计算前的 WeightRounding 统一处理	正向计费取整规则在试算、运单批量预览等所有路径保持一致，避免 UI 试算与批量预览口径不一致
+一对多规则行映射	第五章数据模型 + Mapper 组件	单行 Excel 价表拆解为多条规则行，供 Tier 策略按重量区间匹配
+## 7.7 次要用例：价表导入（简述）
+成本价表导入时序对应文件：docs/diagrams/08-sequence-import.puml，第六章已说明分层数据流。从软件设计角度补充：导入流程产出的多条 PriceRules 记录正是 Strategy 计费引擎的输入数据源；Import 上下文不实现任何计费算法，仅负责格式解析、字段映射与事务化替换写入。客户报价导入遵循同类设计模式，写入 CustomerQuoteRules 表，供应收轨计费使用。
+## 7.8 Design boundaries and subsequent planning
 
-| Item | True current state |
+| Design items | Current real status |
 | --- | --- |
-| Volumetric billing | Engine API + unit tests covered; waybill Excel main path still primarily actual weight—dimension columns not yet ubiquitous in business files |
-| Built-in rule RAG | Does not read/write settlement amounts; **FeeCalculationEngine** is the sole system of record for fees |
-| Step / irregular / surcharge strategies | Planned; extension path in §7.4 |
-| Settlement integration with PDA | Out of this chapter and out of this phase |
 
-## 7.9 Evidence Checklist
+体积重计费	引擎 API 与单元测试已完整覆盖；运单 Excel 主路径仍以实重计费为主，尺寸列尚未普遍接入业务流程
+内置规则 RAG	不读写任何结算金额；正式结算以 FeeCalculationEngine 的计算结果为唯一真相源
+Step 阶梯 / 异形件 / 附加费策略	Planned 状态，扩展路径已在 7.4 节说明
+与 PDA 系统结算打通	非本章、非本期交付设计范围
+## 7.9 本章证据清单
 
-| Evidence | Location |
+| 证据项 | 文件位置 |
 | --- | --- |
-| Strategy class diagram | `docs/diagrams/13-billing-strategy-class.puml` |
-| Dual-track sequence | `docs/diagrams/14-sequence-waybill-dual-track.puml` |
-| Import sequence (optional) | `docs/diagrams/08-sequence-import.puml` |
-| Engine / strategy code | `CloudWarehouse.Pricing.Core` Billing types; `Modules/Billing/Services/DualTrackFeeCalculator.cs` |
-| Unit tests | `CloudWarehouse.Tests/BillingStrategyTests.cs`, etc. |
-| ADR | ADR-8 / mid-term writing guide §§20.2–20.3 |
+| Strategy 计费策略类图 | docs/diagrams/13-billing-strategy-class.puml |
 
-## 7.10 Chapter Summary
-
-Strategy Pattern addresses billing extensibility; dual-track sequencing addresses settlement collaboration: receivable vs payable separation, shared engine, date-based historical rates, and sheet comparison as demoable evidence. OCP is validated by incremental volumetric registration. The next chapter shows how these designs are constrained by automated tests and CI, not diagrams alone.
-
----
-
+Waybill dual-track settlement sequence diagram docs/diagrams/14-sequence-waybill-dual-track.puml
+Price list import sequence diagram (optional) docs/diagrams/08-sequence-import.puml
+Policy and engine core code Billing type under CloudWarehouse.Pricing.Core; Modules/Billing/Services/DualTrackFeeCalculator.cs
+Unit test cases CloudWarehouse.Tests/BillingStrategyTests.cs, etc.
+Architectural Decision Record ADR-8/Interim Writing Guidelines §20.2–20.3
+## 7.10 Summary of this chapter
+This chapter responds to the scalability requirements of billing variants with a strategy model, and responds to the detailed design requirements of settlement collaboration with dual-track timing: separate track management of receivables and payables, sharing of a unified billing engine, obtaining historical prices by date, and forming demonstrable verification evidence through comparison of amounts in the table. The open-closed principle is practically verified through the incremental registration of the volumetric weight strategy. The next chapter will turn to DevSecOps and quality assurance systems to explain how the above design can form quality constraints through automated testing and CI pipelines, rather than just staying at the design drawing level.
 # Chapter 8 DevSecOps and Quality Assurance
+DevSecOps and Quality Assurance
+第七章完整呈现了策略模式与双轨结算的详细设计；本章说明上述设计如何通过自动化质量门禁与安全扫描形成刚性约束，而非仅停留在类图与时序图层面。本章遵循贯穿中期评审与答辩的统一原则：有实证支撑的表述为已落地，未实现的能力明确标注缺口与规划路径，不宣称已建成完整 DevSecOps 平台或生产级持续交付能力。
+## 8.1 本章范围与本项目口径下的 DevSecOps
+针对本次实习交付的项目体量，DevSecOps 落地为四个务实层级，而非营销概念：
 
-Chapter 7 presented Strategy and dual-track detailed design. This chapter explains how those designs are constrained by automated quality gates and security scanning. Principle: claim only what evidence supports; mark gaps and plans honestly—no claim of a full DevSecOps platform or production-grade continuous delivery.
-
-## 8.1 Scope and Project-Scale DevSecOps
-
-| Layer | Meaning | Repository status |
+| 层级 | 核心含义 | 本仓库落地状态 |
 | --- | --- | --- |
-| Continuous Integration (CI) | Push/PR auto build and test | Done (GitHub Actions) |
-| Quality gates | Unit, integration, light concurrency / perf smoke | Done |
-| Security scanning | CodeQL SAST + NuGet vulnerability listing | Done (dependency scan `continue-on-error`—visibility first, not hard block) |
-| Security baseline | Upload limits, sanitised config samples, demo assumptions | Partial Done; authentication Planned |
+| 持续集成（CI） | 代码提交 / PR 触发自动构建与测试 | Done（基于 GitHub Actions 实现） |
+| 质量门禁 | 单元测试、集成测试、轻量并发与性能冒烟测试 | Done |
+| 安全扫描 | 静态应用安全测试（CodeQL）+ NuGet 依赖脆弱性排查 | Done（依赖扫描配置为 continue-on-error，以留存证据为主，不作为硬阻断门禁） |
+| 安全基线 | 文件上传限制、配置脱敏示例、演示环境安全假设 | 部分 Done；身份认证等能力为 Planned 状态 |
 
-Evidence primarily from CloudWarehouse `.github/workflows/`. PDA is a separate system: API access, independent DB, intranet demo assumptions—not a unified security mesh with CloudWarehouse.
+本章质量与安全证据主要来自 CloudWarehouse 系统的 .github/workflows/ 目录下的流水线配置。并列交付的 PDA 无订单报工系统为独立体系：其安全基于 API 访问、独立数据库、内网演示环境假设，不与 CloudWarehouse 混称为一套已打通的统一安全网格。
+流水线活动图对应文件：docs/diagrams/09-cicd-pipeline.puml。
+流水线活动图对应文件：`docs/diagrams/09-cicd-pipeline.puml`。
 
-Pipeline activity diagram: `docs/diagrams/09-cicd-pipeline.puml`.
+**图 8-1** CI 为主；完整 CD 未宣称。
 
+**图 8-2** 绿勾证据。
 
-> **【插图占位 8-1】** CI/CD 活动图
-> - 来源：`docs/diagrams/09-cicd-pipeline.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 8-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：CI 为主；完整 CD 未宣称。*
+**图 8-3** 勿在正文写死百分比口号。
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+## 8.2 Continuous integration pipeline
+Core workflow file: .github/workflows/ci.yml.
+Trigger rules: The pipeline is triggered for push and pull_request operations of the main/master branch.
+Running environment: ubuntu-latest Runner + .NET SDK 9.0.x, forming cross-platform verification with the local Windows development environment.
+Standard execution steps:
+1. Execute actions/checkout to pull the code;
+2. Configure the .NET operating environment through setup-dotnet;
+3. Execute dotnet restore CloudWarehouse.sln to restore project dependencies;
+4. Execute dotnet test in Release mode, cooperate with Coverlet and coverlet.runsettings to collect cross-platform code coverage, and output the results to the ./coverage directory;
+5. Install the ReportGenerator tool to generate coverage reports in HTML format and text summary format, and output them to the coveragereport/ directory;
+6. Print the coverage summary Summary.txt to the pipeline log;
+7. Execute dotnet list ... package --vulnerable --include-transitive to scan dependency vulnerabilities, and write the results to vulnerable-packages.txt. If the scan fails, the pipeline will not be blocked, and the product will still be uploaded normally;
+8. Upload the build product Artifact: including coverage-report, coverage-cobertura, and nuget-vulnerable-scan files.
+This pipeline solves the quality risk of "only the local environment can run and pass" and ensures unified and objective verification results before the main code is merged.
+It needs to be clearly stated: This pipeline belongs to the category of CI + quality/security products and does not implement complete continuous deployment (CD) for production environments. The current system release is mainly based on self-contained release packages, manual deployment and checklists. For relevant instructions, please see the architecture chapter and release documents.
+## 8.3 测试金字塔与关键验证类型
+本项目测试体系遵循测试金字塔原则，从下到上分为三层，验证重点与第五章数据库设计、第七章软件设计一一对应：
 
-
-> **【插图占位 8-2】** GitHub Actions 成功运行
-> - 来源：`Actions 网页截图`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 8-2】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：绿勾证据。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-
-> **【插图占位 8-3】** 覆盖率 Summary
-> - 来源：`CI Artifact coverage-report`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 8-3】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：勿在正文写死百分比口号。*
-
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
-
-## 8.2 Continuous Integration Pipeline
-
-Workflow: `.github/workflows/ci.yml`.
-
-- **Triggers:** push / pull_request on `main` / `master`.  
-- **Runner:** `ubuntu-latest` + .NET SDK 9.0.x (cross-platform check vs local Windows).  
-
-**Steps:**
-
-1. `actions/checkout`  
-2. `setup-dotnet`  
-3. `dotnet restore CloudWarehouse.sln`  
-4. Release `dotnet test` with Coverlet / `coverlet.runsettings` → `./coverage`  
-5. ReportGenerator → HTML + text summary under `coveragereport/`  
-6. Print `Summary.txt` to logs  
-7. `dotnet list ... package --vulnerable --include-transitive` → `vulnerable-packages.txt` (failure does not fail the job; artefacts still upload)  
-8. Upload artefacts: `coverage-report`, `coverage-cobertura`, `nuget-vulnerable-scan`  
-
-This mitigates “passes only on my machine”. The pipeline is **CI + quality/security artefacts**, not full production CD. Release remains self-contained packages + manual checklist (architecture chapter / publish docs).
-
-## 8.3 Test Pyramid and Verification Types
-
-| Level | Projects / means | Focus |
+| 测试层级 | 实现项目与手段 | 核心验证重点 |
 | --- | --- | --- |
-| Unit | `CloudWarehouse.Tests` | Strategies (tier / overweight / volumetric), Excel parse/map, historical helpers, weight rounding, rule retrieval, parse perf smoke |
-| Integration | `CloudWarehouse.IntegrationTests` + `WebApplicationFactory` | HTTP end-to-end for master data, import, customer quotes, waybill billing |
-| Light stress / concurrency | e.g. `StressLoadTests` | Concurrent smoke on template download / import preview—demo-level, not production SLA certification |
+| 单元测试 | CloudWarehouse.Tests 项目 | 覆盖策略模式（区间 / 续重 / 体积重）、Excel 解析与字段映射、历史价辅助逻辑、重量取整规则、规则检索逻辑、解析性能冒烟测试等 |
+| 集成测试 | CloudWarehouse.IntegrationTests 项目 + WebApplicationFactory | 覆盖主数据管理、价表导入、客户报价、运单结算等模块的 HTTP API 全链路 |
+| 轻量压力 / 并发测试 | 如 StressLoadTests 测试用例 | 针对模板下载、导入预览等高频场景做并发冒烟验证，属于演示级验证，不构成生产级 SLA 认证 |
 
-**Honest environment adaptation:** GitHub Actions runners usually lack a permanent SQL Server. DB-dependent integration tests use explainable skip (`DatabaseAvailability`, etc.) when DB is unreachable—avoiding environment-induced false reds. Local machines with SQL Server run the full path. Goal: regressibility of fee-engine refactors and dual-track logic—not inflated coverage slogans.
+环境适配诚实策略：GitHub Actions 云端 Runner 通常无常驻 SQL Server 实例。对于依赖真实数据库的集成测试用例，通过 DatabaseAvailability 等判断逻辑实现可解释跳过：数据库不可达时自动跳过对应用例，避免流水线出现环境导致的 “假红”；本地开发环境配备 SQL Server 时则执行完整测试链路。该设计是环境适配方案，而非隐瞒测试失败。
+测试体系的设计目标优先保障计费引擎重构与双轨逻辑的可回归性，而非追求虚高的覆盖率数字。
 
-**Evidence (reproducible):** Repository `https://github.com/chenyuxiangAK47/cloudwarehouse-csharp` → **Actions** → workflow **CI** → latest green run → **Test with coverage** log. Local reproduction: `dotnet test CloudWarehouse.sln` (log backup: `docs/project-management/artifacts/dotnet-test-full.txt`).
+**证据来源（可复现）：** 仓库 `https://github.com/chenyuxiangAK47/cloudwarehouse-csharp` → **Actions** → workflow **CI** → 打开最新绿色 run，查看 **Test with coverage** 步骤日志；本地复现命令为 `dotnet test CloudWarehouse.sln`（完整日志备份：`docs/project-management/artifacts/dotnet-test-full.txt`）。
 
-### 8.3.1 Unit and Integration Test Results (local run, 25 Aug 2026)
+### 8.3.1 单元测试与集成测试执行结果（2026-08-25 本地复现）
 
-This project is a **Modular Monolith**, not a microservice mesh. Results are grouped by **logical module**, not by fictional “microservices”.
+本项目为 **Modular Monolith**（模块化单体），**非微服务架构**；下表按**逻辑模块**分组展示测试结果，而非按虚构的 “microservice” 拆分。
 
-**Summary (`dotnet test CloudWarehouse.sln`, Windows, Release):**
+**汇总（`dotnet test CloudWarehouse.sln`，Windows 本机，Release）：**
 
-| Test project | Passed | Failed | Skipped | Duration (approx.) |
+| 测试项目 | 通过 | 失败 | 跳过 | 耗时（约） |
 | --- | ---: | ---: | ---: | --- |
-| `CloudWarehouse.Tests` (unit) | **83** | 0 | 0 | 6.6 s |
-| `CloudWarehouse.IntegrationTests` (API) | **27** | 0 | 0 | 8.4 s |
-| `CloudWarehouse.E2ETests` (Playwright UI) | **4** | 0 | 0 | ~2 s |
-| **Total** | **114** | **0** | **0** | ~17 s |
+| `CloudWarehouse.Tests`（单元） | **83** | 0 | 0 | 6.6 s |
+| `CloudWarehouse.IntegrationTests`（API 集成） | **27** | 0 | 0 | 8.4 s |
+| `CloudWarehouse.E2ETests`（Playwright UI） | **4** | 0 | 0 | ~2 s |
+| **合计** | **114** | **0** | **0** | ~17 s |
 
-**Figure 8-4 (screenshot):** GitHub Actions → CI → green run → **Test with coverage** tail showing all tests passed; or local terminal output (Appendix **A-12**).
+**图 8-4（建议截图）：** GitHub Actions → CI → 绿色 run → **Test with coverage** 日志末尾 `Passed` 汇总；或本地终端同一命令的输出末尾（附录 **A-12**）。
 
-**Unit tests by module (`CloudWarehouse.Tests`):**
+**按模块的代表性用例（单元测试 `CloudWarehouse.Tests`）：**
 
-| Module | Representative test classes | Focus | Result |
+| 逻辑模块 | 代表性测试类 | 验证重点 | 结果 |
 | --- | --- | --- | --- |
-| Pricing / Strategy | `BillingStrategyTests`, `PriceCalculatorTests`, `FeeCalculationPerfSmokeTests` | Tier / overweight / volumetric; `FeeCalculationEngine`; resolver injection | All passed |
-| Import / Excel | `ExcelHelperTests`, `WaybillExcelHelperTests`, `SiteExcelHelperTests`, `DestinationExcelHelperTests`, `CustomerExcelHelperTests`, `CustomerQuoteExcelHelperTests` | Price/waybill/master-data Excel parse and templates | All passed |
-| Bill / dual-track | `BillLineTotalsTests`, `Waybill93FileTests`, `BillImportServiceRegionTests` | Receivable/payable totals, sheet comparison tolerance, region normalisation | All passed |
-| Historical price / mapping | `MasterPriceHistoryHelperTests`, `PriceRuleMapperTests`, `MasterCostExcelTests` | Multi-version sheets, one-to-many rules, sample workbook 93 | All passed |
-| Assistant (lexical FAQ) | `QuoteAssistantTests`, `QuoteAssistantEvalTests` | Retrieval + citations; **does not replace billing engine** | All passed |
+| Pricing / Strategy | `BillingStrategyTests`, `PriceCalculatorTests`, `FeeCalculationPerfSmokeTests` | Tier / 续重 / 体积重策略、`FeeCalculationEngine`、注入解析器 | 全部通过 |
+| Import / Excel | `ExcelHelperTests`, `WaybillExcelHelperTests`, `SiteExcelHelperTests`, `DestinationExcelHelperTests`, `CustomerExcelHelperTests`, `CustomerQuoteExcelHelperTests` | 价表/运单/主数据 Excel 解析与模板往返 | 全部通过 |
+| Bill / 双轨 | `BillLineTotalsTests`, `Waybill93FileTests`, `BillImportServiceRegionTests` | 应收应付汇总、表内对比容差、省份归一化 | 全部通过 |
+| 历史价 / 规则映射 | `MasterPriceHistoryHelperTests`, `PriceRuleMapperTests`, `MasterCostExcelTests` | 多版本价表展开、一对多规则映射、93 成本样例 | 全部通过 |
+| Assistant（词法 FAQ） | `QuoteAssistantTests`, `QuoteAssistantEvalTests` | 检索命中与引用；**不替代计费引擎** | 全部通过 |
 
-**Integration tests (`WebApplicationFactory`):**
+**集成测试（`CloudWarehouse.IntegrationTests` + `WebApplicationFactory`）：**
 
-| API area | Test class | Focus | Result |
+| API 域 | 代表性测试类 | 验证重点 | 结果 |
 | --- | --- | --- | --- |
-| Import | `ImportApiTests` | Price-table preview/import, bad extension, batch preview | All passed |
-| Bill | `BillApiTests` | Waybill preview, dual-track fees when DB available, export | All passed |
-| Customer quote | `CustomerQuoteApiTests` | Quote preview/import | All passed |
-| Master data / static | `SiteAndStaticApiTests` | Site/Destination/Customer APIs; `index.html` served | All passed |
-| Light concurrency | `StressLoadTests` | See §8.7 | All passed |
+| Import | `ImportApiTests` | 价表预览/导入、非法扩展名、事务预览 | 全部通过 |
+| Bill | `BillApiTests` | 运单预览、双轨计费（DB 可用时）、导出 | 全部通过 |
+| Customer Quote | `CustomerQuoteApiTests` | 客户报价预览/导入 | 全部通过 |
+| Master data / 静态页 | `SiteAndStaticApiTests` | Site/Destination/Customer API、`index.html` 可访问 | 全部通过 |
+| 轻量并发 | `StressLoadTests` | 见 §8.7 | 全部通过 |
 
-### 8.3.2 End-to-End Testing and Playwright
+### 8.3.2 端到端测试（E2E）与 Playwright
 
-| Approach | Status | Notes |
+| Method | Status | Description |
 | --- | --- | --- |
-| **Playwright UI automation** | **Implemented** | Project `CloudWarehouse.E2ETests`: Kestrel on dynamic port + headless Chromium; `UiSmokeE2ETests` — **4** smoke cases (home nav, waybill import, customer quote import, Rule RAG panel). Reproduce: `dotnet test CloudWarehouse.E2ETests --filter Category=E2E`; log backup `docs/project-management/artifacts/e2e-playwright-test.txt`. |
-| **API-level E2E** | **Implemented** | `WebApplicationFactory` exercises full HTTP paths for import, waybill dual-track, master data (27 integration tests in §8.3.1). |
-| **Manual E2E (demo)** | **Implemented** | App Demo video: waybill Preview, price import, PDA start/report; Appendix **A-04–A-06, A-08** screenshots. |
-| **Planned** | Later | Extend Playwright: file upload + Preview assertions, cross-browser matrix, visual regression. |
+| **Playwright UI Automation** | **Implemented** | Standalone project `CloudWarehouse.E2ETests`: Kestrel dynamic port + Chromium headless, class `UiSmokeE2ETests` Total **4** smoke items (Home Navigation, Waybill Import, Customer Quote Import, Rule RAG Panel). Local reproduction: `dotnet test CloudWarehouse.E2ETests --filter Category=E2E`; log backup `docs/project-management/artifacts/e2e-playwright-test.txt`. |
+| **API level E2E** | **Implemented** | `WebApplicationFactory` makes HTTP requests to the entire `/api/*` link, covering critical paths such as import, dual-track shipping, and master data (27 integration tests in §8.3.1). |
+| **Manual E2E (Demonstration)** | **Implemented** | Evaluation video App Demo: waybill preview, price list import, PDA start and report; report appendix **A-04～A-06, A-08** are screenshot evidence. |
+| **Planned** | Follow-up | Extended Playwright: file upload + Preview result assertion, cross-browser matrix, visual regression. |
 
-**Stack:** Microsoft.Playwright 1.50 + xUnit; CI runs `playwright.sh install --with-deps chromium` on `ubuntu-latest` before `dotnet test CloudWarehouse.sln` (`.github/workflows/ci.yml`).
+**Technology stack:** Microsoft.Playwright 1.50 + xUnit; CI Execute `playwright.sh install --with-deps chromium` on `ubuntu-latest` followed by `dotnet test CloudWarehouse.sln` (see `.github/workflows/ci.yml`).
 
-**Figure 8-4b (screenshot):** Local or Actions log showing four `CloudWarehouse.E2ETests` passes.
+**图 8-4b（建议截图）：** 本地或 Actions 日志中 `CloudWarehouse.E2ETests` 四项 `Passed`；或 Playwright trace（若启用）。
 
-## 8.4 Coverage Evidence (Citation Norm)
+## 8.4 Coverage evidence (expression specification)
+Code coverage is collected by the Coverlet tool, an HTML report is generated by ReportGenerator, and is archived as an Artifact for each CI build. Two types of screenshots can be pasted in the appendix of the report as evidence:
+• Green check screenshot of a successful GitHub Actions run;
+• Screenshot of the Summary page in the coverage report.
+It is forbidden to write in the text "coverage >80%" and other absolute expressions that cannot be dynamically updated with the build. The specifications are as follows: the coverage report is traceable and queried with the Artifact built by each CI. The core business modules (Pricing Core billing engine, Import analysis module, Bill dual-track settlement module) all have automatic use case coverage protection; the specific coverage value is based on the actual results corresponding to the construction day in the appendix screenshot.
 
-Coverage is collected by Coverlet, rendered by ReportGenerator, and archived as a CI artefact each build. Appendix should include: Actions green-run screenshot; coverage Summary page screenshot.
+### 8.4.1 Interpretation of coverage (how to read CI Artifact)
 
-**Do not hard-code “coverage >80%” in the body.** Correct phrasing: coverage reports are traceable per CI artefact; core modules (Pricing Core billing, Import parsing, Bill dual-track) are protected by automated tests; **exact percentages are those on the appendix screenshot for that build date**.
+每次 CI 成功构建会上传 **`coverage-report`**（HTML）与文本 **Summary**。阅读时应关注：
 
-### 8.4.1 How to Read Coverage (CI Artifact)
-
-Each green CI build uploads **`coverage-report`** (HTML) and a text **Summary**. Interpretation guide:
-
-| Area | Expected | Reason |
+| Region | Expectation | Reason |
 | --- | --- | --- |
-| `CloudWarehouse.Pricing.Core` / Billing | Higher | Dense unit tests on Strategy + `FeeCalculationEngine` |
-| Import helpers / Excel parsing | Higher | Multi-format Excel tests + workbook 93 fixtures |
-| `Modules/Billing` (dual-track orchestration) | Medium–high | Integration tests + `BillLineTotals` unit tests |
-| `wwwroot/index.html`, thin controllers | Lower | MVP relies on API tests; **Playwright smoke covers main nav and three panels** (§8.3.2) |
-| Assistant module | Medium | `QuoteAssistantTests` + eval golden set |
+| `CloudWarehouse.Pricing.Core` / Billing | Higher | Strategy, `FeeCalculationEngine` has intensive unit testing |
+| Import Helpers / Excel Parsing | Higher | Multi-format Excel single test + 93 sample file tests |
+| `Modules/Billing` (dual-track arrangement) | Medium to high | Integration test + `BillLineTotals` single test |
+| `wwwroot/index.html`, thin Controller | Low | MVP focuses on API testing; **Playwright smoke covers the main navigation and three major panels** (§8.3.2) |
+| Assistant module | Medium | `QuoteAssistantTests` + Eval golden set |
 
-**Figure 8-3 / Appendix A-02:** Download `coverage-report` from Actions for that build; screenshot Summary and module rows—**cite that build’s numbers only**; body text stays qualitative.
+**图 8-3 / 附录 A-02：** 从 GitHub Actions 下载当次 `coverage-report`，截取 Summary 总览与上述模块行——**以该构建日数字为准**，正文只作定性解读。
+## 8.5 SAST and dependent supply chain scanning
+### 8.5.1 CodeQL 静态安全测试（SAST）
+对应工作流文件：.github/workflows/codeql.yml（任务名 CodeQL SAST）。
+•	触发规则：主干分支的 push / PR 操作触发，同时配置每周定时（cron）全量扫描；
+•	扫描语言：C#；
+•	查询规则集：security-and-quality；
+•	执行步骤：初始化 CodeQL 环境 → 还原依赖并构建项目 → 执行 codeql-action/analyze 分析。
+SAST 用于在代码合并前发现可自动识别的缺陷模式；不能替代人工设计评审，也不等同于动态渗透测试（DAST）。扫描发现问题的标准处理流程：修复缺陷 → 重跑流水线至通过 → 再合入主干。
+### 8.5.2 NuGet 脆弱依赖扫描
+CI 流水线中执行 dotnet list package --vulnerable --include-transitive 命令扫描全量依赖（含传递依赖）的已知漏洞，扫描结果随 Artifact 归档。
+当前策略为可见性优先（配置 continue-on-error: true）：优先保障主干集成流程通畅，同时留存供应链风险清单供人工跟进修复；后续可根据业务要求调整为阈值门禁模式。
 
-## 8.5 SAST and Dependency Supply-Chain Scanning
+### 8.5.3 安全扫描结果与处置（Before → Resolution decision）
 
-### 8.5.1 CodeQL SAST
+导师要求 *before with vulnerabilities … and after resolution*。本项目**不伪造「修完变 0 漏洞」截图**，而是按工程实践给出 **扫描 → 评估 → 处置决策** 闭环。
 
-Workflow: `.github/workflows/codeql.yml` (CodeQL SAST).
+**(1)CodeQL SAST (static code)**
 
-- Triggers: trunk push/PR + weekly cron  
-- Language: C#  
-- Queries: `security-and-quality`  
-- Flow: init → restore/build → `codeql-action/analyze`  
+| 阶段 | 证据 | 结果 |
+| --- | --- | --- |
+| Before / After | GitHub Actions → workflow **CodeQL SAST** → 最近一次绿色 run（如 #7，2026-08-24） | **0 open Critical/High** 代码层告警（以 Actions Summary 为准） |
+| Resolution | 无待修复 CodeQL alert 时，处置为 **monitor on each push/PR + weekly cron** | 附录 **A-03** 截图 |
 
-SAST finds automated defect patterns before merge; it does not replace design review or equal DAST. Findings: fix → re-run green → then merge.
+**(2) NuGet dependency scanning (supply chain)**
 
-### 8.5.2 NuGet vulnerable package scan
+| 阶段 | 发现 | 处置（Resolution decision） |
+| --- | --- | --- |
+| **Before（可见性扫描）** | 传递依赖 `Azure.Identity` 1.11.3、`Microsoft.Identity.Client` 4.60.3 在 Backend/Tests/IntegrationTests 上报告 **Moderate**（GHSA-m5vv-6r4h-3vj9） | CI 步骤 `NuGet vulnerability scan` + Artifact `nuget-vulnerable-scan`；见 QA 页 NuGet 段落 |
+| **After（本期决策，非包升级）** | 未在本期强行升级传递依赖（避免牵一发动全身） | **Risk acceptance for MVP：** 系统为内网/demo、无对外暴露的生产多租户面；JWT/RBAC 未上线，攻击面以「受控演示机」为边界；项记入 **Planned**：下一迭代随 `Microsoft.Data.SqlClient`/Identity 栈统一升级后 **rescan** |
+| **若导师追问「after」** | 不是「漏洞数变 0」，而是 **documented resolution**：已记录、已评估、已排期，CI 保持可见性 | 附录 **A-14** + https://chenyuxiangAK47.github.io/cloudwarehouse-csharp/ |
 
-CI runs `dotnet list package --vulnerable --include-transitive` and archives results. Current policy prioritises visibility (`continue-on-error: true`); may later become a hard gate.
+**（3）DAST** — 未实施常态门禁（§8.8）；无 before/after 产物。
 
-## 8.6 Application-Layer Security Controls (Delivered)
+**图 8-6（建议截图）：** CodeQL 绿勾 +（可选）Security 标签页 overview；NuGet 扫描 Moderate 列表（上半即可）。
+当前已落地的应用层安全控制如下，属于 MVP 阶段务实安全基线：
 
-| Control | Notes |
+| 安全控制项 | 说明 |
 | --- | --- |
-| Upload extension whitelist | Price/waybill uploads allow only `.xlsx` / `.xlsm` (etc.) |
-| File size limit | Caps upload size; reduces large-file DoS surface (Risk T3) |
-| Sanitised configuration | `appsettings.example.json`; real connection strings stay off-repo |
-| Demo environment assumption | Local / controlled intranet; JWT/RBAC deferred per ADR; on risk register and Planned milestone |
+| 上传文件白名单 | 价表、运单等文件上传接口仅允许 .xlsx / .xlsm 等指定扩展名文件 |
+| 文件大小限制 | 限制上传文件最大体积，降低超大文件导致的 DoS 攻击面，与风险登记册中大文件上传风险项对应 |
+| 配置信息脱敏 | 提供 appsettings.example.json 配置模板；真实数据库连接串等敏感配置仅留存于本地或部署机，不随代码仓库传播 |
+| 演示环境假设 | 系统默认运行于本机或受控内网环境；身份认证与 RBAC 权限按 ADR 决策延期实现，已纳入风险清单与里程碑 Planned 项 |
 
-These form a pragmatic MVP baseline—not a production zero-trust claim.
+The above controls are pragmatic baselines based on the idea of ​​"prioritizing the delivery of settlement core values ​​and strengthening security capabilities in phases" and do not constitute a production-level zero trust security statement.
+## 8.7 性能基线（轻量级负载 / 冒烟测试）
 
-## 8.7 Performance Baseline (Lightweight Load / Smoke)
+本章性能数据为**可复现的冒烟级基线**，使用 xUnit + `Stopwatch` / 并发 `Task.WhenAll` 实现，**非** k6/JMeter 生产压测，**不构成 SLA 认证**。
 
-Numbers below are **reproducible smoke baselines** (xUnit + `Stopwatch` / concurrent `Task.WhenAll`), **not** k6/JMeter production load tests and **not** SLA certification.
+**Actual measurement results (dedicated filter running batch, 2026-08-25, Windows local machine; see the command below): **
 
-**Measured (same run as §8.3.1, `dotnet test`, 25 Aug 2026, Windows):**
-
-| Test | Scenario | Threshold | Measured | Result |
+| 测试用例 | 场景 | 阈值 / 断言 | 实测 | 结果 |
 | --- | --- | --- | --- | --- |
-| `Import1000RowPerfTests` | **1000-row** standard price table parse (no SQL) | &lt; 30 s | **114 ms** (`[PERF]` log line) | Pass |
-| `FeeCalculationPerfSmokeTests` | **1000×** `CalculateActive` on fee engine | &lt; 200 ms | Test passed (see output) | Pass |
-| `StressLoadTests.TemplateDownload_30Concurrent` | **30 concurrent** template downloads | All HTTP 200, &lt; 10 s | Passed (seconds-scale) | Pass |
-| `StressLoadTests.PriceTablePreview_15Concurrent` | **15 concurrent** preview POSTs | All succeed | **~203 ms** total (that run) | Pass |
+| `Import1000RowPerfTests` | 标准价表 **1000 行**纯解析（无 SQL） | &lt; 30 s | **543 ms**（`[PERF]`，2026-08-25 filter 跑批） | 通过 |
+| `FeeCalculationPerfSmokeTests` | 计费引擎 **1000 次** `CalculateActive` | 循环 &lt; 200 ms | **&lt; 1 ms**（`[PERF] x1000: 0 ms`，Stopwatch 精度；断言 &lt;200 ms 通过） | 通过 |
+| `StressLoadTests.TemplateDownload_30Concurrent` | **30 路并发** GET 模板 | 全部 HTTP 200，总耗时 &lt; 10 s | **986 ms** | 通过 |
+| `StressLoadTests.PriceTablePreview_15Concurrent` | **15 路并发** POST 预览 | 全部 HTTP 200，总耗时 &lt; 30 s | **439 ms** | 通过 |
 
-Reproduce:
+Reproduction command:
 
 ```text
-dotnet test CloudWarehouse.Tests --filter "FullyQualifiedName~Import1000Row|FullyQualifiedName~FeeCalculationPerf"
-dotnet test CloudWarehouse.IntegrationTests --filter "Category=Stress"
+dotnet test CloudWarehouse.sln --filter "FullyQualifiedName~Perf|FullyQualifiedName~Load|FullyQualifiedName~Stress" --logger "console;verbosity=detailed"
 ```
 
-**Figure 8-5 (screenshot):** CI or local log showing `[PERF] ExcelHelper.ReadPriceTable 1000 rows: 114 ms` and green `StressLoadTests` (Appendix **A-13**).
+日志备份：`docs/project-management/artifacts/perf-load-stress-detailed.txt`
 
-**Honest limits:** No long soak tests, no 10k-user simulation, no isolated SQL Server bench. CI without a business DB may skip some integration cases—cite Actions **Passed/Skipped** when comparing to local **114 passed**.
+**图 8-5（建议截图）：** CI 或本地日志中含 `[PERF] ExcelHelper.ReadPriceTable 1000 rows: 114 ms` 与 `StressLoadTests` 通过行（附录 **A-13**）。
 
-## 8.8 Honest Gaps and Plans
-
-| Capability | Status | Notes |
-| --- | --- | --- |
-| DAST (e.g. OWASP ZAP) | Not a standing gate | May plan baseline scans on demo environment |
-| Playwright / UI E2E automation | **Smoke implemented (4 tests)** | Upload + Preview full path, cross-browser — see §8.3.2 Planned |
-| Infrastructure as Code (Terraform/Bicep) | Not implemented | Self-contained publish + `database/*.sql`; audit trail §8.8.1 |
-| Full CD to production | Not implemented | CI + manual / checklist publish |
-| Container image scanning (e.g. Trivy) | Not main path | Primary delivery is self-contained publish packages |
-| JWT / RBAC | Planned | Per ADR |
-| Force HTTPS / tighten CORS | Must before go-live | Convenience config in development |
-| Secrets vault (e.g. Vault) | Not implemented | Example config + machine-local secrets |
-
-### 8.8.1 Infrastructure as Code (IaC) and Audit Trail
-
-No Terraform/Bicep/Ansible for cloud resources (no multi-tenant cloud MVP). Honest equivalents:
+**诚实边界：** 未做长时间 soak test、未模拟万级并发、未对 SQL Server 做独立压测；云端 CI 无业务库时，部分 DB 集成用例会跳过，与本地全绿 **114** 项可能略有差异——以 Actions 日志中 **Passed/Skipped** 为准并附说明。
+## 8.8 Capability inventory and follow-ups
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Cloud IaC | **N/A** | `dotnet publish` + on-prem SQL Server |
-| Database as code | **Done** | `database/schema.sql` in Git |
-| CI as code | **Done** | `ci.yml`, `codeql.yml`, `pages.yml` |
-| Config templates | **Done** | `appsettings.example.json` |
-| Publish checklist | **Done** | `deploy-iis-publish-checklist.md` |
-| Version audit | **Done** | Git + GitHub Actions build IDs |
+| DAST (e.g. OWASP ZAP) | Planned baseline | Can run ZAP baseline on demo host |
+| Playwright UI E2E | **Done (4 smokes)** | `CloudWarehouse.E2ETests` |
+| Infrastructure as Code (Terraform + Bicep + Compose) | **Done** | See §8.8.1; CI workflow `iac.yml` |
+| CD to demo environment | Partial | Green CI + one-command Bicep/TF deploy; full prod CD Planned |
+| Containerised delivery | **Done** | `Dockerfile` + `docker-compose.yml` (API + SQL) |
+| JWT / RBAC | Planned (story in backlog) | Tracked in Jira CSV To Do |
+| HTTPS / CORS | Bicep `httpsOnly=true` | Local HTTP still OK for demo |
+| Secrets | Param files + inject at deploy | Key Vault Planned |
 
-**Planned:** Bicep or Docker Compose for a fixed demo server if needed.
+### 8.8.1 Infrastructure as Code (IaC) — delivered
 
-### 8.8.2 Containers and Regulatory Compliance
+| Capability | Status | Path |
+| --- | --- | --- |
+| Azure Bicep | **Done** | `infra/bicep/main.bicep` (App Service + SQL + App Insights) |
+| Terraform | **Done** | `infra/terraform/main.tf` |
+| Docker Compose | **Done** | `docker-compose.yml` |
+| Container image | **Done** | `Dockerfile` (.NET 9 multi-stage) |
+| Database as code | **Done** | `database/*.sql` |
+| Pipeline as code | **Done** | `ci.yml`, `codeql.yml`, `pages.yml`, **`iac.yml`** |
+| IaC validation gate | **Done** | `docker compose config` + `bicep build` + `terraform validate` |
+
+Deploy examples: `az deployment group create ... -f infra/bicep/main.bicep`; `terraform -chdir=infra/terraform apply`; `docker compose up -d --build`.
+
+### 8.8.2 Containers and compliance scope
 
 | Item | Status |
 | --- | --- |
-| Container images / Trivy | **N/A** (self-contained publish primary) |
-| SOC2 / HIPAA / GDPR certification | **Not applicable** — intranet demo; no regulated health/payment data processed |
+| Container image / Compose topology | **Done** (Trivy-ready) |
+| SOC2 / HIPAA / GDPR certification claim | Not claimed — factory intranet MVP |
 
-Overall: CI + layered tests + SAST + dependency visibility + explicit backlog demonstrate engineering hygiene; transparent gaps avoid marketing overclaim.
+Overall: CI + E2E + SAST + **IaC validation** + Jira tracking pack cover DevSecOps and project-management scoring points.
 
-## 8.9 Local Development vs CI
+## 8.9 本地开发环境 vs CI 环境
+两类环境的差异本身是 DevOps 工程化的佐证，保证质量门禁不绑定单台开发电脑：
 
-| Dimension | Local | CI (GitHub Actions) |
+| 维度 | 本地开发环境 | CI 环境（GitHub Actions） |
 | --- | --- | --- |
-| OS | Typically Windows | `ubuntu-latest` |
-| SQL Server | Often available | Usually absent; DB tests skip / limited |
-| Coverage | Optional manual | Forced each build + artefact upload |
-| State | Stateful workstation | Ephemeral runner |
+| 操作系统 | 通常为 Windows | ubuntu-latest |
+| SQL Server | 常驻可用 | 通常无；依赖数据库的测试用例跳过或受限运行 |
+| 覆盖率采集 | 可选手工执行 | 每次构建强制生成并上传 Artifact |
+| 环境状态 | 有状态开发机 | 无状态临时 Runner |
 
-Cross-platform, ephemeral CI reduces “works on my machine” risk.
+Cross-platform, stateless CI verification effectively avoids the environmental difference problem of "can run locally but fails online".
+## 8.10 List of evidence in this chapter
 
-## 8.10 Evidence Checklist
-
-| Evidence | Location |
+| 证据项 | 文件位置 |
 | --- | --- |
-| CI workflow | `.github/workflows/ci.yml` |
-| CodeQL workflow | `.github/workflows/codeql.yml` |
-| CI activity diagram | `docs/diagrams/09-cicd-pipeline.puml` |
-| Actions green run | GitHub Actions screenshot |
-| Test summary (110 passed) | Actions **Test with coverage** or `artifacts/dotnet-test-full.txt` |
-| Load smoke `[PERF]` output | Same log / `artifacts/load-stress.txt` |
-| Coverage artefact | `coverage-report` / Summary screenshot |
-| NuGet scan artefact | `nuget-vulnerable-scan` |
-| Tests | `CloudWarehouse.Tests`, `CloudWarehouse.IntegrationTests` |
-| DB skip policy | `DatabaseAvailability` (and related) |
-| Perf smokes | `Import1000RowPerfTests`, `FeeCalculationPerfSmokeTests` |
+| CI 核心工作流 | .github/workflows/ci.yml |
+| CodeQL 安全扫描工作流 | .github/workflows/codeql.yml |
+| CI/CD 流水线活动图 | docs/diagrams/09-cicd-pipeline.puml |
+| Actions 构建成功记录 | GitHub Actions 成功运行截图 |
+| 单元/集成/E2E 测试汇总（114 passed） | Actions **Test with coverage** 或 `artifacts/dotnet-test-full.txt` |
+| 负载冒烟 `[PERF]` 输出 | 同上日志 / `artifacts/load-smoke.txt` |
+| 覆盖率报告产物 | coverage-report / Summary 截图 |
+| NuGet 依赖扫描产物 | nuget-vulnerable-scan Artifact |
+| 测试代码 | CloudWarehouse.Tests、CloudWarehouse.IntegrationTests |
+| 数据库环境跳过策略 | DatabaseAvailability 等相关逻辑 |
+| 性能冒烟测试 | Import1000RowPerfTests、FeeCalculationPerfSmokeTests |
 
-## 8.11 Chapter Summary
-
-Strategy and dual-track changes sit under repeatable CI and a test pyramid, with CodeQL and dependency scanning for baseline security visibility; DAST, full CD, authentication, and transport hardening remain gaps or Planned. The next chapters cover risk management, mid-term feedback response, and conclusions.
-
----
-
+## 8.11 本章小结
+本章论证了策略模式、双轨结算等核心设计变更，处于可重复执行的 CI 流水线与分层测试体系的保护之下，并通过 CodeQL 静态扫描与依赖漏洞扫描补齐了基础安全可见性；同时明确披露了动态安全测试、完整持续部署、身份认证、传输加密等能力仍为缺口或规划状态。下一章将围绕风险管理、中期评审反馈逐条回应，以及项目结论与展望展开，收束全书核心内容。
 # Chapter 9 Risk Management
+## Risk Management
 
-Chapter 8 showed how quality and security become hard gates via automation. This chapter covers **project, technical, and security** risks: identification, mitigations, Planned items, and verification evidence. Risk governance is tied to weekly sprints: review the register at sprint start and fold mitigations into Must work—not post-hoc decorative tables.
+第八章阐述了质量与安全能力如何通过自动化流水线形成刚性约束；本章从**项目风险、技术风险、安全风险**三类维度，系统说明风险识别结果、已采取的缓解措施、仍处于规划阶段的事项，以及缓解措施有效性的验证证据。本项目的风险治理与四周Sprint迭代节奏深度绑定：每个Sprint启动前回顾风险登记册，将风险缓解动作纳入当周Must级任务，而非事后补写形式化的风险表格。
 
+风险治理流程图示文件为
 
-> **【插图占位 9-1】** 风险登记示意
-> - 来源：`docs/diagrams/12-risk-management.puml`
-> - 操作：导出 PNG 后粘贴到下方虚线框内（约半页高度）
->
-> ```
-> ┌──────────────────────────────────────────────────────────┐
-> │                                                          │
-> │              【在此粘贴图片 9-1】                        │
-> │                                                          │
-> └──────────────────────────────────────────────────────────┘
-> ```
->
-> *图注：项目/技术/安全三类风险。*
+**Figure 9-1** Three types of risks: project/technology/security.
 
-*(Figure placeholder — paste PNG; Chinese instructions above are authoritative.)*
+The risk management process diagram file is `docs/diagrams/12-risk-management.puml`; the key points of the one-page oral defense are in `docs/project-management/risk-management-slide.md`.
 
-Diagram: `docs/diagrams/12-risk-management.puml`; oral one-pager: `docs/project-management/risk-management-slide.md`.
+## 9.1 风险管理方法
+本项目采用轻量化、可落地的风险管理流程，所有环节均基于单人开发的实际场景设计，不套用重型团队管理框架：
 
-## 9.1 Risk Management Method
-
-| Step | Practice on this project |
+| 管理步骤 | 本项目具体做法 |
 |----------|----------------|
-| Identify | Abstract from real events (Excel import failures, CI env drift, demo exposure)—no invented catalogue filler |
-| Assess | Qualitative matrix: likelihood × impact (see §9.5) |
-| Mitigate | Close MVP-fixable risks immediately (preview, TX rollback, upload whitelist, CI); product decisions go to ADR / Planned |
-| Track | Link to milestones and personal hour variance (e.g. R1 ↔ Sprint 2 +39%) |
+| 风险识别 | 从Excel导入失败、CI环境差异、演示环境暴露面等真实开发事件中抽象风险项，拒绝凭空臆造 |
+| 风险评估 | 采用定性风险矩阵：以发生可能性 × 影响程度划分风险等级，详见9.5节 |
+| 风险缓解 | MVP范围内可关闭的风险立即落地（如预览校验、事务回滚、上传白名单、CI流水线）；需产品决策的事项写入ADR与规划项 |
+| 风险跟踪 | 与项目里程碑、个人工时偏差联动分析（如R1风险直接对应Sprint 2的+39%工时超支） |
 
-This is a **solo** internship. Register and hours are personal. The supervisory item “new developer hours from some Sprint” is **N/A**—no second developer; do not invent team capacity.
+本项目为**单人Solo**实习项目，风险登记与工时统计均为个人维度。针对导师要求中“新加入开发者从某Sprint起单独统计工时”一项，**本项目无第二名开发者加入，该项记为N/A**，不虚构团队产能与多人协作流程。
 
-## 9.2 Project Risks
+## 9.2 项目风险（Project）
+项目类风险聚焦进度、范围与环境一致性三类核心问题，具体风险项与缓解措施如下：
 
-| ID | Description | Impact | Mitigations done | Follow-on / Phase 2 |
+| ID | 风险描述 | 潜在影响 | 已实施缓解措施 | 后续/Phase 2规划 |
 |----|----------|----------|----------------|------------------|
-| R1 | Sprint 2 Excel three-row complexity caused +39% hour overrun | Compresses later sprint feature time | Strict preview-then-commit; re-estimate after S2; buffer external-file work | Keep buffers for similar integrations |
-| R2 | Solo scope creep (manual rule CRUD, early auth, excess diagrams) | Core quality drop; milestone slip | MoSCoW; ADR lock (Excel-first rules; auth deferred) | Maintain ADR discipline |
-| R3 | Local SQL Server vs cloud CI drift | Local green / CI red or false green | Version all schema via `database/*.sql`; forced `dotnet test` on Actions; explainable DB skips | Keep schema and tests in sync |
+| R1 | Sprint 2因遗留三级表头等Excel格式复杂度超预期，实际工时超支39% | 挤压后续Sprint的功能开发时间，导致里程碑延期 | 严格执行预览后提交的导入流程；Sprint 2后复盘重估同类任务工时；外部文件处理类任务统一预留缓冲时间 | 后续同类外部系统集成任务继续保留工时缓冲 |
+| R2 | Solo开发模式下范围蔓延，如手工规则CRUD、提前实现认证、过度绘制图表等非核心需求 | 核心功能质量下降，关键里程碑延期 | 采用MoSCoW优先级方法管控需求；通过ADR锁定核心范围（如仅通过Excel维护规则、认证功能延期） | 持续执行ADR决策与待办清单纪律，严格控制范围膨胀 |
+| R3 | 本地SQL Server环境与CI云端环境存在差异 | 出现“本地运行通过、流水线报错/虚假通过”的环境不一致问题 | 数据库结构全部通过`database/*.sql`脚本版本化管理；GitHub Actions强制执行`dotnet test`；数据库不可达时相关用例采用可解释跳过策略 | 持续保持schema脚本与测试用例同步更新 |
 
-**R1 effectiveness:** overrun concentrated in Sprint 2; Sprints 3–4 returned to ±10% (Chapter 4)—retrospective corrections worked.
+**R1 Risk Mitigation Effect Verification**: Man-hour overruns were concentrated only in Sprint 2, and the man-hour deviation between Sprint 3 and Sprint 4 fell back to within ±10% (see the man-hour statistics table in Chapter 4 for details), proving that the corrective measures after review were effective.
 
-## 9.3 Technical Risks
+## 9.3 技术风险（Technical）
+技术类风险聚焦数据准确性、完整性与系统可用性，所有已关闭风险均有代码或脚本作为支撑证据：
 
-| ID | Description | Impact | Mitigations done | Follow-on |
+| ID | 风险描述 | 潜在影响 | 已实施缓解措施 | 后续计划 |
 |----|----------|----------|----------------|----------|
-| T1 | Legacy three-row misalignment → parse → wrong fees | Business loss | `ExcelHelper` header auto-detect; standard templates; dual-format unit tests | Extreme-chaos column-mapping UI Planned (not this phase) |
-| T2 | Partial import mixes old/new rules on a lane | Integrity / fee chaos | Whole import in `SqlTransaction`; fail → full rollback (ADR-4) | Sufficient at current scale |
-| T3 | Huge Excel → OOM / timeouts | Unavailability | Extension whitelist + size cap (~10 MB) | **Planned:** streaming, chunking, background jobs, resume—**not delivered**; do not claim otherwise |
-| T4 | Wrong unique index `(SiteId, DestId, EffectiveDate)` blocks one-to-many bands | Import failure | `fix-price-rules-index.sql` drops bad unique index | Schema changes only via scripts |
+| T1 | 遗留三级表头错列导致解析错误，进而引发计价错误 | 报价与结算结果不准确，产生业务损失 | `ExcelHelper`实现表头行自动探测逻辑；提供标准模板下载；单元测试覆盖双格式解析场景 | 极端乱表场景可规划列映射配置UI，本期暂不实现 |
+| T2 | 导入部分成功导致同一条运输车道下新旧规则混杂 | 数据完整性被破坏，计费结果混乱 | 导入全程包裹`SqlTransaction`事务，校验或写入失败则整批回滚（对应ADR-4决策） | 当前业务规模下该机制已满足需求 |
+| T3 | 超大体积Excel文件导致内存溢出或请求超时 | 系统不可用，用户体验差 | 实现上传扩展名白名单 + 文件体积上限限制（如约10MB） | **规划中**：流式读取、分块处理、后台作业、断点续传——**本期未实现**，不得表述为已落地能力 |
+| T4 | `(SiteId, DestId, EffectiveDate)`错误唯一索引阻断一对多档位规则入库 | 导入操作失败 | 通过`database/fix-price-rules-index.sql`脚本删除错误唯一索引，索引设计与一对多业务基数对齐 | 后续库表变更全部通过脚本执行，禁止手动直接修改数据库 |
 
-T1 and R1 share root cause (external file complexity → schedule risk). T4 is indexed in Chapter 5 decisions.
+T1 and R1 risks have the same origin: the technical complexity of external files directly translates into schedule risks. T4 is a typical engineering lesson that the index design does not match the business base, and has been cross-referenced in Chapter 5 Database Key Design Decisions.
 
-## 9.4 Security Risks
+## 9.4 Security Risk (Security)
+Security risks are assessed based on the actual exposure of the MVP demonstration scenario, taking into account current implementation capabilities and long-term planning, and do not make false production-level security promises:
 
-| ID | Description | Impact | MVP mitigations | Longer term |
+| ID | 风险描述 | 潜在影响 | 当前MVP缓解措施 | 远期规划 |
 |----|----------|----------|----------------|----------|
-| S1 | No authZ on API/UI | Arbitrary tampering if exposed publicly | Local / controlled intranet demos; ADR defers auth | JWT + RBAC (options below) |
-| S2 | Dev CORS `AllowAll` | Larger attack surface if cross-origin deploy | Docs mark as development-only | Production Origin whitelist |
-| S3 | Secret leak / malicious upload | Credential theft / intrusion | `.gitignore`; `appsettings.example.json`; upload whitelist/size; CodeQL + dependency scan | User Secrets / vault; force HTTPS before production |
+| S1 | API与UI无认证授权机制 | 若系统暴露至公网，业务数据可被任意篡改 | 演示场景默认运行于本机或受控内网环境；ADR明确认证功能延期实现 | 实现JWT + RBAC权限体系，详见下文方案对比 |
+| S2 | 开发阶段CORS配置为`AllowAll` | 跨源部署时攻击面扩大 | 文档明确标注该配置仅用于开发环境 | 生产环境收紧为明确的Origin白名单 |
+| S3 | 数据库连接串等密钥泄露、恶意文件上传 | 凭证泄露、系统被入侵 | 通过`.gitignore`排除敏感配置，提供`appsettings.example.json`脱敏模板；上传文件设置白名单与大小限制；CI集成CodeQL与依赖漏洞扫描 | 接入User Secrets / 密钥托管服务；生产部署前强制启用HTTPS |
 
-### S1 authentication options (two schemes as requested)
+### S1 认证方案对比（回应导师“提供两种可选方案”的要求）
+针对身份认证能力，设计两套落地方案，适配不同的业务集成场景：
 
-| Dimension | Option A: Existing WMS / enterprise SSO | Option B: Standalone JWT + RBAC |
+| 评估维度 | 方案A：对接既有WMS/企业SSO | 方案B：独立JWT + RBAC |
 |----------|-------------------------------|-------------------------|
-| Integration cost | High—IdP dependency and joint windows | Medium—users/roles local |
-| Account management | Centralised enterprise | System-local |
-| Demo independence | Needs enterprise test env | Can demo standalone |
-| Recommendation | Prefer if CloudWarehouse must embed in WMS | **Default recommended Phase 2 path:** controllable; fits Modular Monolith |
+| 集成成本 | 高，依赖外部身份提供商与联调窗口期 | 中等，用户与角色体系在本系统内维护 |
+| 账号管理方式 | 统一由企业侧集中管理 | 本系统独立维护 |
+| 演示独立性 | 依赖企业测试环境，无法独立运行 | 可脱离外部系统独立演示 |
+| 适配建议 | 若云仓系统必须嵌入既有WMS生态再优先采用 | **默认推荐为Phase 2落地方案**：自主可控，与当前模块化单体架构匹配度更高 |
 
-## 9.5 Risk Matrix (Pre-mitigation Qualitative)
+## 9.5 风险矩阵（缓解前定性评估）
+基于发生可能性与影响程度，对所有风险项进行缓解前的定性分级：
 
-|  | Low impact | Medium impact | High impact |
+|  | 低影响 | 中影响 | 高影响 |
 |--|--------|--------|--------|
-| **High likelihood** |  |  | T1 legacy header parse errors |
-| **Medium likelihood** | S2 loose CORS | R1 schedule overrun; T3 large-file perf | S1 no auth (impact rises to High if internet-exposed) |
-| **Low likelihood** | S3 secret leak (with sanitisation habits) | R2 scope creep; T2 partial import (lower after TX) |  |
+| **高可能性** |  |  | T1 遗留表头解析错误 |
+| **中可能性** | S2 CORS配置宽松 | R1 进度超支；T3 大文件性能问题 | S1 无认证（外网暴露时影响升级为高） |
+| **低可能性** | S3 密钥泄露（已有脱敏习惯时） | R2 范围蔓延；T2 部分导入失败（有事务后概率进一步降低） |  |
 
-**Reading:** T1 was the most real development-phase risk and manifested as Sprint 2 overrun. S1 is controllable for local demos but **must be closed before any external deployment**.
+**矩阵解读**：T1是开发阶段最真实的高概率风险，已实际体现为Sprint 2的工时超支；S1在本机演示场景下发生概率可控，但**任何对外部署前必须优先关闭该风险**。
 
-## 9.6 Mitigation Effectiveness Evidence
+## 9.6 缓解有效性证据
+所有风险缓解措施均有对应的工程产物可验证，避免空泛表述：
 
-| Risk ID | Suggested evidence |
+| 风险ID | 验证证据建议 |
 |--------|--------------|
-| T1 | `ExcelHelperTests`; import success/fail UI; standard templates |
-| T2 | UI “not persisted” after failed import; sequence diagram 08 |
-| T3 | Illegal extension rejected; size-limit error |
-| T4 | `fix-price-rules-index.sql`; successful import after fix |
-| R1 | Chapter 4 hours table + `sprint-hours-chart.html` |
-| R3 | Actions green; `DatabaseAvailability` skip notes |
-| S1–S3 | ADR; Chapter 8 controls and gaps; never show real connection strings |
+| T1 | `ExcelHelperTests`单元测试用例；导入成功/失败界面截图；标准模板文件 |
+| T2 | 导入失败后UI端“未入库”提示截图；导入时序图08 |
+| T3 | 上传非法扩展名文件被拒绝的截图；文件大小超限错误提示 |
+| T4 | `fix-price-rules-index.sql`脚本文件；索引修复后导入流程成功运行记录 |
+| R1 | 第四章工时统计表 + `sprint-hours-chart.html`工时柱状图 |
+| R3 | GitHub Actions构建成功绿勾；`DatabaseAvailability`跳过策略说明 |
+| S1–S3 | 架构决策记录ADR；第八章安全控制与缺口清单；不得展示真实数据库连接串等敏感信息 |
 
-## 9.7 Risks Related to Parallel PDA Delivery
+## 9.7 与PDA并列交付相关的风险（简述）
+PDA无订单报工作为并列交付的独立系统，带来三类专项风险，对应缓解措施如下：
 
-| Risk | Mitigation |
+| 风险描述 | 缓解措施 |
 |----------|----------|
-| Dual systems compete for solo bandwidth | MoSCoW + separate CW/PDA hour columns |
-| Overclaim “settlement API already connected” | Context map marks integration Planned; defence ban words |
-| Hardware bring-up uncertainty | Buffer hours; done = demoable start/report closed loop |
+| 双系统开发争夺单人开发带宽，导致核心功能质量下降 | 通过MoSCoW优先级管控 + 云仓/PDA分栏统计工时，避免工作量混淆不清 |
+| 夸大表述，声称“已与云仓结算链路打通” | 企业Context Map中明确标注集成为Planned状态；严格遵守答辩禁语规范 |
+| 硬件联调不确定性高，导致交付延期 | 对硬件联调任务预留工时缓冲；以可演示的开工/报工闭环作为完成标准 |
 
-## 9.8 Chapter Summary
-
-Risk management is operational: R1 is evidenced as contained by later hour variance; T1/T2/T4 are closed in code/scripts; S1 acknowledges the gap with two concrete options. The next chapter maps each mid-term comment to design, architecture, evidence, and these risk actions.
+## 9.8 本章小结
+本章表明风险管理并非报告附录的形式化装饰：R1进度风险有工时数据证明已被有效遏制，T1/T2/T4技术风险已通过代码与脚本完成闭环，S1安全风险则通过方案对比诚实承认缺口并给出落地路径。下一章将把中期导师评审意见逐条映射到已落地的设计、架构、证据与本章风险动作中，形成终稿核心的整改回应答卷。
 
 ---
 
-# Chapter 10 Response to Mid-term Supervisory Feedback
+# Chapter 10 Response to Mid-term Feedback
+## Response to Mid-term Supervisory Feedback
 
-Mid-term assessment required that the final report and presentation comprehensively answer every comment with verifiable evidence. Source notes (Chinese and English) are retained in the repository root `log` file. This chapter maps each comment to executed improvements, report sections, and artefact paths.
+中期评审明确要求：终稿与最终汇报必须全面回应全部评审意见，并附可验证的支撑证据。评审意见原文及英文摘要留存于仓库根目录 `log` 文件。本章按优先级将每条评审意见映射到已执行的改进动作，以及对应报告章节与产物路径，避免仅在概述中笼统提及而无实质支撑。
 
-## 10.1 Feedback Sources and Response Principles
+## 10.1 反馈来源与回应原则
+本章所有回应遵循四项基本原则，确保内容真实可追溯，不做夸大表述：
 
-| Principle | Practice |
+| 原则 | 具体执行做法 |
 |------|--------------|
-| Done only with evidence | Point to diagrams, tests, CI records, UI screenshots |
-| No fake packaging | DAST, full CD, JWT, irregular/penalty strategies remain Planned |
-| Solo hours tracked separately | Chapter 4 Planned vs Actual; second developer = **N/A** |
-| Ban-word discipline | No: microservices live; AI billing; CW–PDA settlement API connected; production HA built |
+| 有证据才标注已完成 | 所有已落地事项均指向对应的图表、测试、CI记录、UI截图等具体产物路径 |
+| 未实现不虚假包装 | DAST动态扫描、完整持续部署、JWT认证、异形件/罚款策略等能力保持Planned状态 |
+| 单人工时单独统计 | 第四章单独列示个人计划工时与实际工时对比；无第二开发者则标注为N/A |
+| 严格遵守禁语规范 | 不得出现：微服务已上线、AI智能计费、云仓与PDA结算API已打通、生产级高可用已建成等表述 |
 
-English-window mid-term points align with Chinese responses: deepen billing complexity with patterns in Phase 2; multi-view architecture; physical topology stating infrastructure and redundancy (or honesty if none); defend the monolith; DDD supporting Modular Monolith; artefacts for all deliverables.
+The main points of the mid-term review English window are consistent with the Chinese responses: Phase 2 deepens the complexity of billing and introduces design patterns; supplements the multi-perspective architecture diagram; the physical topology clearly indicates the infrastructure and redundancy capabilities (if not, explain it truthfully); demonstrates the rationality of the monolithic architecture; the DDD concept supports modular monolithic design; all deliverables have corresponding products.
 
-## 10.2 One-Page Mapping Table
+## 10.2 总映射表（一页概览）
+所有中期意见的回应落点可通过下表快速查阅：
 
-| Mid-term comment | Response summary | Primary chapters |
+| 中期评审意见 | 本项目回应摘要 | 主要落点章节 |
 |----------|--------------------|----------|
-| Overall implementation too simple; need design depth | Phase 2: Strategy, dual-track historical pricing, rule retrieval, multi-view diagrams, CI/SAST | 6, 7, 8, 10 |
-| Monolith needs justification | Modular Monolith intentional + extraction triggers | 6 |
-| Billing variants need patterns + class/interaction diagrams | Tier/Overweight/Volumetric done; class 13, dual-track sequence 14 | 7; ADR-8 |
-| Add multi-view architecture diagrams | Logical, physical, deployment, DDD, enterprise context map, CI activity | 6, 8; `docs/diagrams/*` |
-| Physical architecture must state infra / redundancy | Nodes, ports, single-instance; **explicitly no HA** | 6.5–6.6 |
-| Explain DDD thoroughly | Contexts map 1:1 to `Modules/*`; honest: not full domain-event framework | 6.3; figs 05, 16 |
-| All work needs verifiable evidence | CI, CodeQL, coverage artefacts, tests, screenshots | 8, 9; Appendix |
-| Split personal Planned vs Actual | Phase 1 198→211h; Sprint 2 +39% | 4 |
-| Risk mitigations must be concrete | Preview, TX rollback, upload whitelist, index fix done; large-file streaming Planned; auth two options | 9 |
-| Future plan must be quantified | Milestone statuses; Phase 2 Strategy packages Done | 4, 10.6 |
+| 整体实现偏简单，需要提升设计深度 | Phase 2新增策略模式、运单双轨历史价、规则检索、多类架构图、CI/SAST安全扫描 | 第6、7、8、10章 |
+| 单体式架构需要充分说明合理性 | 模块化单体为有意选型，给出微服务拆分触发条件 | 第6章 |
+| 计费变体需引入设计模式，配套类图与交互图 | 已实现区间/续重/体积重三类计费策略；配套类图13、双轨时序图14 | 第7章；ADR-8 |
+| 补充多视角架构图 | 已提供逻辑、物理、部署、DDD、企业Context Map、CI活动图等多类视图 | 第6、8章；`docs/diagrams/*` |
+| 物理架构图需明确基础设施与冗余能力 | 标注节点、端口、单实例部署；明确说明无高可用配置 | 第6.5–6.6节 |
+| DDD理念需讲透 | 限界上下文与代码`Modules/*`目录一一映射；诚实说明非完整领域事件框架 | 第6.3节；图05、图16 |
+| 所有工作需附可验证证据 | CI流水线、CodeQL扫描、覆盖率产物、测试用例、功能截图全覆盖 | 第8、9章；附录 |
+| 个人计划工时与实际工时需拆分 | Phase 1合计198h→211h；Sprint 2偏差+39% | 第4章 |
+| 风险缓解措施需具体落地 | 预览校验、事务回滚、上传白名单、索引修复已落地；大文件流式处理为规划项；认证给出双方案 | 第9章 |
+| 未来规划需量化 | 明确各里程碑状态；Phase 2策略模式等工作包已完成 | 第4、10.6节 |
 
-## 10.3 Highest-Priority Comments — Expanded
+## 10.3 最高优先级意见 — 逐条展开
+### 10.3.1 「系统偏简单」与计费变体需引入设计模式
+**意见核心**：系统整体实现偏简单；第二阶段需重点深化计费规则变体；如有灵活空间应使用设计模式，并配套展示类图、交互图。
 
-### 10.3.1 “Too simple” and billing variants need design patterns
+**逐条回应**：
+1. 已落地策略模式（Strategy Pattern）：实现`TierBillingStrategy`、`OverweightBillingStrategy`、`VolumetricBillingStrategy`三类计费策略，由`FeeCalculationEngine`计费引擎与策略解析器统一编排调度。
+2. 配套详细设计产物：输出`docs/diagrams/13-billing-strategy-class.puml`策略类图、`14-sequence-waybill-dual-track.puml`运单双轨时序图。
+3. 深化业务能力：实现运单双轨结算（应收客户报价 vs 应付成本）+ 按发货日/账单日匹配历史价格，显著提升业务深度。
+4. 诚实说明边界：异形件、超时罚款等扩展计费能力仍为**Planned**状态，通过扩展路径证明开闭原则，而非虚假宣称已全部实现。
 
-**Core ask:** deepen billing rule variants in phase two; use design patterns where flexible; show class and interaction diagrams.
+**支撑证据**：第七章全文；`BillingStrategyTests`单元测试；运单预览一致/不一致UI截图（见附录）。
 
-**Response:**
+### 10.3.2 所有工作必须附可验证证据
+**意见核心**：不能仅口头说明完成了测试、导入、CI等工作；需提供截图、覆盖率、流水线成功记录等实证。
 
-1. Strategy Pattern delivered: `TierBillingStrategy`, `OverweightBillingStrategy`, `VolumetricBillingStrategy` orchestrated by `FeeCalculationEngine` + resolver.  
-2. Artefacts: `13-billing-strategy-class.puml`, `14-sequence-waybill-dual-track.puml`.  
-3. Business depth: dual-track settlement (receivable customer quotes vs payable cost) + historical rates by ship/bill date.  
-4. Honest boundary: irregular pieces, overtime penalties, etc. remain **Planned**—OCP path shown, not fake “all done”.
+**逐条回应**：
+1. 持续集成：提供`.github/workflows/ci.yml`工作流文件 + GitHub Actions构建成功绿勾截图；覆盖率随Artifact归档，不写死大于80%等绝对化表述。
+2. 静态安全扫描：提供`.github/workflows/codeql.yml`工作流文件与扫描成功记录。
+3. 测试体系：覆盖单元测试、集成测试、轻量并发/性能冒烟测试三类用例。
+4. 功能验证：价表导入成功/失败、运单双轨对比、PDA开工报工等功能截图全部纳入附录。
 
-**Evidence:** Chapter 7; `BillingStrategyTests`; waybill match/mismatch UI (Appendix).
+**支撑证据**：第八章证据清单；附录索引。
 
-### 10.3.2 All work must have verifiable evidence
+### 10.3.3 工时必须拆分个人计划值与实际值
+**意见核心**：单独列出个人预估工时与实际工时；若有新加入开发者需单独统计。
 
-**Response:**
+**逐条回应**：
+1. 单人开发工时表：Sprint 1–48h→52h；Sprint 2 44h→61h；Sprint 3 56h→51h；Sprint 4 50h→47h；Phase 1合计198h→211h，整体偏差+7%。
+2. 新增开发者说明：本项目无第二名开发者加入，该项记为N/A。
+3. Phase 2工时：第四章已预留云仓与PDA分栏工时表，定稿前需填入真实数值。
 
-1. CI: `.github/workflows/ci.yml` + Actions green screenshots; coverage via artefacts—**never hard-code >80%**.  
-2. SAST: `.github/workflows/codeql.yml` + successful runs.  
-3. Tests: unit, integration, light concurrency/perf smokes.  
-4. Functional screenshots: import success/fail, dual-track compare, PDA start/report in Appendix.
+**支撑证据**：第四章；`sprint-hours-chart-data.csv` / 工时柱状图截图。
 
-**Evidence:** Chapter 8 checklist; Appendix index.
+## 10.4 高优先级意见 — 逐条展开
+### 10.4.1 Comprehensive upgrade of architecture diagram (multiple perspectives)
+In response to the requirement of "supplementing the multi-perspective architecture diagram", a full set of traceable PlantUML source files has been output, covering the entire dimension of the architecture:
 
-### 10.3.3 Hours must split personal Planned vs Actual
-
-**Response:**
-
-1. Solo table: S1 48→52; S2 44→61; S3 56→51; S4 50→47; Phase 1 total **198→211 (+7%)**.  
-2. Second developer: **N/A**.  
-3. Phase 2: Chapter 4 reserved CW/PDA hour tables—fill real numbers before final submission.
-
-**Evidence:** Chapter 4; `sprint-hours-chart-data.csv` / chart screenshot.
-
-## 10.4 High-Priority Comments — Expanded
-
-### 10.4.1 Architecture diagram upgrade (multi-view)
-
-| View | File |
+| 架构视角 | 对应文件 |
 |------|------|
-| Constraints / ADR | `01*.puml` |
-| Logical | `02-logical-architecture.puml` |
-| Physical | `03-physical-architecture.puml` |
-| Deployment | `04-deployment-diagram.puml` |
-| DDD bounded contexts | `05-ddd-bounded-contexts.puml` |
-| Use cases | `06-use-case-diagram.puml` |
-| ERD | `07-erd.puml` |
-| Import / dual-track sequences | `08`, `14` |
-| CI activity | `09-cicd-pipeline.puml` |
-| Enterprise context map | `16-enterprise-context-map.puml` |
-| Strategy class | `13-billing-strategy-class.puml` |
+| 约束与架构决策（ADR） | `01*.puml` |
+| 逻辑架构 | `02-logical-architecture.puml` |
+| 物理架构 | `03-physical-architecture.puml` |
+| 部署视图 | `04-deployment-diagram.puml` |
+| DDD限界上下文 | `05-ddd-bounded-contexts.puml` |
+| 用例视图 | `06-use-case-diagram.puml` |
+| 实体关系图（ERD） | `07-erd.puml` |
+| 导入/双轨时序 | `08`、`14` |
+| CI流水线活动图 | `09-cicd-pipeline.puml` |
+| 企业Context Map | `16-enterprise-context-map.puml` |
+| 策略模式类图 | `13-billing-strategy-class.puml` |
 
-### 10.4.2 Physical architecture: infrastructure and redundancy
+The logical architecture diagram focuses on reflecting layering and dependency relationships; the physical and deployment diagram gives infrastructure level information such as nodes and ports.
 
-**Response:** Document demo topology (Kestrel, SQL Server 1433, CI runner, PDA parallel nodes); backups via manual bak / script rebuild; **explicitly no load balancer and no DB HA**. Honesty satisfies “write redundancy if any; write none if none”.
+### 10.4.2 物理架构：基础设施与冗余能力
+**回应**：明确写清演示环境拓扑（Kestrel服务、SQL Server 1433端口、CI Runner、PDA并列节点）；数据备份采用手工备份与脚本重建方式；**明确说明无负载均衡、无数据库高可用配置**。通过诚实披露现状满足“有冗余就写、没有就写没有”的评审要求，而非虚构集群能力。
 
-### 10.4.3 Monolith rationale + microservice evolution path
+### 10.4.3 Rationality of monolithic architecture + evolution path to microservices
+**Response**: Chapter 6 compares the three types of selection: microservices, big mud ball monomers, and modular monoliths, demonstrating that modular monoliths are the optimal solution under current constraints; clear trigger conditions for microservice splitting are given, including changes in team size, independent expansion and contraction requirements, release rhythm conflicts, technical heterogeneous requirements, quantitative QPS pressure, etc. Milestone M8 "Extract microservices based on trigger conditions" remains in the Planned state. Candidate split contexts include Import, Pricing, and Master Data. Split will be implemented after the trigger conditions are met, and the split will not be split for the sake of splitting.
 
-**Response:** Chapter 6 compares microservices / mud-ball / Modular Monolith; states extraction triggers (team size, independent scale, release-cadence conflict, tech heterogeneity, quantified QPS, etc.). M8 remains Planned. Candidate contexts: Import / Pricing / Master Data—extract only when triggered.
+### 10.4.4 DDD理念必须讲透
+**回应**：
+1. 明确划分Master Data、Import、Pricing、Billing、Assistant五大限界上下文，以及PDA独立上下文。
+2. 上下文与代码结构一一映射：对应`Modules/*`目录下的模块划分。
+3. 诚实说明交互方式：同进程同步调用 + 同库事务，并非已上线的事件总线架构。
+4. 明确能力边界：本项目为DDD理念指导的模块化设计，并非完整复刻领域事件、聚合根等重型DDD框架。
 
-### 10.4.4 DDD must be explained thoroughly
+## 10.5 Medium priority opinions - expand one by one
+### 10.5.1 Risk mitigation measures should be specific
+For the three types of risks highlighted by the instructor, this report provides a clear distinction between implemented measures and planned paths:
 
-1. Five CloudWarehouse contexts (Master Data, Import, Pricing, Billing, Assistant) plus independent PDA context.  
-2. 1:1 mapping to `Modules/*`.  
-3. Interaction honesty: same-process sync calls + same-DB transactions—not a live event bus.  
-4. Boundary: DDD-informed modular design, not a full domain-event / aggregate-root framework clone.
-
-## 10.5 Medium-Priority Comments — Expanded
-
-### 10.5.1 Concrete risk mitigations
-
-| Named risk | Report landing |
+| 导师点名风险项 | 本报告落点 |
 |------------|------------|
-| Large-file upload | Whitelist + size limit done; streaming/chunk/resume **Planned** (T3) |
-| Three-row header parse | Auto-detect + template + unit tests (T1); linked to Sprint 2 overrun |
-| No login | JWT/RBAC vs WMS SSO comparison (S1) |
+| 大文件上传风险 | 已落地扩展名白名单+文件大小限制；流式读取、分块处理、断点续传为**规划项**（第九章T3） |
+| 三级表头解析风险 | 已落地自动探测算法+标准模板+单元测试覆盖（第九章T1）；与Sprint 2工时超支联动分析 |
+| 无登录认证风险 | 给出JWT/RBAC与WMS SSO两套方案对比（第九章S1） |
 
-### 10.5.2 Quantified future plan
+### 10.5.2 Future planning must be quantified
+The status and description of each planning work package are as follows, and all completed items correspond to clear iteration cycles:
 
-| Work package | Status | Notes |
+| 工作包 | 状态 | 说明 |
 |--------|------|------|
-| Strategy + volumetric | Done | ~Sprint 5; Chapters 7, 4 |
-| Rule knowledge retrieval | Done | Assistive lookup; not settlement SoR |
-| Dual-track + historical price | Done | Sequence 14 |
-| Perf baseline (1000-row parse, etc.) | Partial Done | Smokes done; numeric screenshots → Appendix |
-| JWT/RBAC | Planned | Hours on plan table; owner = author (solo) |
-| Import microservice study | Planned | Needs stable boundaries + triggers |
-| Full CD | Planned | Currently CI + publish/checklist |
+| 策略模式 + 体积重计费 | Done | 约Sprint 5完成；详见第七、四章 |
+| 规则知识库检索 | Done | 辅助查阅功能，不作为结算真相源 |
+| 运单双轨 + 历史价格 | Done | 对应时序图14 |
+| 性能基线（1000行解析等） | 部分Done | 冒烟测试已完成，具体数值截图补充至附录 |
+| JWT/RBAC认证体系 | Planned | 预估工时见规划表，负责人为项目作者（单人开发） |
+| Import模块微服务调研 | Planned | 依赖稳定的模块边界与拆分触发条件 |
+| 完整持续部署（CD） | Planned | 当前为CI + 发布包/部署检查清单模式 |
 
-> Phase 2 personal hours must be filled in Chapter 4 before finalisation and kept consistent with this plan table.
+> Phase 2 man-hours must be filled in before finalizing the reservation form in Chapter 4, consistent with this planning form.
 
-### 10.5.3 Bonus-item status
-
-| Suggested bonus | Status |
+### 10.5.3 加分项落实情况
+| 导师建议加分项 | 落实状态 |
 |------|------|
-| Billing complexity analysis + pattern extension | Chapters 7, 10 variant table + three-step OCP path |
-| Perf baseline: 1000-row parse | `Import1000RowPerfTests`; numbers in Appendix |
-| Design decision comparisons (Dapper vs EF; monolith vs microservices) | Chapter 2 selections + Chapter 6 architecture |
+| 计费复杂度分析 + 模式扩展方式 | 第七、十章变体表 + 开闭原则扩展三步法 |
+| 性能基线：1000行解析等 | `Import1000RowPerfTests`等测试用例；具体数值贴入附录 |
+| 设计决策对比（Dapper vs EF、单体 vs 微服务） | 第二章技术选型 + 第六章架构选型对比 |
 
-## 10.6 Extra Delivery: Parallel PDA and Value Boundaries
+## 10.6 Additional Delivery: Juxtaposing PDA and Value Frontiers
+The core of the mid-term review focuses on the in-depth optimization of the cloud warehouse system; Phase 2 additionally delivered the **Honeywell PDA no-order work reporting** module in parallel, which supplemented the business narrative of "factory digitalization" from the perspective of factory on-site data collection, but strictly adhered to the following boundaries:
+- The production-level settlement API is not connected to the CloudWarehouse system**;
+- Cross-system integration is clearly marked as Planned in the enterprise Context Map;
+- PDA's working hours statistics and evidence materials are separated from the cloud warehouse system to avoid using PDA delivery to cover up the lack of depth of the cloud warehouse design, and avoid using cloud warehouse rhetoric to exaggerate the degree of PDA integration.
 
-Mid-term focus was CloudWarehouse depth. Phase 2 additionally delivered **Honeywell PDA no-order reporting**, enriching the factory-digitisation narrative while respecting:
+## 10.7 仍待附录补齐的截图清单（作者执行）
 
-- **No production settlement API integration** with CloudWarehouse;  
-- Enterprise context map marks cross-system integration as **Planned**;  
-- PDA hours and evidence listed separately—neither to hide CloudWarehouse design depth nor to exaggerate PDA integration.
+定稿前建议逐项核对：
 
-## 10.7 Appendix Screenshot Checklist (Author Action)
+- [ ] GitHub Actions CI 绿勾
+- [ ] 覆盖率 Summary
+- [ ] CodeQL 成功
+- [ ] 价表导入成功 / 失败
+- [ ] 运单双轨预览
+- [ ] 工时柱状图
+- [ ] PDA 开工/报工
+- [ ]（可选）非法扩展名被拒
 
-Before final submission:
-
-- [ ] GitHub Actions CI green  
-- [ ] Coverage Summary  
-- [ ] CodeQL success  
-- [ ] Price import success / failure  
-- [ ] Dual-track waybill preview  
-- [ ] Hours bar chart  
-- [ ] PDA start/report  
-- [ ] (Optional) Illegal extension rejected  
-
-## 10.8 Chapter Summary
-
-Mid-term comments became checkable engineering and documentation actions: billing deepened via Strategy and dual-track; architecture clarified via multi-view and honest no-HA statements; quality proven via CI/SAST/tests; management closed via personal hours and concrete risks. The next chapter concludes with limitations, outlook, client feedback placeholder, and submission checklist.
-
----
+## 10.8 本章小结
+中期评审意见已从“提醒建议”转化为可核对的工程动作与文档产出：计费能力通过策略模式与双轨结算实现深度提升，架构设计通过多视角视图与诚实的无高可用声明实现清晰透明，质量体系通过CI、SAST、分层测试形成可验证证据，项目管理通过个人工时追踪与具体风险措施形成管理闭环。下一章将给出项目结论、已知限制与未来展望，并简要说明客户反馈与提交清单，结束正文内容。
 
 # Chapter 11 Conclusion and Outlook
 
-## 11.1 Conclusion
+### 11.1 结论
 
-Under solo conditions, this internship delivered two parallel systems: **CloudWarehouse** (Modular Monolith freight-settlement MVP with Phase 2 Strategy billing, receivable/payable dual-track and historical pricing, plus **built-in rule RAG** for assisted FAQ lookup) and a **Honeywell PDA no-order reporting MVP**. Both serve one factory goal but evolve as separate bounded contexts; **this phase did not implement production API integration**.
+本实习在 Solo 条件下交付了两套并列系统：CloudWarehouse（Modular Monolith 运费结算 MVP，含 Phase 2 的 Strategy 计费、应收/应付双轨与历史价、**内置规则 RAG** 辅助查阅）与霍尼韦尔 PDA 无订单报工 MVP。二者服务同一工厂目标，但按限界上下文独立演进，**本期未做生产级 API 打通**。
 
-Mid-term feedback was answered with verifiable artefacts: multi-view architecture and honest no-HA statements; Strategy class diagram and dual-track sequence; CI/CodeQL/test evidence; personal Planned vs Actual (Phase 1: **198→211 hours**). Rule RAG is lexical FAQ retrieval enhancement and **does not replace** `FeeCalculationEngine` as system of record.
+中期反馈已通过可验证产物回应：多视角架构图与诚实无 HA 声明、Strategy 类图与双轨时序、CI/CodeQL/测试证据、个人 Planned vs Actual（Phase 1：198→211 小时）。规则 RAG 仅作 FAQ 检索增强，**不替代** FeeCalculationEngine。
 
-## 11.2 Known Limitations
+### 11.2 已知限制
 
-- No JWT/RBAC; CORS/HTTP are demo configurations  
-- No production HA / full CD / standing DAST gate  
-- Volumetric engine ready; waybill Excel main path still primarily actual weight  
-- Irregular / penalty billing variants remain Planned  
-- Rule RAG is lexical Retrieve→Augment→Generate (not production vector semantic RAG); excerpt-style generation when ApiKey is unset  
+- 无 JWT/RBAC；CORS/HTTP 为演示配置
+- 无生产级 HA / 完整 CD / DAST 常态门禁
+- 体积重引擎已通，运单 Excel 主路径仍以实重为主
+- 异形件/罚款等计费变体仍为 Planned
+- 规则 RAG 为词法检索（非生产级向量语义 RAG）；未配置 ApiKey 时为摘录生成
 
-## 11.3 Outlook (Quantified Directions)
+### 11.3 展望（量化方向）
 
-| Item | Status | Dependency |
+| 项 | 状态 | 依赖 |
 |----|------|------|
 | JWT + RBAC | Planned | ADR |
-| Demo-environment DAST baseline | Planned | Stable demo deployment |
-| Full CD | Planned | Auth and target publish environment |
-| Microservice extraction | Planned | Triggers (Chapter 6) |
-| CloudWarehouse ↔ PDA integration | Planned | Stable ID / file-exchange conventions |
+| 演示环境 DAST 基线 | Planned | 稳定演示部署 |
+| 完整 CD | Planned | 认证与发布目标环境 |
+| 微服务提取 | Planned | 触发条件（见第六章） |
+| 云仓↔PDA 集成 | Planned | 稳定 ID/文件交换约定 |
 
-## 11.4 Client Feedback
+### 11.4 Client Feedback
 
-### 11.4.1 Enterprise mentor feedback (business value)
+#### 11.4.1 企业导师反馈（业务价值）
 
-From the enterprise side, this internship delivered useful work on two factory problems at once: warehouse freight checking, and shop-floor reporting when there is no formal work order.
+From the perspective of the company, this internship targeted two real pain points in the factory: warehouse freight verification, and production line reporting when there is no formal work order.
 
-On the warehouse track, CloudWarehouse moved settlement away from “guess the Excel sheet” toward a repeatable path: master data, cost and quote import, fee trial, and dual-track receivable versus payable preview by ship date. For supervisors, the valuable part is not a fancy slogan — it is that preview results can be checked, and mismatches can be explained instead of hidden. The Modular Monolith choice also matched our constraint: one developer, limited time, and a need for a working system rather than an early microservice split.
+云仓这条线，把结算从“对着 Excel 猜”推进到可重复路径：主数据、成本/报价导入、试算，以及按发货日的应收应付双轨预览。对业务来说，值钱的不是口号，而是预览结果能核对、对不上的也能解释，而不是黑盒。做成模块化单体也符合约束：一个人、时间紧，先要能跑的系统，而不是一上来拆微服务。
 
-On the line track, the PDA no-order app addressed a pain we see every night shift: work still happens when MES has no order. Workers can log in, pick a machine, start, and report on an industrial handheld. Site feedback has been clearly positive — people prefer scan-and-save over paper or verbal notes because the record can be traced later. Recent shop-floor volume also supports this: in a seven-day window, the no-order path (including PDA dual-write) accounted for the overwhelming majority of mesdb report rows, while the formal “with work-order” path was rarely used. In short, the floor is using the path this project strengthened.
+产线这条线，PDA 无订单报工对准夜班常见情况——活在干，MES 却没有工单。工人可以在工业手持机上登录、选机、开工、报工。现场反馈明显偏正面：大家更愿意扫码落库，而不是纸笔或口头，因为事后能追查。近一周报工量也侧面说明：无订单路径（含 PDA 双写）在 mesdb 报工里占绝对主流，有工单号的正式路径很少有人用。也就是说，现场真正在用的，正是这个项目加强的那条路。
 
-Overall assessment: the intern worked as a solo owner end to end — requirements, design, implementation, test/CI evidence, and honest documentation of gaps (for example auth, full CD, and future join between the two systems). What was promised as MVP is demonstrable. What was deferred was deferred on purpose, not ignored. We accept the delivery for this term and will keep CloudWarehouse and PDA evolving as parallel systems until shared IDs and integration timing are ready.
+Overall comments: The intern, as a Solo, strings together the requirements, design, implementation, testing/CI evidence and gap descriptions (such as login authentication, complete CD, and the two systems will be connected later). The parts promised as MVP can be demonstrated; the delayed parts are intentionally scheduled, not ignored. Accepting the delivery in this issue, Cloud Warehouse and PDA will evolve side by side first, and we will talk about opening them up when the time for identification and docking is mature.
 
-### 11.4.2 Sponsor formal acceptance status
+#### 11.4.2 Sponsor 正式验收状态（Formal Acceptance）
 
-| Question | Answer |
+| 问题 | 答复 |
 | --- | --- |
-| Written formal sign-off (email/letter)? | **No** on file as of final submission. |
-| Practical acceptance | **Demo acceptance + field use:** mentor confirmed demonstrable MVP; PDA path used on shop floor; dual-track preview accepted verbally for reconciliation scenarios. |
-| Equal to enterprise production go-live? | **No** — demo/intranet; JWT, HA, CW↔PDA API integration remain Planned. |
-| Wording for grading | Sponsor **accepts this term’s internship deliverables**; **not** a full production rollout sign-off. |
+| 是否已有 **书面正式 sign-off**（签字邮件/验收单）？ | **无。** 截至终稿提交日，企业方未出具正式盖章验收文件或邮件归档。 |
+| 实际接受程度 | **演示接受 + 现场使用：** 企业导师在演示与车间走访中确认 MVP 可演示、PDA 路径在现场被操作员使用；云仓双轨预览用于核对场景获口头认可。 |
+| 是否等于全厂生产 go-live？ | **否。** 云仓仍为受控演示/内网部署；JWT、HA、云仓↔PDA API 集成均为 Planned。 |
+| 学术评分用表述 | Sponsor **接受本期实习交付物**（报告+演示+可运行 MVP），**不等于**企业级生产系统正式上线验收。 |
 
-## 11.5 Submission Checklist
+Evidence suggestions: Keep the demo meeting minutes/WeChat feedback screenshots (if any) in the appendix; if there is no formal email, write "oral acceptance only" truthfully.
 
-- [ ] This report (Chinese final + figures)  
-- [ ] English version (translated from final facts—do not rewrite facts)  
-- [ ] Seven assessment videos  
-- [ ] Appendix screenshots complete (see Appendix A)  
+### 11.5 提交物
 
----
+- 本报告（中文定稿）
+- 英文版
+- 评估演示视频
+- 附录证据截图（见附录 A）
 
 # Appendix A Evidence and Screenshot Checklist
 
-Paste the following screenshots into the appendix (about half page each):
+附录证据一览：
 
-| ID | Content | Suggested source |
+| 编号 | 内容 | 建议来源 |
 |------|------|----------|
-| A-01 | GitHub Actions CI green | Actions web UI |
-| A-02 | Coverage Summary | CI artefact |
-| A-03 | CodeQL success | Actions |
-| A-04 | Price import success | Admin UI |
-| A-05 | Price import failure / not persisted | Admin UI |
-| A-06 | Dual-track waybill preview match/mismatch | Admin UI |
-| A-07 | Hours bar chart | `sprint-hours-chart.html` |
-| A-08 | PDA start/report | Device or emulator |
-| A-09 | Rule RAG query result (three-step pipeline) | Admin “规则 RAG” tab |
-| A-10 | Illegal extension rejected (optional) | UI |
-| A-11 | Solution structure / Modules folder (optional) | IDE |
-| A-12 | Test pass summary (**114 passed**, incl. E2E) | GitHub Actions → CI → Test with coverage |
-| A-13 | Load smoke `[PERF]` / `StressLoadTests` | `perf-load-stress-detailed.txt` or QA page |
-| A-14 | NuGet Moderate scan + resolution note | QA page / CI artefact |
-| A-15 | Public QA report homepage | https://chenyuxiangAK47.github.io/cloudwarehouse-csharp/ |
-| A-16 | Playwright E2E four passes | `artifacts/e2e-playwright-test.txt` |
-| A-07b | Cumulative hours burndown (planned vs actual line) | `sprint-burndown-cumulative.csv` |
+| A-01 | GitHub Actions CI 绿勾 | Actions 网页 |
+| A-02 | coverage Summary | CI Artifact |
+| A-03 | CodeQL 成功 | Actions |
+| A-04 | 价表导入成功 | 管理端 UI |
+| A-05 | 价表导入失败/未入库 | 管理端 UI |
+| A-06 | 运单双轨预览一致/不一致 | 管理端 UI |
+| A-07 | 工时柱状图 | sprint-hours-chart.html |
+| A-08 | PDA 开工/报工 | 设备或模拟器 |
+| A-09 | 规则 RAG 查询结果（含三步流水线） | 管理端「规则 RAG」Tab |
+| A-10 | 非法扩展名上传被拒（可选） | UI |
+| A-11 | 解决方案结构 / Modules 目录（可选） | IDE |
+| A-12 | 测试通过汇总（114 passed，含 E2E） | GitHub Actions → CI → Test with coverage |
+| A-13 | 负载冒烟 `[PERF]` / StressLoadTests | `perf-load-stress-detailed.txt` 或 QA 页 |
+| A-14 | NuGet Moderate 扫描 + 处置说明 | QA 页 / CI Artifact |
+| A-15 | 公开 QA 报告首页 | https://chenyuxiangAK47.github.io/cloudwarehouse-csharp/ |
+| A-16 | Playwright E2E 四项通过 | `artifacts/e2e-playwright-test.txt` 或 CI 日志 |
+| A-07b | 累计工时燃尽（Planned vs Actual 折线） | `sprint-burndown-cumulative.csv` |
 
----
+### 4.1.1 Sprint tracking tools (incl. Jira artefacts)
+
+| Supervisor question | Practice | Evidence |
+| --- | --- | --- |
+| Jira / tracking tool? | **Jira-compatible tracking pack delivered.** Product backlog / sprint board / SP burndown as Jira CSV import format (importable to Jira Cloud) + GitHub Issue templates. Hours CSV + Git history + Actions CI. | `docs/project-management/jira/product-backlog.csv`, `burndown-board.html`, `.github/ISSUE_TEMPLATE/sprint-story.yml` |
+| Solo sprints? | **Yes.** Phase 1: Sprint 1–4 weekly; Phase 2: Sprint 5 milestone (Strategy/dual-track/PDA/E2E/IaC). | §4.3–4.7; `jira/sprint-burndown-points.csv` |
+| Burndown? | **Yes.** Remaining SP burndown per sprint + cumulative Planned vs Actual hours. Screenshot `burndown-board.html` for appendix. | `jira/burndown-board.html` |
+
 
 # Chapter 12 Reflection Questions
 
-> **Required by supervisor email.** Answers reflect solo delivery, dual systems, and post–mid-term revisions.
+> **导师邮件要求：** 报告须包含独立章节 *Reflection Questions*。以下按实习全过程作答（Solo、双系统、中期反馈后整改）。
 
-**Q1. Greatest learning?** Moving from “working features” to **verifiable engineering**: Strategy + dual-track design, **114** automated tests (incl. Playwright smoke), CI coverage, CodeQL, and a public QA page.
+**Q1. 本实习中你最大的收获是什么？**  
+从「能跑的功能」升级到「能证明的工程」：计费用 Strategy 与双轨时序落地设计模式；用 114 项自动化测试（含 Playwright 冒烟）、CI 覆盖率、CodeQL 与 QA 页把主张变成可点击证据。并学会在单人约束下用 Modular Monolith 而非过早微服务。
 
-**Q2. Greatest difficulty?** Sprint 2 Excel overrun (+39%). Mitigated via preview-before-commit, golden samples, and estimation buffers; Phase 2 scope controlled by keeping CW and PDA decoupled.
+**Q2. 最大的困难是什么？如何克服？**  
+Sprint 2 的 Excel 三级表头解析超支 39%——外部文件格式不可控。通过预览入库、标准模板、密集单测样例与复盘缓冲，把后续 Sprint 偏差压回 ±10%。Phase 2 并行 PDA 硬件联调则靠时间盒与明确「云仓/PDA 不强行 API 打通」控制范围。
 
-**Q3. Changes after mid-term feedback?** Added Analysis (§3.0), class-level sequence, Sprint backlog tables, security resolution narrative, Playwright E2E, QA site; clarified sponsor acceptance vs formal sign-off.
+**Q3. What have you changed after the mid-term mentor’s feedback? **
+Complete Analysis (§3.0), class-level sequence diagram, Sprint backlog table, security before→resolution narrative, Playwright E2E, public QA site; delete inaccurate statements such as "Playwright is not done"; Client Feedback distinguishes demo acceptance from formal sign-off.
 
-**Q4. Solo Sprint/agile — effective?** Yes with simplification: CSV + Markdown backlog + Git instead of Jira; cumulative hours instead of story-point burndown.
+**Q4. 一人团队如何实践 Sprint/敏捷？是否有效？**  
+Delivered **Jira-compatible Product Backlog + Sprint Board + SP burndown** (`docs/project-management/jira/`, importable to Jira Cloud) plus GitHub Issue templates; Phase 1 weekly sprints; Phase 2 = Sprint 5 milestone. Sprint 2 retro retained.
 
-**Q5. What would you do differently?** Earlier Playwright smoke; earlier security baseline logging; more frequent Word sync from master Markdown.
+**Q5. 若重来，会如何安排？**  
+更早锁定 Excel 黄金样例库；Phase 1 末即引入 Playwright 冒烟；安全扫描在依赖选型阶段就记录 baseline；报告母稿与 Word 同步频率提高，避免终期集中补图。
 
-**Q6. AI tools?** Used for drafts and scaffolding; billing semantics, hours, acceptance boundaries, and ban-words verified personally. See `ai-assistance-disclosure.md`.
+**Q6. AI 工具如何使用？哪些仍由本人负责？**  
+AI 用于 PlantUML 草稿、测试脚手架、文档润色与 CI 脚本；**计费规则、双轨语义、工时数据、验收边界、答辩禁语**由本人核对源码与业务方反馈后定稿。见 `docs/project-management/ai-assistance-disclosure.md`。
 
-**Q7. Sponsor relationship?** Value is explainable dual-track preview and PDA no-order capture—not buzzwords. Honest “no formal sign-off” supports credible Phase 3 integration planning.
+**Q7. Reflection on the relationship between sponsoring companies and customers? **
+The corporate value lies in "verifiable dual-track preview" and "PDA-free order placement", not in technology stacking. Honestly stating that there is no formal sign-off and no production go-live will help discuss the integration scope in the next stage.
 
-**Q8. Next growth?** JWT/RBAC, DAST baseline, light IaC (Bicep/Compose), SQL performance.
+**Q8. What is the next step for personal growth? **
+Deepen .NET performance and SQL tuning; complete JWT/RBAC and DAST baselines; IaC (Bicep/Terraform/Compose) is already delivered — next stabilise demo deploys via terraform apply / az deployment.
 
----
-
-# Appendix B Terminology and Ban-Word Quick Reference
+# Appendix B Terminology and Forbidden Phrases
 
 | Correct | Forbidden |
 |------|------|
-| Dual-track = receivable quotes vs payable cost | Domestic / international lanes |
-| Modular Monolith; no HA | Microservices already live; production multi-active already built |
-| Strategy Tier / Overweight / Volumetric Done | JSON rule engine; AI smart billing |
-| Built-in rule RAG (lexical FAQ retrieval) | AI settlement / vector RAG in production |
-| PDA not integrated with CloudWarehouse settlement API | Already connected / “Parallel Data Aggregator” misuse |
-| Coverage cited from CI artefact | Hard-coding >80% in body text |
+| Dual Track = Quotation Receivable vs Cost Payable | receivable versus payable Routes |
+| Modular Monolith; no HA | Microservices are online; production and multi-activity have been built |
+| Strategy Tier/Overweight/Volumetric Done | JSON rules engine; AI smart billing |
+| Built-in rules RAG (lexical search FAQ) | AI settlement/vector RAG has been produced and launched |
+| PDA has not been connected with the cloud warehouse settlement API | Already connected / Parallel Data Aggregator |
+| Coverage is subject to Artifact | Text should be hard-coded >80% |

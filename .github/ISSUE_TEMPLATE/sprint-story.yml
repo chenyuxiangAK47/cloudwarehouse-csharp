@@ -1,0 +1,31 @@
+name: Sprint Story
+description: Jira-style user story for CloudWarehouse sprint tracking
+title: "[S?] As a … I want … so that …"
+labels: ["sprint", "story"]
+body:
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint
+      options: [Sprint 1, Sprint 2, Sprint 3, Sprint 4, Sprint 5, Backlog]
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (MoSCoW)
+      options: [Must, Should, Could, Won't]
+    validations:
+      required: true
+  - type: input
+    id: points
+    attributes:
+      label: Story Points
+      placeholder: "5"
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist for Done
+    validations:
+      required: true

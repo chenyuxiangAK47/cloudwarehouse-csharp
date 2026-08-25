@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CloudWarehouse — Sprint Burndown (Jira-style)</title>
+  <style>
+    :root { font-family: "Segoe UI", system-ui, sans-serif; color: #172b4d; }
+    body { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.4rem; }
+    .meta { color: #5e6c84; margin-bottom: 1rem; }
+    .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.5rem 0; }
+    .col { background: #f4f5f7; border-radius: 8px; padding: 0.75rem; min-height: 180px; }
+    .col h3 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; color: #5e6c84; }
+    .card { background: #fff; border-radius: 6px; padding: 0.5rem 0.65rem; margin: 0.4rem 0;
+            box-shadow: 0 1px 2px rgba(9,30,66,.15); font-size: 0.85rem; }
+    .sp { float: right; background: #dfe1e6; border-radius: 10px; padding: 0 0.4rem; font-size: 0.75rem; }
+    canvas { width: 100%; max-width: 900px; height: 320px; border: 1px solid #dfe1e6; border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; font-size: 0.9rem; }
+    th, td { border: 1px solid #dfe1e6; padding: 0.4rem 0.6rem; text-align: left; }
+    th { background: #f4f5f7; }
+  </style>
+</head>
+<body>
+  <h1>CloudWarehouse Sprint Board &amp; Burndown</h1>
+  <p class="meta">Jira-compatible tracking artefact · Solo Intern · Source: <code>product-backlog.csv</code> + <code>sprint-burndown-points.csv</code> · Open this HTML for report appendix screenshot</p>
+
+  <div class="board">
+    <div class="col"><h3>To Do</h3>
+      <div class="card">JWT / RBAC <span class="sp">8</span></div>
+      <div class="card">CW ↔ PDA API join <span class="sp">13</span></div>
+    </div>
+    <div class="col"><h3>In Progress</h3>
+      <div class="card">Final report / videos (M5) <span class="sp">5</span></div>
+    </div>
+    <div class="col"><h3>Done — Phase 1</h3>
+      <div class="card">S1 Foundation <span class="sp">21</span></div>
+      <div class="card">S2 Excel import <span class="sp">24</span></div>
+      <div class="card">S3 Pricing <span class="sp">18</span></div>
+      <div class="card">S4 QA+CI <span class="sp">18</span></div>
+    </div>
+    <div class="col"><h3>Done — Phase 2</h3>
+      <div class="card">Strategy + dual-track <span class="sp">16</span></div>
+      <div class="card">PDA no-order <span class="sp">13</span></div>
+      <div class="card">Playwright + IaC + Jira pack <span class="sp">10</span></div>
+    </div>
+  </div>
+
+  <h2>Burndown (Story Points remaining)</h2>
+  <canvas id="c" width="900" height="320"></canvas>
+
+  <h2>Sprint velocity summary</h2>
+  <table>
+    <thead><tr><th>Sprint</th><th>Committed SP</th><th>Completed SP</th><th>Hours Planned</th><th>Hours Actual</th></tr></thead>
+    <tbody>
+      <tr><td>Sprint 1</td><td>21</td><td>21</td><td>48</td><td>52</td></tr>
+      <tr><td>Sprint 2</td><td>24</td><td>24</td><td>44</td><td>61</td></tr>
+      <tr><td>Sprint 3</td><td>18</td><td>18</td><td>56</td><td>51</td></tr>
+      <tr><td>Sprint 4</td><td>18</td><td>18</td><td>50</td><td>47</td></tr>
+      <tr><td>Sprint 5 (Phase 2)</td><td>42</td><td>42</td><td>130</td><td>139</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    const series = {
+      'Sprint 1': [[0,21],[1,18],[2,14],[3,10],[4,6],[5,2],[6,0]],
+      'Sprint 2': [[0,24],[1,22],[2,18],[3,14],[4,10],[5,6],[6,2]],
+      'Sprint 4': [[0,18],[1,15],[2,12],[3,9],[4,5],[5,2],[6,0]],
+      'Sprint 5': [[0,42],[3,30],[7,18],[12,8],[16,0]]
+    };
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height, pad = 40;
+    const pts = series['Sprint 5'];
+    const maxX = Math.max(...pts.map(p => p[0]));
+    const maxY = Math.max(...pts.map(p => p[1]));
+    const x = v => pad + (v / maxX) * (W - 2 * pad);
+    const y = v => H - pad - (v / maxY) * (H - 2 * pad);
+    ctx.strokeStyle = '#dfe1e6'; ctx.beginPath();
+    ctx.moveTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.lineTo(W - pad, H - pad); ctx.stroke();
+    // ideal
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = '#97a0af'; ctx.beginPath();
+    ctx.moveTo(x(0), y(maxY)); ctx.lineTo(x(maxX), y(0)); ctx.stroke();
+    ctx.setLineDash([]);
+    // actual
+    ctx.strokeStyle = '#0052cc'; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach((p, i) => { if (i === 0) ctx.moveTo(x(p[0]), y(p[1])); else ctx.lineTo(x(p[0]), y(p[1])); });
+    ctx.stroke();
+    ctx.fillStyle = '#172b4d';
+    ctx.fillText('Remaining SP (Sprint 5 / Phase 2)', pad, 24);
+    ctx.fillText('Ideal', W - 120, pad + 8);
+    ctx.fillStyle = '#0052cc'; ctx.fillText('Actual', W - 120, pad + 24);
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+name: IaC Validate
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "infra/**"
+      - "docker-compose.yml"
+      - "Dockerfile"
+      - ".github/workflows/iac.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - "docker-compose.yml"
+      - "Dockerfile"
+  workflow_dispatch:
+
+jobs:
+  validate-iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose
+        run: docker compose config
+
+      - name: Install Bicep CLI
+        run: |
+          curl -Lo bicep https://github.com/Azure/bicep/releases/download/v0.29.47/bicep-linux-x64
+          chmod +x ./bicep
+          sudo mv ./bicep /usr/local/bin/bicep
+          bicep --version
+
+      - name: Bicep build (compile check)
+        run: bicep build infra/bicep/main.bicep
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform init + validate
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Upload IaC sources as artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iac-sources
+          path: |
+            infra/
+            docker-compose.yml
+            Dockerfile
+            docs/project-management/jira/

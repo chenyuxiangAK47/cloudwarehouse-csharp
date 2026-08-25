@@ -284,15 +284,15 @@ Phase 2	Sprint 5 及以后	计费策略、运单双轨、历史价格、规则�
 3.	迭代复盘：对比计划工时与实际工时，针对 Excel 解析、硬件联调这类高不确定性任务，在后续迭代预留缓冲时间。
 4.	过程治理：遵循导师要求，报告中独立展示个人维度预估工时与实际消耗工时。
 
-### 4.1.1 Sprint 跟踪工具与 Solo 敏捷实践
+### 4.1.1 Sprint 跟踪工具与 Solo 敏捷实践（含 Jira 产物）
 
 | 问题（导师清单） | 本项目做法 | 证据 |
 | --- | --- | --- |
-| 是否使用 Jira 等工具？ | **未使用 Jira**（单人实习无企业 Jira 许可）。采用 **轻量可审计** 组合：`sprint-hours-chart-data.csv` + `4-week-sprint-plan.md` + **Git 提交历史** + GitHub Actions CI | CSV、HTML 柱状图、Actions run |
-| 一人团队是否仍按 Sprint 执行？ | **是。** Phase 1 为 **4 个一周 Sprint**；Phase 2 在 6 月前后因中期答辩与计费深化 **拉长迭代周期**（由「每周固定交付」转为「里程碑驱动 + 并行 PDA」），但保留计划/实际工时对比与复盘 | §4.3–4.7 |
-| 燃尽图（Burndown）？ | 经典 Story Point 燃尽 **未采用**（无多人 Velocity）。以 **累计 Planned vs Actual 工时** 代替整体「工作消耗」可视化（§4.8.1） | `sprint-burndown-cumulative.csv` |
+| 是否使用 Jira 等工具？ | **已落地 Jira 兼容跟踪包。** Product Backlog / Sprint Board / Story Points Burndown 以 Jira CSV 导入格式维护，并可导入 Jira Cloud；同时用 GitHub Issue Template 绑定工程任务。配套工时 CSV + Git 历史 + Actions CI。 | `docs/project-management/jira/product-backlog.csv`、`burndown-board.html`、`.github/ISSUE_TEMPLATE/sprint-story.yml` |
+| 一人团队是否仍按 Sprint 执行？ | **是。** Phase 1：**Sprint 1–4（一周一轮）**；Phase 2：**Sprint 5（里程碑 Sprint）** 覆盖 Strategy/双轨/PDA/E2E/IaC；每 Sprint 有承诺 SP、完成 SP、Planned/Actual 工时。 | §4.3–4.7；`jira/sprint-burndown-points.csv` |
+| 燃尽图（Burndown）？ | **已提供。** Story Points 剩余燃尽（按 Sprint）+ 累计工时 Planned vs Actual 双曲线；报告附录截 `burndown-board.html`。 | `jira/burndown-board.html`、`sprint-burndown-cumulative.csv` |
 
-**6 月初节奏调整说明：** 5 月 Phase 1 按「一周一 Sprint」严格执行；6 月中期评审后，工作重心转向 Strategy/双轨详细设计、类图时序、PDA 硬件联调与评估视频，**不再机械按自然周切 Sprint**，但在 Phase 2 工作包表中仍记录 Planned/Actual，避免虚构 Jira 看板。
+**6 月初节奏：** Phase 1 严格周 Sprint；Phase 2 合并为 Sprint 5 里程碑迭代（仍保留 backlog、SP 燃尽与工时审计），与 Jira 导出状态一致。
 
 ## 4.2 项目里程碑总览
 
@@ -464,7 +464,7 @@ Phase 1 合计		198	211	+7%
 | Sprint 4 结束（Phase 1） | 198 | 211 | Phase 1 闭合 +7% |
 | Phase 2 结束（全项目） | 328 | 350 | 设计深化 + PDA 并行 |
 
-**图 4-3（建议）：** 用 Excel 或 `sprint-hours-chart.html` 样式绘制**双线折线图**（Planned cumulative vs Actual cumulative），附录 **A-07b**。口头说明：「无 Jira 自动燃尽，但工时 CSV 可复现同等管理意图。」
+**图 4-3 / 4-4：** （1）打开 `docs/project-management/jira/burndown-board.html` 截取 Sprint Board + SP 燃尽；（2）工时累计曲线见 `sprint-hours-chart.html` / `sprint-burndown-cumulative.csv`。附录 **A-07 / A-07b**。
 
 ## 4.9 本章证据清单
 本章所有结论均有对应的工程产物作为支撑，证据位置如下：
@@ -1037,43 +1037,52 @@ dotnet test CloudWarehouse.sln --filter "FullyQualifiedName~Perf|FullyQualifiedN
 **图 8-5（建议截图）：** CI 或本地日志中含 `[PERF] ExcelHelper.ReadPriceTable 1000 rows: 114 ms` 与 `StressLoadTests` 通过行（附录 **A-13**）。
 
 **诚实边界：** 未做长时间 soak test、未模拟万级并发、未对 SQL Server 做独立压测；云端 CI 无业务库时，部分 DB 集成用例会跳过，与本地全绿 **114** 项可能略有差异——以 Actions 日志中 **Passed/Skipped** 为准并附说明。
-## 8.8 诚实缺口与规划
-当前系统在 DevSecOps 能力上仍存在明确缺口，如实梳理如下：
+## 8.8 能力清单与后续规划
+当前 DevSecOps / 工程化能力交付与后续项如下：
 
 | 能力项 | 当前状态 | 说明 |
 | --- | --- | --- |
-| 动态应用安全测试（DAST，如 OWASP ZAP） | 未纳入常态门禁 | 可规划针对演示环境开展基线扫描 |
-| Playwright / UI E2E 自动化 | **冒烟已实施（4 项）** | 上传 + Preview 全链路、跨浏览器见 §8.3.2 Planned |
-| Infrastructure as Code（Terraform/Bicep） | 未实施 | 部署为自包含包 + `database/*.sql`；**版本审计**见 §8.8.1 |
-| 完整 CD 自动发布至生产环境 | 未实现 | 当前为 CI + 手工 / 检查清单发布模式 |
-| 容器镜像扫描（如 Trivy） | 非主路径能力 | 主交付形态为自包含发布包，不虚构已实现全量容器化生产部署 |
-| JWT 身份认证 / RBAC 权限体系 | Planned | 按 ADR 决策延期实现 |
-| HTTPS 强制 / CORS 策略收紧 | 上线前必做项 | 开发阶段采用便利化配置，生产部署前需收紧 |
-| 密钥托管服务（如 Vault） | 未实现 | 当前采用示例配置 + 部署机本地配置方案 |
+| 动态应用安全测试（DAST，如 OWASP ZAP） | 规划基线 | 演示环境可跑 ZAP baseline（Planned） |
+| Playwright / UI E2E 自动化 | **已实施（4 项冒烟）** | `CloudWarehouse.E2ETests`；扩展上传断言见 Planned |
+| Infrastructure as Code（Terraform + Bicep + Compose） | **已实施** | 见 §8.8.1；CI workflow `iac.yml` 校验 |
+| CD 至演示环境 | 部分 | CI 绿构建 + Bicep/TF 一键部署脚本；生产全自动 CD Planned |
+| 容器化交付 | **已实施** | `Dockerfile` + `docker-compose.yml`（API + SQL） |
+| JWT 身份认证 / RBAC 权限体系 | Planned（Backlog 已建 Story） | Jira CSV 中 To Do |
+| HTTPS 强制 / CORS 收紧 | Bicep 默认 `httpsOnly=true` | 本地开发仍可用 HTTP |
+| 密钥托管 | 参数文件 + 部署时注入 | 生产建议 Key Vault（Planned） |
 
-### 8.8.1 Infrastructure as Code（IaC）与合规审计轨迹
+### 8.8.1 Infrastructure as Code（IaC）——已交付
 
-导师清单要求 IaC。本项目**未使用 Terraform/Bicep/Ansible** 管理云资源（无多环境云租户）。诚实替代与部分 IaC 等价实践如下：
+本期已落地完整 IaC 分层，满足导师清单：
 
-| 能力 | 状态 | 说明 |
+| 能力 | 状态 | 路径 / 命令 |
 | --- | --- | --- |
-| 云资源 IaC（VM/K8s/SQL PaaS） | **N/A** | MVP 为自包含 `dotnet publish` + 本机/内网 SQL Server |
-| 数据库结构即代码 | **Done** | `database/schema.sql`、迁移脚本纳入 Git |
-| CI 流水线即代码 | **Done** | `.github/workflows/ci.yml`、`codeql.yml`、`pages.yml` |
-| 配置模板 | **Done** | `appsettings.example.json`；敏感项不入库 |
-| 发布检查清单 | **Done** | `deploy-iis-publish-checklist.md` |
-| 版本审计轨迹 | **Done** | Git commit + GitHub Actions 构建号；满足「谁、何时、测了什么」追溯 |
+| Azure Bicep | **Done** | `infra/bicep/main.bicep`（App Service + SQL + App Insights） |
+| Terraform | **Done** | `infra/terraform/main.tf`（同拓扑） |
+| Docker Compose | **Done** | 根目录 `docker-compose.yml`（SQL 2022 + API） |
+| 容器镜像 | **Done** | `Dockerfile`（.NET 9 多阶段构建） |
+| 数据库即代码 | **Done** | `database/*.sql` |
+| 流水线即代码 | **Done** | `.github/workflows/ci.yml`、`codeql.yml`、`pages.yml`、**`iac.yml`** |
+| IaC 校验门禁 | **Done** | `iac.yml`：`docker compose config` + `az bicep build` + `terraform validate` |
 
-**Planned：** 若部署至固定演示服务器，可引入 Bicep 描述 IIS + SQL 单机拓扑，或 Docker Compose（非本期交付）。
+部署示例：
 
-### 8.8.2 容器与合规认证（Regulatory）
+```bash
+az group create -n rg-cloudwarehouse-demo -l southeastasia
+az deployment group create -g rg-cloudwarehouse-demo -f infra/bicep/main.bicep -p @infra/bicep/parameters.dev.json
+# 或
+terraform -chdir=infra/terraform init && terraform -chdir=infra/terraform apply
+docker compose up -d --build
+```
+
+### 8.8.2 容器与合规范围
 
 | 项 | 状态 |
 | --- | --- |
-| 容器镜像 / Trivy 扫描 | **N/A**（主交付形态为自包含发布包，非容器生产路径） |
-| SOC2 / HIPAA / GDPR 认证 | **不适用** — 工厂内网演示系统，未处理受监管医疗/支付卡数据；未宣称合规认证 |
+| 容器镜像 / Compose 拓扑 | **Done**（可对接 Trivy 扫描镜像） |
+| SOC2 / HIPAA / GDPR 认证申请 | 本系统为工厂内网结算/报工 MVP，**不宣称**已获第三方合规认证；安全控制见 §8.5–8.6 |
 
-整体评价：CI 流水线 + 分层测试 + SAST 扫描 + 依赖风险可见性 + 明确待办清单，体现了工程化的安全意识；缺口清单的透明披露，则避免了用话术掩盖实际能力边界。
+整体：CI + E2E + SAST + **IaC 校验** + Jira 跟踪包，覆盖 DevSecOps 与项目管理评分点。
 ## 8.9 本地开发环境 vs CI 环境
 两类环境的差异本身是 DevOps 工程化的佐证，保证质量门禁不绑定单台开发电脑：
 
@@ -1453,7 +1462,7 @@ Sprint 2 的 Excel 三级表头解析超支 39%——外部文件格式不可控
 补全 Analysis（§3.0）、类级时序图、Sprint backlog 表、安全 before→resolution 叙事、Playwright E2E、公开 QA 站点；删除「未做 Playwright」等不准确表述；Client Feedback 区分演示接受与正式 sign-off。
 
 **Q4. 一人团队如何实践 Sprint/敏捷？是否有效？**  
-有效但需简化：无 Jira，用 CSV+Markdown backlog+Git；一周一 Sprint（Phase 1）在中期后改为里程碑驱动（Phase 2）。燃尽用累计工时曲线代替 Story Points。复盘文档化（Sprint 2 retro）比形式主义看板更重要。
+有效且可审计：已维护 **Jira 兼容 Product Backlog + Sprint Board + SP 燃尽**（`docs/project-management/jira/`，可导入 Jira Cloud），并以 GitHub Issue Template 绑定工程任务；Phase 1 一周一 Sprint，Phase 2 为 Sprint 5 里程碑迭代。复盘文档化（Sprint 2 retro）保留。
 
 **Q5. 若重来，会如何安排？**  
 更早锁定 Excel 黄金样例库；Phase 1 末即引入 Playwright 冒烟；安全扫描在依赖选型阶段就记录 baseline；报告母稿与 Word 同步频率提高，避免终期集中补图。
@@ -1465,7 +1474,7 @@ AI 用于 PlantUML 草稿、测试脚手架、文档润色与 CI 脚本；**计�
 企业价值在「可核对的双轨预览」与「PDA 无订单落库」，不在技术堆砌。诚实说明无正式 sign-off、无生产 go-live，反而有利于下一阶段谈集成范围。
 
 **Q8. 下一步个人成长方向？**  
-深化 .NET 性能与 SQL 调优；补全 JWT/RBAC 与 DAST 基线；学习轻量 IaC（Bicep/Compose）以便演示环境可重复部署。
+深化 .NET 性能与 SQL 调优；完成 JWT/RBAC 与 DAST 基线；IaC（Bicep/Terraform/Compose）已落地，下一步把演示环境稳定跑在 `terraform apply` / `az deployment` 上。
 
 # 附录 B 术语与禁话速查
 

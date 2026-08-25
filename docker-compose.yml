@@ -1,0 +1,41 @@
+# CloudWarehouse local/demo stack (IaC for runtime topology)
+# Usage:
+#   docker compose up -d sql
+#   # apply database/*.sql against localhost,1433 (sa / Your_password123)
+#   docker compose up -d --build app
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cw-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_password123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - cw_sqldata:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Your_password123" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cw-app
+    depends_on:
+      sql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__DefaultConnection: "Server=sql,1433;Database=CloudWarehouse;User Id=sa;Password=Your_password123;TrustServerCertificate=True;"
+
+volumes:
+  cw_sqldata:

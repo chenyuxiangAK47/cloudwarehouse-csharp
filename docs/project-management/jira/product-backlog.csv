@@ -1,0 +1,26 @@
+Summary,Issue Type,Status,Priority,Sprint,Story Points,Epic Link,Description,Assignee,Labels
+As admin I can CRUD sites,Story,Done,Highest,Sprint 1,5,EPIC-MasterData,Create/read/update/delete warehouse sites,Solo Intern,phase1;must
+As admin I can CRUD destinations,Story,Done,Highest,Sprint 1,5,EPIC-MasterData,Create/read/update/delete destinations,Solo Intern,phase1;must
+As admin I can use ERD and schema.sql,Story,Done,High,Sprint 1,3,EPIC-Foundation,Database schema and seed scripts,Solo Intern,phase1;must
+As admin I can open ASP.NET admin UI shell,Story,Done,High,Sprint 1,5,EPIC-Foundation,Static index.html + API host,Solo Intern,phase1;must
+As admin I can download Excel price template,Story,Done,Highest,Sprint 2,3,EPIC-Import,Standard template download API,Solo Intern,phase1;must
+As admin I can parse single-row Excel headers,Story,Done,Highest,Sprint 2,5,EPIC-Import,ClosedXML standard header parse,Solo Intern,phase1;must
+As admin I can parse legacy 3-row Excel headers,Story,Done,Highest,Sprint 2,8,EPIC-Import,Legacy supplier workbook compatibility,Solo Intern,phase1;must
+As admin I can preview import before commit,Story,Done,Highest,Sprint 2,5,EPIC-Import,Preview UI and API,Solo Intern,phase1;must
+As admin I can trial-calculate during preview,Story,Done,High,Sprint 2,3,EPIC-Import,Preview-time fee check,Solo Intern,phase1;must
+As admin I can transactional upsert PriceRules,Story,Done,Highest,Sprint 3,8,EPIC-Pricing,Delete+insert within TX,Solo Intern,phase1;must
+As admin I can call calculate API and UI,Story,Done,Highest,Sprint 3,5,EPIC-Pricing,/api/PriceRule/calculate,Solo Intern,phase1;must
+As admin I can map tier and overweight rows,Story,Done,High,Sprint 3,5,EPIC-Pricing,One Excel row to many rules,Solo Intern,phase1;must
+As developer I have unit test suite,Story,Done,Highest,Sprint 4,5,EPIC-Quality,xUnit unit tests,Solo Intern,phase1;must
+As developer I have WebApplicationFactory integration tests,Story,Done,Highest,Sprint 4,5,EPIC-Quality,API integration tests,Solo Intern,phase1;must
+As developer I have GitHub Actions CI with coverage,Story,Done,Highest,Sprint 4,5,EPIC-Quality,CI pipeline + Coverlet,Solo Intern,phase1;must
+As developer I have light concurrency smoke,Story,Done,Medium,Sprint 4,3,EPIC-Quality,StressLoadTests,Solo Intern,phase1;should
+As system I support Strategy billing variants,Story,Done,Highest,Sprint 5,8,EPIC-Billing-P2,Tier/Overweight/Volumetric strategies,Solo Intern,phase2;must
+As admin I can dual-track waybill preview,Story,Done,Highest,Sprint 5,8,EPIC-Billing-P2,Receivable vs payable historical rates,Solo Intern,phase2;must
+As admin I can use built-in rule RAG assistant,Story,Done,High,Sprint 5,5,EPIC-Billing-P2,Lexical FAQ RAG not settlement SoR,Solo Intern,phase2;should
+As operator I can PDA no-order start/report,Story,Done,Highest,Sprint 5,13,EPIC-PDA,Honeywell PDA + Spring Boot API,Solo Intern,phase2;must
+As developer I have Playwright UI E2E smoke,Story,Done,High,Sprint 5,3,EPIC-Quality,CloudWarehouse.E2ETests 4 cases,Solo Intern,phase2;must
+As ops I can deploy via Bicep/Terraform IaC,Story,Done,High,Sprint 5,5,EPIC-DevSecOps,infra/bicep + infra/terraform + compose,Solo Intern,phase2;must
+As developer I track sprints in Jira backlog export,Story,Done,High,Sprint 5,2,EPIC-Management,jira/*.csv + burndown.html,Solo Intern,phase2;must
+JWT RBAC authentication,Story,To Do,Medium,Backlog,8,EPIC-Security,Deferred per ADR,Solo Intern,planned
+CloudWarehouse to PDA API integration,Story,To Do,Low,Backlog,13,EPIC-Integration,Planned after stable IDs,Solo Intern,planned
